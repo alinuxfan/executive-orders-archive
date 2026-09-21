@@ -1,0 +1,9 @@
+.venv/
+__pycache__/
+*.pyc
+data/raw/historical/*.html
+data/raw/federal_register/
+node_modules/
+.astro/
+dist/
+.DS_Store

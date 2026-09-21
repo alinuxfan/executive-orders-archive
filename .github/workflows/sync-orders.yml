@@ -1,0 +1,52 @@
+name: Sync Executive Orders
+
+on:
+  schedule:
+    # Runs twice every weekday (6:00 AM UTC and 6:00 PM UTC / roughly 2 AM and 2 PM Eastern)
+    - cron: '0 6,18 * * 1-5'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions UI
+
+concurrency:
+  group: sync-orders
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Run sync script
+        run: |
+          PYTHONPATH=scripts python scripts/sync_orders.py
+
+      - name: Commit and push changes
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Stage updated database, stats JSON, and sync status
+          git add data/orders.sqlite data/stats.json data/sync_status.json
+          
+          if git diff --staged --quiet; then
+            echo "No new executive orders found. Database is up to date."
+          else
+            echo "New executive orders detected! Committing changes..."
+            git commit -m "chore(data): auto-sync latest executive orders [skip ci]"
+            git push
+          fi

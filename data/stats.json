@@ -1,0 +1,141 @@
+{
+  "generated_at": "2026-09-21T21:23:47.833895+00:00",
+  "total_orders": 141,
+  "sentiment_breakdown": {
+    "Neutral": 2,
+    "Positive": 118,
+    "Urgent/Negative": 21
+  },
+  "presidents": [
+    {
+      "president": "Donald J. Trump (2nd Term)",
+      "total_orders": 100,
+      "avg_word_count": 1133.0,
+      "avg_sentiment": 0.779
+    },
+    {
+      "president": "Abraham Lincoln",
+      "total_orders": 33,
+      "avg_word_count": 292.0,
+      "avg_sentiment": 0.277
+    },
+    {
+      "president": "Donald Trump",
+      "total_orders": 8,
+      "avg_word_count": 1072.0,
+      "avg_sentiment": 0.997
+    }
+  ],
+  "recent_orders": [
+    {
+      "id": "app-executive-order-enhancing-program-integrity-and-integrity-and-interagency-coordination-the",
+      "eo_number": null,
+      "title": "Executive Order\u2014Enhancing Program Integrity and Integrity and Interagency Coordination in the Administration of the H-1B Nonimmigrant Visa Program",
+      "president_name": "Donald J. Trump (2nd Term)",
+      "signing_date": "2026-09-18",
+      "word_count": 1148,
+      "reading_time_minutes": 6,
+      "sentiment_valence": "Positive",
+      "sentiment_compound": 0.9743
+    },
+    {
+      "id": "app-executive-order-restoring-american-saltwater-angling-and-recreation",
+      "eo_number": null,
+      "title": "Executive Order\u2014Restoring American Saltwater Angling and Recreation",
+      "president_name": "Donald J. Trump (2nd Term)",
+      "signing_date": "2026-09-17",
+      "word_count": 2053,
+      "reading_time_minutes": 10,
+      "sentiment_valence": "Positive",
+      "sentiment_compound": 0.9969
+    },
+    {
+      "id": "app-executive-order-reinvigorating-americas-hunting-heritage",
+      "eo_number": null,
+      "title": "Executive Order\u2014Reinvigorating America's Hunting Heritage",
+      "president_name": "Donald J. Trump (2nd Term)",
+      "signing_date": "2026-09-17",
+      "word_count": 1174,
+      "reading_time_minutes": 6,
+      "sentiment_valence": "Positive",
+      "sentiment_compound": 0.999
+    },
+    {
+      "id": "fr-2026-19335",
+      "eo_number": 14428,
+      "title": "Providing Meaningful Water Quality Improvements Through Collaboration and Oversight of Federal Support",
+      "president_name": "Donald Trump",
+      "signing_date": "2026-09-16",
+      "word_count": 984,
+      "reading_time_minutes": 5,
+      "sentiment_valence": "Positive",
+      "sentiment_compound": 0.9951
+    },
+    {
+      "id": "app-executive-order-14428-providing-meaningful-water-quality-improvements-through",
+      "eo_number": 14428,
+      "title": "Executive Order 14428\u2014Providing Meaningful Water Quality Improvements Through Collaboration and Oversight of Federal Support",
+      "president_name": "Donald J. Trump (2nd Term)",
+      "signing_date": "2026-09-16",
+      "word_count": 946,
+      "reading_time_minutes": 5,
+      "sentiment_valence": "Positive",
+      "sentiment_compound": 0.9939
+    },
+    {
+      "id": "fr-2026-18739",
+      "eo_number": 14427,
+      "title": "Adjusting Certain Delegations Under the Defense Production Act",
+      "president_name": "Donald Trump",
+      "signing_date": "2026-09-08",
+      "word_count": 583,
+      "reading_time_minutes": 3,
+      "sentiment_valence": "Positive",
+      "sentiment_compound": 0.9944
+    },
+    {
+      "id": "fr-2026-18738",
+      "eo_number": 14426,
+      "title": "Accelerating Access to Veterans' Benefits and Employment Opportunities",
+      "president_name": "Donald Trump",
+      "signing_date": "2026-09-08",
+      "word_count": 908,
+      "reading_time_minutes": 5,
+      "sentiment_valence": "Positive",
+      "sentiment_compound": 0.9954
+    },
+    {
+      "id": "app-executive-order-14427-adjusting-certain-delegations-under-the-defense-production-act",
+      "eo_number": 14427,
+      "title": "Executive Order 14427\u2014Adjusting Certain Delegations Under the Defense Production Act",
+      "president_name": "Donald J. Trump (2nd Term)",
+      "signing_date": "2026-09-08",
+      "word_count": 547,
+      "reading_time_minutes": 3,
+      "sentiment_valence": "Positive",
+      "sentiment_compound": 0.9943
+    },
+    {
+      "id": "app-executive-order-14426-accelerating-access-veterans-benefits-and-employment-opportunities",
+      "eo_number": 14426,
+      "title": "Executive Order 14426\u2014Accelerating Access To Veterans' Benefits And Employment Opportunities",
+      "president_name": "Donald J. Trump (2nd Term)",
+      "signing_date": "2026-09-08",
+      "word_count": 865,
+      "reading_time_minutes": 4,
+      "sentiment_valence": "Positive",
+      "sentiment_compound": 0.9946
+    },
+    {
+      "id": "fr-2026-18571",
+      "eo_number": 14425,
+      "title": "Supporting America's Ranchers",
+      "president_name": "Donald Trump",
+      "signing_date": "2026-09-04",
+      "word_count": 1032,
+      "reading_time_minutes": 5,
+      "sentiment_valence": "Positive",
+      "sentiment_compound": 0.9985
+    }
+  ]
+}

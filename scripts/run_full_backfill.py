@@ -19,6 +19,7 @@ if str(SCRIPTS_DIR) not in sys.path:
 
 from db import init_db, upsert_order, get_connection
 from metrics import clean_text_from_html, compute_metrics
+from constitutional_engine import analyze_constitutional_sentiment, generate_statesman_summary
 from sync_orders import export_stats_json
 from export_site_data import export_all
 
@@ -72,7 +73,7 @@ def extract_eo_number(title):
     m = re.search(r"Executive Order\s+(\d+)", title or "", re.IGNORECASE)
     return int(m.group(1)) if m else None
 
-def update_progress(status, phase, processed, current_page=None, total_pages=115, total_target=11000):
+def update_progress(status, phase, processed, current_page=None, total_pages=109, total_target=10900):
     try:
         conn = get_connection()
         cursor = conn.cursor()
@@ -157,9 +158,10 @@ def fetch_ucsb_doc_safe(item_meta):
     item_meta["full_text"] = clean_text
     return item_meta
 
-def run_backfill(max_pages=112):
+def run_backfill(start_page=33, max_pages=109):
     logging.info("=================================================================")
-    logging.info("Starting Comprehensive Executive Orders Archive Backfill (1789-2026)")
+    logging.info(f"Starting Comprehensive Executive Orders Archive Backfill (Pages {start_page}-{max_pages})")
+    logging.info("Constitutional Analysis & Statesman Summarization: ENABLED")
     logging.info("=================================================================")
     
     init_db()
@@ -170,14 +172,14 @@ def run_backfill(max_pages=112):
     conn.close()
 
     logging.info(f"Loaded {len(existing_ids)} existing orders with full text.")
-    update_progress("running", "starting", 0, current_page=0, total_pages=max_pages)
+    update_progress("running", f"page_{start_page}", 0, current_page=start_page, total_pages=max_pages)
 
     session = requests.Session()
     session.headers.update(HEADERS_HTML)
 
     total_processed = 0
 
-    for page in range(max_pages):
+    for page in range(start_page, max_pages):
         params = {"items_per_page": 100, "page": page}
         resp = None
         for attempt in range(3):
@@ -225,8 +227,7 @@ def run_backfill(max_pages=112):
             })
 
         if to_fetch:
-            # 3 workers: polite, reliable, fast
-            with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
                 results = list(executor.map(fetch_ucsb_doc_safe, to_fetch))
 
             for item in results:
@@ -234,33 +235,47 @@ def run_backfill(max_pages=112):
                     full_text = item.get("full_text", "")
                     metrics = compute_metrics(full_text)
                     pres_name = item.get("president_name", "Unknown")
+                    title = item.get("title", "")
+                    w_count = metrics["word_count"]
+                    s_date = item.get("signing_date") or ""
+
+                    # Constitutional Statesman Sentiment & Directives
+                    const_metrics = analyze_constitutional_sentiment(full_text, title)
+                    summary_data = generate_statesman_summary(
+                        title=title,
+                        president_name=pres_name,
+                        signing_date=s_date,
+                        full_text=full_text,
+                        word_count=w_count,
+                        metrics=const_metrics
+                    )
 
                     record = {
                         "id": item["id"],
                         "eo_number": item["eo_number"],
-                        "title": item["title"],
+                        "title": title,
                         "president_name": pres_name,
                         "president_slug": slugify(pres_name),
-                        "signing_date": item["signing_date"],
+                        "signing_date": s_date or None,
                         "publication_date": None,
                         "source": "presidency_project",
                         "source_url": f"{BASE_UCSB}{item['relative_url']}",
                         "pdf_url": None,
                         "full_text": full_text,
-                        "word_count": metrics["word_count"],
+                        "word_count": w_count,
                         "char_count": metrics["char_count"],
                         "reading_time_minutes": metrics["reading_time_minutes"],
                         "flesch_kincaid_grade": metrics["flesch_kincaid_grade"],
-                        "sentiment_compound": metrics["sentiment_compound"],
-                        "sentiment_pos": metrics["sentiment_pos"],
-                        "sentiment_neg": metrics["sentiment_neg"],
-                        "sentiment_neu": metrics["sentiment_neu"],
-                        "sentiment_valence": metrics["sentiment_valence"],
-                        "summary_plain_english": None,
-                        "key_directives_json": None,
-                        "who_it_affects_json": None,
-                        "tone_tag": None,
-                        "raw_metadata_json": json.dumps({"title": item["title"], "url": item["relative_url"]})
+                        "sentiment_compound": const_metrics["sentiment_compound"],
+                        "sentiment_pos": const_metrics["sentiment_pos"],
+                        "sentiment_neg": const_metrics["sentiment_neg"],
+                        "sentiment_neu": const_metrics["sentiment_neu"],
+                        "sentiment_valence": const_metrics["sentiment_valence"],
+                        "summary_plain_english": summary_data["summary_plain_english"],
+                        "key_directives_json": json.dumps(summary_data["key_directives"]),
+                        "who_it_affects_json": json.dumps(summary_data["who_it_affects"]),
+                        "tone_tag": summary_data["tone_tag"],
+                        "raw_metadata_json": json.dumps({"title": title, "url": item["relative_url"]})
                     }
                     upsert_order(record)
                     existing_ids.add(item["id"])
@@ -270,13 +285,15 @@ def run_backfill(max_pages=112):
 
         logging.info(f"Page {page}/{max_pages}: {len(to_fetch)} new orders saved (Session total: {total_processed}).")
         update_progress("running", f"page_{page}", total_processed, current_page=page, total_pages=max_pages)
+        sys.stdout.flush()
 
-        # Export updated site JSON and stats every 2 pages (~200 orders)
-        if (page + 1) % 2 == 0:
+        # Periodically export fresh site data every 100 new orders
+        if total_processed > 0 and total_processed % 100 == 0:
+            logging.info("Flushing real-time datasets to site_orders.json and stats.json...")
             export_stats_json()
             export_all()
 
-        time.sleep(0.2)
+        time.sleep(0.3)
 
     logging.info("Archive backfill complete! Generating final static site export...")
     export_stats_json()
@@ -285,4 +302,8 @@ def run_backfill(max_pages=112):
     logging.info("All executive orders successfully backfilled!")
 
 if __name__ == "__main__":
-    run_backfill()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--start-page", type=int, default=33)
+    parser.add_argument("--max-pages", type=int, default=109)
+    args = parser.parse_args()
+    run_backfill(start_page=args.start_page, max_pages=args.max_pages)

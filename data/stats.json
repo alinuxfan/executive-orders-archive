@@ -1,89 +1,263 @@
 {
-  "generated_at": "2026-09-21T21:24:15.559416+00:00",
-  "total_orders": 181,
+  "generated_at": "2026-09-21T22:32:28.657651+00:00",
+  "total_orders": 11045,
   "sentiment_breakdown": {
-    "Neutral": 2,
-    "Positive": 144,
-    "Urgent/Negative": 35
+    "Constitutional Fidelity": 2361,
+    "Constitutional Friction / Overreach": 233,
+    "Constitutional Neutral": 8451
   },
   "presidents": [
     {
-      "president": "Donald J. Trump (2nd Term)",
-      "total_orders": 100,
-      "avg_word_count": 1133.0,
-      "avg_sentiment": 0.779
+      "president": "Franklin D. Roosevelt",
+      "total_orders": 3701,
+      "avg_word_count": 353.0,
+      "avg_sentiment": 0.023
     },
     {
-      "president": "Abraham Lincoln",
-      "total_orders": 44,
-      "avg_word_count": 250.0,
-      "avg_sentiment": 0.332
+      "president": "Herbert Hoover",
+      "total_orders": 1001,
+      "avg_word_count": 280.0,
+      "avg_sentiment": 0.031
+    },
+    {
+      "president": "Harry S Truman",
+      "total_orders": 907,
+      "avg_word_count": 650.0,
+      "avg_sentiment": 0.034
+    },
+    {
+      "president": "Dwight D. Eisenhower",
+      "total_orders": 483,
+      "avg_word_count": 581.0,
+      "avg_sentiment": 0.039
+    },
+    {
+      "president": "Ronald Reagan",
+      "total_orders": 381,
+      "avg_word_count": 561.0,
+      "avg_sentiment": 0.119
+    },
+    {
+      "president": "William J. Clinton",
+      "total_orders": 364,
+      "avg_word_count": 863.0,
+      "avg_sentiment": 0.288
+    },
+    {
+      "president": "Richard Nixon",
+      "total_orders": 346,
+      "avg_word_count": 525.0,
+      "avg_sentiment": 0.074
+    },
+    {
+      "president": "Lyndon B. Johnson",
+      "total_orders": 325,
+      "avg_word_count": 525.0,
+      "avg_sentiment": 0.051
+    },
+    {
+      "president": "Jimmy Carter",
+      "total_orders": 320,
+      "avg_word_count": 660.0,
+      "avg_sentiment": 0.084
+    },
+    {
+      "president": "George W. Bush",
+      "total_orders": 291,
+      "avg_word_count": 834.0,
+      "avg_sentiment": 0.342
+    },
+    {
+      "president": "Donald J. Trump (2nd Term)",
+      "total_orders": 285,
+      "avg_word_count": 1263.0,
+      "avg_sentiment": 0.59
+    },
+    {
+      "president": "Barack Obama",
+      "total_orders": 276,
+      "avg_word_count": 1197.0,
+      "avg_sentiment": 0.469
+    },
+    {
+      "president": "Donald J. Trump (1st Term)",
+      "total_orders": 220,
+      "avg_word_count": 1332.0,
+      "avg_sentiment": 0.585
+    },
+    {
+      "president": "John F. Kennedy",
+      "total_orders": 214,
+      "avg_word_count": 747.0,
+      "avg_sentiment": 0.023
     },
     {
       "president": "Donald Trump",
-      "total_orders": 8,
-      "avg_word_count": 1072.0,
-      "avg_sentiment": 0.997
+      "total_orders": 200,
+      "avg_word_count": 1270.0,
+      "avg_sentiment": 0.595
+    },
+    {
+      "president": "Grover Cleveland",
+      "total_orders": 173,
+      "avg_word_count": 331.0,
+      "avg_sentiment": 0.026
+    },
+    {
+      "president": "Gerald R. Ford",
+      "total_orders": 169,
+      "avg_word_count": 445.0,
+      "avg_sentiment": 0.071
+    },
+    {
+      "president": "George Bush",
+      "total_orders": 166,
+      "avg_word_count": 516.0,
+      "avg_sentiment": 0.179
+    },
+    {
+      "president": "Joseph R. Biden, Jr.",
+      "total_orders": 162,
+      "avg_word_count": 1997.0,
+      "avg_sentiment": 0.635
+    },
+    {
+      "president": "Woodrow Wilson",
+      "total_orders": 150,
+      "avg_word_count": 370.0,
+      "avg_sentiment": 0.019
+    },
+    {
+      "president": "Abraham Lincoln",
+      "total_orders": 119,
+      "avg_word_count": 204.0,
+      "avg_sentiment": 0.004
+    },
+    {
+      "president": "William McKinley",
+      "total_orders": 117,
+      "avg_word_count": 203.0,
+      "avg_sentiment": 0.017
+    },
+    {
+      "president": "Ulysses S. Grant",
+      "total_orders": 112,
+      "avg_word_count": 247.0,
+      "avg_sentiment": 0.024
+    },
+    {
+      "president": "Theodore Roosevelt",
+      "total_orders": 104,
+      "avg_word_count": 122.0,
+      "avg_sentiment": 0.026
+    },
+    {
+      "president": "Calvin Coolidge",
+      "total_orders": 80,
+      "avg_word_count": 275.0,
+      "avg_sentiment": 0.053
+    },
+    {
+      "president": "William Howard Taft",
+      "total_orders": 75,
+      "avg_word_count": 183.0,
+      "avg_sentiment": 0.031
+    },
+    {
+      "president": "Chester A. Arthur",
+      "total_orders": 72,
+      "avg_word_count": 302.0,
+      "avg_sentiment": 0.02
+    },
+    {
+      "president": "Andrew Johnson",
+      "total_orders": 70,
+      "avg_word_count": 272.0,
+      "avg_sentiment": 0.042
+    },
+    {
+      "president": "Benjamin Harrison",
+      "total_orders": 67,
+      "avg_word_count": 198.0,
+      "avg_sentiment": 0.025
+    },
+    {
+      "president": "Rutherford B. Hayes",
+      "total_orders": 37,
+      "avg_word_count": 179.0,
+      "avg_sentiment": 0.02
+    },
+    {
+      "president": "Warren G. Harding",
+      "total_orders": 27,
+      "avg_word_count": 337.0,
+      "avg_sentiment": 0.02
     },
     {
       "president": "Millard Fillmore",
       "total_orders": 7,
       "avg_word_count": 159.0,
-      "avg_sentiment": 0.326
+      "avg_sentiment": 0.05
     },
     {
       "president": "Andrew Jackson",
       "total_orders": 7,
       "avg_word_count": 535.0,
-      "avg_sentiment": -0.107
+      "avg_sentiment": 0.064
     },
     {
       "president": "James K. Polk",
       "total_orders": 4,
       "avg_word_count": 1525.0,
-      "avg_sentiment": 0.232
+      "avg_sentiment": -0.087
     },
     {
       "president": "Martin van Buren",
       "total_orders": 2,
       "avg_word_count": 211.0,
-      "avg_sentiment": 0.693
+      "avg_sentiment": 0.02
     },
     {
       "president": "John Tyler",
       "total_orders": 2,
       "avg_word_count": 369.0,
-      "avg_sentiment": -0.367
+      "avg_sentiment": 0.2
     },
     {
       "president": "John Quincy Adams",
       "total_orders": 2,
       "avg_word_count": 744.0,
-      "avg_sentiment": 0.974
+      "avg_sentiment": 0.02
+    },
+    {
+      "president": "James A. Garfield",
+      "total_orders": 2,
+      "avg_word_count": 64.0,
+      "avg_sentiment": 0.02
     },
     {
       "president": "Franklin Pierce",
       "total_orders": 2,
       "avg_word_count": 375.0,
-      "avg_sentiment": -0.395
+      "avg_sentiment": 0.02
     },
     {
       "president": "Zachary Taylor",
       "total_orders": 1,
       "avg_word_count": 453.0,
-      "avg_sentiment": -0.798
+      "avg_sentiment": 0.02
     },
     {
       "president": "James Buchanan",
       "total_orders": 1,
       "avg_word_count": 407.0,
-      "avg_sentiment": -0.974
+      "avg_sentiment": 0.02
     },
     {
       "president": "George Washington",
       "total_orders": 1,
       "avg_word_count": 249.0,
-      "avg_sentiment": 0.99
+      "avg_sentiment": 0.02
     }
   ],
   "recent_orders": [
@@ -95,8 +269,8 @@
       "signing_date": "2026-09-18",
       "word_count": 1148,
       "reading_time_minutes": 6,
-      "sentiment_valence": "Positive",
-      "sentiment_compound": 0.9743
+      "sentiment_valence": "Constitutional Fidelity",
+      "sentiment_compound": 0.52
     },
     {
       "id": "app-executive-order-restoring-american-saltwater-angling-and-recreation",
@@ -106,8 +280,8 @@
       "signing_date": "2026-09-17",
       "word_count": 2053,
       "reading_time_minutes": 10,
-      "sentiment_valence": "Positive",
-      "sentiment_compound": 0.9969
+      "sentiment_valence": "Constitutional Fidelity",
+      "sentiment_compound": 0.86
     },
     {
       "id": "app-executive-order-reinvigorating-americas-hunting-heritage",
@@ -117,8 +291,8 @@
       "signing_date": "2026-09-17",
       "word_count": 1174,
       "reading_time_minutes": 6,
-      "sentiment_valence": "Positive",
-      "sentiment_compound": 0.999
+      "sentiment_valence": "Constitutional Fidelity",
+      "sentiment_compound": 0.66
     },
     {
       "id": "fr-2026-19335",
@@ -128,8 +302,8 @@
       "signing_date": "2026-09-16",
       "word_count": 984,
       "reading_time_minutes": 5,
-      "sentiment_valence": "Positive",
-      "sentiment_compound": 0.9951
+      "sentiment_valence": "Constitutional Fidelity",
+      "sentiment_compound": 0.52
     },
     {
       "id": "app-executive-order-14428-providing-meaningful-water-quality-improvements-through",
@@ -139,8 +313,8 @@
       "signing_date": "2026-09-16",
       "word_count": 946,
       "reading_time_minutes": 5,
-      "sentiment_valence": "Positive",
-      "sentiment_compound": 0.9939
+      "sentiment_valence": "Constitutional Fidelity",
+      "sentiment_compound": 0.52
     },
     {
       "id": "fr-2026-18739",
@@ -150,8 +324,8 @@
       "signing_date": "2026-09-08",
       "word_count": 583,
       "reading_time_minutes": 3,
-      "sentiment_valence": "Positive",
-      "sentiment_compound": 0.9944
+      "sentiment_valence": "Constitutional Fidelity",
+      "sentiment_compound": 0.52
     },
     {
       "id": "fr-2026-18738",
@@ -161,8 +335,8 @@
       "signing_date": "2026-09-08",
       "word_count": 908,
       "reading_time_minutes": 5,
-      "sentiment_valence": "Positive",
-      "sentiment_compound": 0.9954
+      "sentiment_valence": "Constitutional Fidelity",
+      "sentiment_compound": 0.6
     },
     {
       "id": "app-executive-order-14427-adjusting-certain-delegations-under-the-defense-production-act",
@@ -172,8 +346,8 @@
       "signing_date": "2026-09-08",
       "word_count": 547,
       "reading_time_minutes": 3,
-      "sentiment_valence": "Positive",
-      "sentiment_compound": 0.9943
+      "sentiment_valence": "Constitutional Fidelity",
+      "sentiment_compound": 0.52
     },
     {
       "id": "app-executive-order-14426-accelerating-access-veterans-benefits-and-employment-opportunities",
@@ -183,8 +357,8 @@
       "signing_date": "2026-09-08",
       "word_count": 865,
       "reading_time_minutes": 4,
-      "sentiment_valence": "Positive",
-      "sentiment_compound": 0.9946
+      "sentiment_valence": "Constitutional Fidelity",
+      "sentiment_compound": 0.6
     },
     {
       "id": "fr-2026-18571",
@@ -194,8 +368,8 @@
       "signing_date": "2026-09-04",
       "word_count": 1032,
       "reading_time_minutes": 5,
-      "sentiment_valence": "Positive",
-      "sentiment_compound": 0.9985
+      "sentiment_valence": "Constitutional Fidelity",
+      "sentiment_compound": 0.7
     }
   ]
 }

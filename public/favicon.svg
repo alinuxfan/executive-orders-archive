@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none">
+  <rect width="64" height="64" rx="14" fill="#0f172a"/>
+  <!-- Laurel / Circular Accent -->
+  <circle cx="32" cy="32" r="26" stroke="#fbbf24" stroke-width="2" stroke-dasharray="3 3"/>
+  <circle cx="32" cy="32" r="22" stroke="#1e293b" stroke-width="2"/>
+  <!-- Central Eagle / Shield Icon -->
+  <path d="M32 18L36 26H28L32 18Z" fill="#fbbf24"/>
+  <path d="M22 28L32 23L42 28V36C42 43 32 48 32 48C32 48 22 43 22 36V28Z" fill="#1e3a8a" stroke="#fbbf24" stroke-width="2"/>
+  <path d="M26 31H38M26 36H38M28 41H36" stroke="#93c5fd" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

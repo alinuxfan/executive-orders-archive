@@ -12,30 +12,31 @@ interface Props {
     flesch_kincaid_grade: number;
     sentiment_compound: number;
     sentiment_valence: string;
+    tone_tag?: string;
     snippet?: string;
   };
 }
 
 const { order } = Astro.props;
 
-// Sentiment styling
+// Sentiment styling based on Early Statesman Constitutional Prism
 let sentimentBadge = {
-  label: "Neutral",
+  label: "Constitutional Neutral",
   bg: "bg-slate-100 dark:bg-slate-800",
   text: "text-slate-700 dark:text-slate-300",
   border: "border-slate-200 dark:border-slate-700"
 };
 
-if (order.sentiment_valence === "Positive") {
+if (order.sentiment_valence === "Constitutional Fidelity" || order.sentiment_valence === "Positive") {
   sentimentBadge = {
-    label: `Positive (${order.sentiment_compound >= 0 ? '+' : ''}${order.sentiment_compound.toFixed(2)})`,
+    label: `Fidelity (${order.sentiment_compound >= 0 ? '+' : ''}${order.sentiment_compound.toFixed(2)})`,
     bg: "bg-emerald-50 dark:bg-emerald-950/40",
     text: "text-emerald-700 dark:text-emerald-300",
     border: "border-emerald-200 dark:border-emerald-800"
   };
-} else if (order.sentiment_valence === "Urgent/Negative") {
+} else if (order.sentiment_valence === "Constitutional Friction / Overreach" || order.sentiment_valence === "Urgent/Negative") {
   sentimentBadge = {
-    label: `Urgent/Negative (${order.sentiment_compound.toFixed(2)})`,
+    label: `Friction (${order.sentiment_compound.toFixed(2)})`,
     bg: "bg-rose-50 dark:bg-rose-950/40",
     text: "text-rose-700 dark:text-rose-300",
     border: "border-rose-200 dark:border-rose-800"
@@ -87,6 +88,15 @@ const formattedDate = order.signing_date ? new Date(order.signing_date).toLocale
         {order.title}
       </a>
     </h3>
+
+    <!-- Constitutional Tone Badge if available -->
+    {order.tone_tag && (
+      <div class="mb-3">
+        <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-900/60 font-medium">
+          🏛️ {order.tone_tag}
+        </span>
+      </div>
+    )}
 
     <!-- Snippet / Overview -->
     {order.snippet ? (

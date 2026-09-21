@@ -12,8 +12,8 @@ export async function getStaticPaths() {
 
 const { order } = Astro.props;
 
-// Plain English summary and directives
-const summary = generateOrderSummary({
+// Plain English summary and directives fallback
+const fallbackSummary = generateOrderSummary({
   title: order.title,
   president_name: order.president_name,
   signing_date: order.signing_date,
@@ -21,6 +21,30 @@ const summary = generateOrderSummary({
   sentiment_valence: order.sentiment_valence,
   word_count: order.word_count
 });
+
+// Use database-backed constitutional evaluations when available
+let directives = fallbackSummary.keyDirectives;
+if (order.key_directives_json) {
+  try {
+    const parsed = JSON.parse(order.key_directives_json);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      directives = parsed;
+    }
+  } catch (e) {}
+}
+
+let affectedEntities = fallbackSummary.whoItAffects;
+if (order.who_it_affects_json) {
+  try {
+    const parsed = JSON.parse(order.who_it_affects_json);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      affectedEntities = parsed;
+    }
+  } catch (e) {}
+}
+
+const rawSummaryText = order.summary_plain_english || fallbackSummary.plainEnglish;
+const summaryParagraphs = rawSummaryText.split("\n\n").filter(p => p.trim().length > 0);
 
 // Format date
 const formattedDate = order.signing_date ? new Date(order.signing_date).toLocaleDateString("en-US", {
@@ -37,13 +61,13 @@ let sentimentColor = {
   border: "border-slate-300 dark:border-slate-700"
 };
 
-if (order.sentiment_valence === "Positive") {
+if (order.sentiment_valence === "Constitutional Fidelity" || order.sentiment_valence === "Positive") {
   sentimentColor = {
     bg: "bg-emerald-50 dark:bg-emerald-950/40",
     text: "text-emerald-700 dark:text-emerald-300",
     border: "border-emerald-300 dark:border-emerald-800"
   };
-} else if (order.sentiment_valence === "Urgent/Negative") {
+} else if (order.sentiment_valence === "Constitutional Friction / Overreach" || order.sentiment_valence === "Urgent/Negative") {
   sentimentColor = {
     bg: "bg-rose-50 dark:bg-rose-950/40",
     text: "text-rose-700 dark:text-rose-300",
@@ -54,7 +78,7 @@ if (order.sentiment_valence === "Positive") {
 
 <Layout 
   title={`${order.title} | Executive Order`}
-  description={summary.plainEnglish}
+  description={summaryParagraphs[0] || order.title}
 >
   <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
     
@@ -84,7 +108,13 @@ if (order.sentiment_valence === "Positive") {
           {order.sentiment_valence} ({order.sentiment_compound >= 0 ? '+' : ''}{order.sentiment_compound.toFixed(2)})
         </span>
 
-        <span class="text-xs font-mono px-2.5 py-1 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900/60 font-medium">
+        {order.tone_tag && (
+          <span class="text-xs font-mono px-2.5 py-1 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-900/60 font-semibold">
+            🏛️ {order.tone_tag}
+          </span>
+        )}
+
+        <span class="text-xs font-mono px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-medium">
           Grade {order.flesch_kincaid_grade} (Post-Grad)
         </span>
       </div>
@@ -122,20 +152,38 @@ if (order.sentiment_valence === "Positive") {
       </div>
     </header>
 
-    <!-- "What It Actually Does" - Plain-English Intelligence Breakdown -->
+    <!-- "What It Actually Does" & Early Statesman's Constitutional Verdict -->
     <section class="bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border-2 border-amber-400/40 dark:border-amber-500/30 rounded-2xl p-6 sm:p-8 mb-8 shadow-sm">
-      <div class="flex items-center gap-2 mb-3">
-        <span class="w-6 h-6 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-bold text-xs">
-          💡
-        </span>
-        <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white">
-          What It Actually Does (Plain-English Summary)
-        </h2>
+      <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
+        <div class="flex items-center gap-2.5">
+          <span class="w-7 h-7 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-bold text-sm shadow-xs">
+            💡
+          </span>
+          <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white">
+            What It Actually Does (Plain-English Intelligence)
+          </h2>
+        </div>
       </div>
 
-      <p class="text-slate-800 dark:text-slate-200 text-base leading-relaxed mb-6 font-normal">
-        {summary.plainEnglish}
-      </p>
+      <div class="space-y-4 mb-6">
+        {summaryParagraphs.map(p => {
+          const isVerdict = p.startsWith("Constitutional Assessment:");
+          return isVerdict ? (
+            <div class="p-4 sm:p-5 rounded-xl bg-amber-100/60 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/80 text-amber-950 dark:text-amber-100 text-sm sm:text-base leading-relaxed font-serif shadow-2xs">
+              <div class="text-xs font-mono font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 mb-1.5 flex items-center gap-1.5">
+                <span>📜</span> Early Statesman's Constitutional Verdict
+              </div>
+              <p class="italic">
+                {p.replace(/^Constitutional Assessment:\s*/, "")}
+              </p>
+            </div>
+          ) : (
+            <p class="text-slate-800 dark:text-slate-200 text-base leading-relaxed font-normal">
+              {p}
+            </p>
+          );
+        })}
+      </div>
 
       <!-- Key Directives -->
       <div class="space-y-3 mb-6">
@@ -143,7 +191,7 @@ if (order.sentiment_valence === "Positive") {
           Key Directives & Operative Actions
         </h3>
         <div class="grid grid-cols-1 gap-2.5">
-          {summary.keyDirectives.map(d => (
+          {directives.map(d => (
             <div class="p-3.5 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-sm text-slate-700 dark:text-slate-300 flex items-start gap-3">
               <span class="text-amber-500 font-bold mt-0.5">▪</span>
               <span>{d.description}</span>
@@ -155,12 +203,12 @@ if (order.sentiment_valence === "Positive") {
       <!-- Who It Affects -->
       <div>
         <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
-          Who & What It Affects
+          Constitutional & Societal Entities Impacted
         </h3>
         <div class="flex flex-wrap gap-2">
-          {summary.whoItAffects.map(entity => (
+          {affectedEntities.map(entity => (
             <span class="px-3 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 shadow-2xs">
-              🏛 {entity}
+              🏛️ {entity}
             </span>
           ))}
         </div>
@@ -195,11 +243,11 @@ if (order.sentiment_valence === "Positive") {
       </div>
 
       <div class="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 text-center">
-        <div class="text-[11px] text-slate-400 uppercase tracking-wider font-semibold mb-1">Sentiment Score</div>
+        <div class="text-[11px] text-slate-400 uppercase tracking-wider font-semibold mb-1">Constitutional Polarity</div>
         <div class="text-2xl font-bold font-mono text-slate-900 dark:text-white">
           {order.sentiment_compound >= 0 ? '+' : ''}{order.sentiment_compound.toFixed(2)}
         </div>
-        <div class="text-[10px] text-slate-500 mt-1">VADER Polarity index</div>
+        <div class="text-[10px] text-slate-500 mt-1">Framers' Alignment index</div>
       </div>
 
     </section>

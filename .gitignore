@@ -1,12 +1,28 @@
-.venv/
-__pycache__/
-*.pyc
-data/raw/historical/*.html
-data/raw/federal_register/
+# Environment & secrets
+.env*
+!.env.example
+.dev.vars
+
+# Dependencies
 node_modules/
+.venv/
+
+# Astro & build output
 .astro/
 dist/
+.wrangler/
+
+# Logs & temp files
+*.log
+data/*.log
 .DS_Store
+
+# Scraper raw cache and logs
+data/raw/
 data/backfill.log
 data/backfill_console.log
 data/backfill_progress.json
+
+# Python
+__pycache__/
+*.pyc

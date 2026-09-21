@@ -15,9 +15,9 @@ const totalWords = rawOrders.reduce((sum, o) => sum + (o.word_count || 0), 0);
 const avgReadingTime = totalOrders > 0 ? Math.round(rawOrders.reduce((sum, o) => sum + (o.reading_time_minutes || 0), 0) / totalOrders) : 0;
 const avgGrade = totalOrders > 0 ? (rawOrders.reduce((sum, o) => sum + (o.flesch_kincaid_grade || 0), 0) / totalOrders).toFixed(1) : "18.0";
 
-const positiveCount = rawOrders.filter(o => o.sentiment_valence === "Positive").length;
-const neutralCount = rawOrders.filter(o => o.sentiment_valence === "Neutral").length;
-const urgentCount = rawOrders.filter(o => o.sentiment_valence === "Urgent/Negative").length;
+const positiveCount = rawOrders.filter(o => o.sentiment_valence === "Constitutional Fidelity" || o.sentiment_valence === "Positive").length;
+const neutralCount = rawOrders.filter(o => o.sentiment_valence === "Constitutional Neutral" || o.sentiment_valence === "Neutral").length;
+const urgentCount = rawOrders.filter(o => o.sentiment_valence === "Constitutional Friction / Overreach" || o.sentiment_valence === "Urgent/Negative").length;
 
 // Map presidents with counts
 const presidentMap = new Map<string, { count: number; totalWords: number; totalSentiment: number }>();
@@ -32,10 +32,8 @@ for (const o of rawOrders) {
 
 // Enhance presidents list with order statistics
 const enrichedPresidents = presidentsData.map(p => {
-  // Check exact slug or variations (e.g. donald-trump vs donald-j-trump-2nd-term)
   let stats = presidentMap.get(p.slug);
   if (!stats && p.slug === "donald-trump") {
-    // Combine 1st and 2nd term stats if needed
     const term2 = presidentMap.get("donald-j-trump-2nd-term");
     if (term2) {
       stats = term2;
@@ -87,7 +85,7 @@ const recentOrders = rawOrders.slice(0, 8);
       
       <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-blue-950/80 border border-blue-800/60 text-blue-300 text-xs font-medium mb-6">
         <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span>Every US President • 1789 to Today • Open Access Archive</span>
+        <span>Every US President • 1789 to Today • Scored Through the Constitution</span>
       </div>
 
       <h1 class="text-4xl sm:text-6xl font-extrabold font-serif tracking-tight text-white mb-6 max-w-4xl mx-auto leading-tight">
@@ -98,7 +96,7 @@ const recentOrders = rawOrders.slice(0, 8);
       </h1>
 
       <p class="text-base sm:text-xl text-slate-300 max-w-2xl mx-auto mb-10 leading-relaxed font-light">
-        Computational linguistics meets presidential history: sentiment intensity, reading times, legal complexity metrics, and plain-English distillations.
+        Constitutional sentiment scoring from the prism of an early American statesman, operative directive extraction, reading times, and plain-English distillations.
       </p>
 
       <!-- Instant Search Jump Bar -->
@@ -150,12 +148,12 @@ const recentOrders = rawOrders.slice(0, 8);
       </div>
 
       <div class="bg-white dark:bg-slate-900 rounded-xl p-5 border border-slate-200 dark:border-slate-800 shadow-sm">
-        <div class="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Sentiment Balance</div>
+        <div class="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">Constitutional Alignment</div>
         <div class="text-2xl sm:text-3xl font-extrabold font-serif text-emerald-600 dark:text-emerald-400">
-          {Math.round((positiveCount / totalOrders) * 100)}% <span class="text-xs font-sans font-normal text-slate-500">Constructive</span>
+          {Math.round((positiveCount / totalOrders) * 100)}% <span class="text-xs font-sans font-normal text-slate-500">Fidelity</span>
         </div>
         <div class="text-[11px] text-rose-600 dark:text-rose-400 mt-1">
-          {Math.round((urgentCount / totalOrders) * 100)}% crisis & emergency
+          {Math.round((urgentCount / totalOrders) * 100)}% overreach / friction
         </div>
       </div>
 
@@ -198,7 +196,7 @@ const recentOrders = rawOrders.slice(0, 8);
           Presidents & Administrations
         </h2>
         <p class="text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Click any president to inspect their full executive decree history and sentiment fingerprint.
+          Click any president to inspect their full executive decree history and constitutional posture.
         </p>
       </div>
 

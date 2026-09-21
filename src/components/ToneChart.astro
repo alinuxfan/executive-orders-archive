@@ -16,15 +16,16 @@ const urgPct = totalOrders > 0 ? Math.round((urgentCount / totalOrders) * 100) :
 <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
   <div class="flex items-center justify-between mb-4">
     <div>
-      <h3 class="font-serif font-bold text-slate-900 dark:text-white text-lg">
-        Presidential Sentiment & Tone
+      <h3 class="font-serif font-bold text-slate-900 dark:text-white text-lg flex items-center gap-2">
+        <span>⚖️</span>
+        Constitutional Alignment & Sentiment
       </h3>
       <p class="text-xs text-slate-500 dark:text-slate-400">
-        VADER sentiment analysis scoring across all operative mandates
+        Evaluated strictly through the U.S. Constitution (Articles I–VII) & Amendments from an Early Statesman's prism
       </p>
     </div>
     <span class="text-xs font-mono px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold">
-      {totalOrders} Analyzed
+      {totalOrders} Scored
     </span>
   </div>
 
@@ -33,17 +34,17 @@ const urgPct = totalOrders > 0 ? Math.round((urgentCount / totalOrders) * 100) :
     <div 
       style={`width: ${posPct}%`} 
       class="bg-emerald-500 hover:bg-emerald-600 transition-all cursor-pointer relative group" 
-      title={`Positive/Constructive: ${positiveCount} (${posPct}%)`}
+      title={`Constitutional Fidelity: ${positiveCount} (${posPct}%)`}
     ></div>
     <div 
       style={`width: ${neuPct}%`} 
       class="bg-amber-400 hover:bg-amber-500 transition-all cursor-pointer relative group" 
-      title={`Neutral/Routine: ${neutralCount} (${neuPct}%)`}
+      title={`Constitutional Neutral: ${neutralCount} (${neuPct}%)`}
     ></div>
     <div 
       style={`width: ${urgPct}%`} 
       class="bg-rose-500 hover:bg-rose-600 transition-all cursor-pointer relative group" 
-      title={`Urgent/Negative: ${urgentCount} (${urgPct}%)`}
+      title={`Constitutional Friction / Overreach: ${urgentCount} (${urgPct}%)`}
     ></div>
   </div>
 
@@ -56,8 +57,8 @@ const urgPct = totalOrders > 0 ? Math.round((urgentCount / totalOrders) * 100) :
         <div class="font-bold text-slate-900 dark:text-slate-100 text-sm">
           {positiveCount} <span class="text-xs font-normal text-slate-500">({posPct}%)</span>
         </div>
-        <div class="font-semibold text-emerald-700 dark:text-emerald-400">Positive & Constructive</div>
-        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Public works, program establishment, economic growth</div>
+        <div class="font-semibold text-emerald-700 dark:text-emerald-400">Constitutional Fidelity</div>
+        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Art. II §3 faithful statutory execution & civil liberty protection</div>
       </div>
     </div>
 
@@ -67,8 +68,8 @@ const urgPct = totalOrders > 0 ? Math.round((urgentCount / totalOrders) * 100) :
         <div class="font-bold text-slate-900 dark:text-slate-100 text-sm">
           {neutralCount} <span class="text-xs font-normal text-slate-500">({neuPct}%)</span>
         </div>
-        <div class="font-semibold text-amber-700 dark:text-amber-400">Neutral & Procedural</div>
-        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Routine delegations, holidays, committee extensions</div>
+        <div class="font-semibold text-amber-700 dark:text-amber-400">Constitutional Neutral</div>
+        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Routine departmental administration, civil service, executive seals</div>
       </div>
     </div>
 
@@ -78,8 +79,8 @@ const urgPct = totalOrders > 0 ? Math.round((urgentCount / totalOrders) * 100) :
         <div class="font-bold text-slate-900 dark:text-slate-100 text-sm">
           {urgentCount} <span class="text-xs font-normal text-slate-500">({urgPct}%)</span>
         </div>
-        <div class="font-semibold text-rose-700 dark:text-rose-400">Urgent & Crisis</div>
-        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">National emergencies, sanctions, wartime seizures</div>
+        <div class="font-semibold text-rose-700 dark:text-rose-400">Friction & Overreach</div>
+        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Art. I purse/commerce tension, 10th Amend federalism, property takings</div>
       </div>
     </div>
 

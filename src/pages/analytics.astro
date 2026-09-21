@@ -6,9 +6,9 @@ import orders from '../../data/site_orders_summary.json';
 import presidents from '../../data/presidents.json';
 
 const totalOrders = orders.length;
-const positiveOrders = orders.filter(o => o.sentiment_valence === "Positive").length;
-const neutralOrders = orders.filter(o => o.sentiment_valence === "Neutral").length;
-const urgentOrders = orders.filter(o => o.sentiment_valence === "Urgent/Negative").length;
+const positiveOrders = orders.filter(o => o.sentiment_valence === "Constitutional Fidelity" || o.sentiment_valence === "Positive").length;
+const neutralOrders = orders.filter(o => o.sentiment_valence === "Constitutional Neutral" || o.sentiment_valence === "Neutral").length;
+const urgentOrders = orders.filter(o => o.sentiment_valence === "Constitutional Friction / Overreach" || o.sentiment_valence === "Urgent/Negative").length;
 
 // Map presidents
 const presStats = new Map<string, { count: number; totalWords: number; totalSentiment: number; totalGrade: number }>();
@@ -47,14 +47,14 @@ const shortestOrder = [...orders].filter(o => o.word_count > 30).sort((a, b) => 
 
 <Layout 
   title="Analytics, Trends & Graphs | Executive Orders Archive"
-  description="Linguistic trends, length inflation across centuries, sentiment distribution, and legal complexity across US presidencies."
+  description="Linguistic trends, length inflation across centuries, constitutional sentiment distribution, and legal complexity across US presidencies."
 >
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
     
     <!-- Header -->
     <div class="mb-10 text-center max-w-3xl mx-auto">
       <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-900 dark:bg-blue-950/60 dark:text-blue-300 text-xs font-semibold uppercase tracking-wider mb-4 border border-blue-200 dark:border-blue-900">
-        📊 Computational Linguistics & Historical Trends
+        📊 Computational Linguistics & Constitutional Trends
       </div>
       <h1 class="font-serif font-extrabold text-3xl sm:text-5xl text-slate-900 dark:text-white leading-tight">
         Presidential Analytics & Graphs
@@ -116,63 +116,6 @@ const shortestOrder = [...orders].filter(o => o.word_count > 30).sort((a, b) => 
       <LengthChart 
         presidents={enriched}
       />
-    </div>
-
-    <!-- Comparative Table by Administration -->
-    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
-      <div class="p-6 border-b border-slate-200 dark:border-slate-800">
-        <h3 class="font-serif font-bold text-xl text-slate-900 dark:text-white">
-          Administration Metric Matrix
-        </h3>
-        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
-          Comparing volume, verbosity, readability grades, and sentiment scores across presidencies
-        </p>
-      </div>
-
-      <div class="overflow-x-auto">
-        <table class="w-full text-left text-sm">
-          <thead class="bg-slate-50 dark:bg-slate-800/60 text-xs font-bold uppercase text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
-            <tr>
-              <th class="py-3 px-6">President</th>
-              <th class="py-3 px-6">Party</th>
-              <th class="py-3 px-6 text-right">Orders</th>
-              <th class="py-3 px-6 text-right">Avg Words</th>
-              <th class="py-3 px-6 text-right">Avg Reading Time</th>
-              <th class="py-3 px-6 text-right">Flesch-Kincaid</th>
-              <th class="py-3 px-6 text-right">Avg Sentiment</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-100 dark:divide-slate-800 font-mono text-xs">
-            {enriched.map(p => (
-              <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
-                <td class="py-3 px-6 font-serif font-medium text-slate-900 dark:text-white text-sm">
-                  {p.name}
-                </td>
-                <td class="py-3 px-6 font-sans">
-                  <span class="px-2 py-0.5 rounded text-[11px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                    {p.party}
-                  </span>
-                </td>
-                <td class="py-3 px-6 text-right font-bold text-slate-900 dark:text-white">
-                  {p.orderCount}
-                </td>
-                <td class="py-3 px-6 text-right">
-                  {p.avgWordCount.toLocaleString()}
-                </td>
-                <td class="py-3 px-6 text-right">
-                  ~{Math.max(1, Math.round(p.avgWordCount / 200))} min
-                </td>
-                <td class="py-3 px-6 text-right font-medium text-amber-600 dark:text-amber-400">
-                  Grade {p.avgGrade}
-                </td>
-                <td class={`py-3 px-6 text-right font-bold ${p.avgSentiment >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
-                  {p.avgSentiment >= 0 ? '+' : ''}{p.avgSentiment}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
     </div>
 
   </div>

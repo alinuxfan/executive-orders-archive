@@ -1,0 +1,179 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ToneChart from '../components/ToneChart.astro';
+import LengthChart from '../components/LengthChart.astro';
+import orders from '../../data/site_orders_summary.json';
+import presidents from '../../data/presidents.json';
+
+const totalOrders = orders.length;
+const positiveOrders = orders.filter(o => o.sentiment_valence === "Positive").length;
+const neutralOrders = orders.filter(o => o.sentiment_valence === "Neutral").length;
+const urgentOrders = orders.filter(o => o.sentiment_valence === "Urgent/Negative").length;
+
+// Map presidents
+const presStats = new Map<string, { count: number; totalWords: number; totalSentiment: number; totalGrade: number }>();
+for (const o of orders) {
+  const slug = o.president_slug || "";
+  const cur = presStats.get(slug) || { count: 0, totalWords: 0, totalSentiment: 0, totalGrade: 0 };
+  cur.count += 1;
+  cur.totalWords += o.word_count || 0;
+  cur.totalSentiment += o.sentiment_compound || 0;
+  cur.totalGrade += o.flesch_kincaid_grade || 0;
+  presStats.set(slug, cur);
+}
+
+const enriched = presidents.map(p => {
+  let s = presStats.get(p.slug);
+  if (!s && p.slug === "donald-trump") {
+    const term2 = presStats.get("donald-j-trump-2nd-term");
+    if (term2) s = term2;
+  }
+  const count = s?.count || 0;
+  return {
+    name: p.name,
+    party: p.party,
+    orderCount: count,
+    avgWordCount: count > 0 ? Math.round(s!.totalWords / count) : 0,
+    avgSentiment: count > 0 ? Number((s!.totalSentiment / count).toFixed(2)) : 0,
+    avgGrade: count > 0 ? Number((s!.totalGrade / count).toFixed(1)) : 0
+  };
+}).filter(p => p.orderCount > 0);
+
+// Longest order
+const longestOrder = [...orders].sort((a, b) => (b.word_count || 0) - (a.word_count || 0))[0];
+// Shortest order
+const shortestOrder = [...orders].filter(o => o.word_count > 30).sort((a, b) => (a.word_count || 0) - (b.word_count || 0))[0];
+---
+
+<Layout 
+  title="Analytics, Trends & Graphs | Executive Orders Archive"
+  description="Linguistic trends, length inflation across centuries, sentiment distribution, and legal complexity across US presidencies."
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    
+    <!-- Header -->
+    <div class="mb-10 text-center max-w-3xl mx-auto">
+      <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-900 dark:bg-blue-950/60 dark:text-blue-300 text-xs font-semibold uppercase tracking-wider mb-4 border border-blue-200 dark:border-blue-900">
+        📊 Computational Linguistics & Historical Trends
+      </div>
+      <h1 class="font-serif font-extrabold text-3xl sm:text-5xl text-slate-900 dark:text-white leading-tight">
+        Presidential Analytics & Graphs
+      </h1>
+      <p class="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-3">
+        Quantifying presidential power: how executive orders evolved from brief 100-word wartime decrees into massive regulatory frameworks.
+      </p>
+    </div>
+
+    <!-- Comparative High-Level Insights -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+      
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Longest Executive Order</div>
+        <div class="font-serif font-bold text-xl text-slate-900 dark:text-white mb-2 line-clamp-2">
+          {longestOrder ? longestOrder.title : "N/A"}
+        </div>
+        <div class="flex items-center justify-between text-xs text-slate-500 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <span class="font-bold text-slate-800 dark:text-slate-200">{longestOrder?.president_name}</span>
+          <span class="font-mono bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 px-2 py-0.5 rounded font-bold">
+            {longestOrder?.word_count.toLocaleString()} words (~{longestOrder?.reading_time_minutes}m)
+          </span>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Most Concise Executive Order</div>
+        <div class="font-serif font-bold text-xl text-slate-900 dark:text-white mb-2 line-clamp-2">
+          {shortestOrder ? shortestOrder.title : "N/A"}
+        </div>
+        <div class="flex items-center justify-between text-xs text-slate-500 mt-4 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <span class="font-bold text-slate-800 dark:text-slate-200">{shortestOrder?.president_name}</span>
+          <span class="font-mono bg-blue-50 dark:bg-blue-950/40 text-blue-800 dark:text-blue-300 px-2 py-0.5 rounded font-bold">
+            {shortestOrder?.word_count} words (~1m)
+          </span>
+        </div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 rounded-2xl p-6 border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Readability & Legal Density</div>
+        <div class="font-serif font-bold text-xl text-slate-900 dark:text-white mb-2">
+          Post-Graduate Level (Grade 18+)
+        </div>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+          Modern executive orders require an average of 18-22 years of formal education (equivalent to a Master's or J.D. degree) to parse effectively.
+        </p>
+      </div>
+
+    </div>
+
+    <!-- Charts Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
+      <ToneChart 
+        positiveCount={positiveOrders}
+        neutralCount={neutralOrders}
+        urgentCount={urgentOrders}
+        totalOrders={totalOrders}
+      />
+      <LengthChart 
+        presidents={enriched}
+      />
+    </div>
+
+    <!-- Comparative Table by Administration -->
+    <div class="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+      <div class="p-6 border-b border-slate-200 dark:border-slate-800">
+        <h3 class="font-serif font-bold text-xl text-slate-900 dark:text-white">
+          Administration Metric Matrix
+        </h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-1">
+          Comparing volume, verbosity, readability grades, and sentiment scores across presidencies
+        </p>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="bg-slate-50 dark:bg-slate-800/60 text-xs font-bold uppercase text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800">
+            <tr>
+              <th class="py-3 px-6">President</th>
+              <th class="py-3 px-6">Party</th>
+              <th class="py-3 px-6 text-right">Orders</th>
+              <th class="py-3 px-6 text-right">Avg Words</th>
+              <th class="py-3 px-6 text-right">Avg Reading Time</th>
+              <th class="py-3 px-6 text-right">Flesch-Kincaid</th>
+              <th class="py-3 px-6 text-right">Avg Sentiment</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-100 dark:divide-slate-800 font-mono text-xs">
+            {enriched.map(p => (
+              <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                <td class="py-3 px-6 font-serif font-medium text-slate-900 dark:text-white text-sm">
+                  {p.name}
+                </td>
+                <td class="py-3 px-6 font-sans">
+                  <span class="px-2 py-0.5 rounded text-[11px] bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                    {p.party}
+                  </span>
+                </td>
+                <td class="py-3 px-6 text-right font-bold text-slate-900 dark:text-white">
+                  {p.orderCount}
+                </td>
+                <td class="py-3 px-6 text-right">
+                  {p.avgWordCount.toLocaleString()}
+                </td>
+                <td class="py-3 px-6 text-right">
+                  ~{Math.max(1, Math.round(p.avgWordCount / 200))} min
+                </td>
+                <td class="py-3 px-6 text-right font-medium text-amber-600 dark:text-amber-400">
+                  Grade {p.avgGrade}
+                </td>
+                <td class={`py-3 px-6 text-right font-bold ${p.avgSentiment >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
+                  {p.avgSentiment >= 0 ? '+' : ''}{p.avgSentiment}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</Layout>

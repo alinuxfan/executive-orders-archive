@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-09-21T21:23:47.833895+00:00",
-  "total_orders": 141,
+  "generated_at": "2026-09-21T21:24:15.559416+00:00",
+  "total_orders": 181,
   "sentiment_breakdown": {
     "Neutral": 2,
-    "Positive": 118,
-    "Urgent/Negative": 21
+    "Positive": 144,
+    "Urgent/Negative": 35
   },
   "presidents": [
     {
@@ -15,15 +15,75 @@
     },
     {
       "president": "Abraham Lincoln",
-      "total_orders": 33,
-      "avg_word_count": 292.0,
-      "avg_sentiment": 0.277
+      "total_orders": 44,
+      "avg_word_count": 250.0,
+      "avg_sentiment": 0.332
     },
     {
       "president": "Donald Trump",
       "total_orders": 8,
       "avg_word_count": 1072.0,
       "avg_sentiment": 0.997
+    },
+    {
+      "president": "Millard Fillmore",
+      "total_orders": 7,
+      "avg_word_count": 159.0,
+      "avg_sentiment": 0.326
+    },
+    {
+      "president": "Andrew Jackson",
+      "total_orders": 7,
+      "avg_word_count": 535.0,
+      "avg_sentiment": -0.107
+    },
+    {
+      "president": "James K. Polk",
+      "total_orders": 4,
+      "avg_word_count": 1525.0,
+      "avg_sentiment": 0.232
+    },
+    {
+      "president": "Martin van Buren",
+      "total_orders": 2,
+      "avg_word_count": 211.0,
+      "avg_sentiment": 0.693
+    },
+    {
+      "president": "John Tyler",
+      "total_orders": 2,
+      "avg_word_count": 369.0,
+      "avg_sentiment": -0.367
+    },
+    {
+      "president": "John Quincy Adams",
+      "total_orders": 2,
+      "avg_word_count": 744.0,
+      "avg_sentiment": 0.974
+    },
+    {
+      "president": "Franklin Pierce",
+      "total_orders": 2,
+      "avg_word_count": 375.0,
+      "avg_sentiment": -0.395
+    },
+    {
+      "president": "Zachary Taylor",
+      "total_orders": 1,
+      "avg_word_count": 453.0,
+      "avg_sentiment": -0.798
+    },
+    {
+      "president": "James Buchanan",
+      "total_orders": 1,
+      "avg_word_count": 407.0,
+      "avg_sentiment": -0.974
+    },
+    {
+      "president": "George Washington",
+      "total_orders": 1,
+      "avg_word_count": 249.0,
+      "avg_sentiment": 0.99
     }
   ],
   "recent_orders": [

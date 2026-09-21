@@ -1,0 +1,119 @@
+---
+interface Props {
+  order: {
+    id: string;
+    eo_number?: number | null;
+    title: string;
+    president_name: string;
+    president_slug?: string;
+    signing_date: string;
+    word_count: number;
+    reading_time_minutes: number;
+    flesch_kincaid_grade: number;
+    sentiment_compound: number;
+    sentiment_valence: string;
+    snippet?: string;
+  };
+}
+
+const { order } = Astro.props;
+
+// Sentiment styling
+let sentimentBadge = {
+  label: "Neutral",
+  bg: "bg-slate-100 dark:bg-slate-800",
+  text: "text-slate-700 dark:text-slate-300",
+  border: "border-slate-200 dark:border-slate-700"
+};
+
+if (order.sentiment_valence === "Positive") {
+  sentimentBadge = {
+    label: `Positive (${order.sentiment_compound >= 0 ? '+' : ''}${order.sentiment_compound.toFixed(2)})`,
+    bg: "bg-emerald-50 dark:bg-emerald-950/40",
+    text: "text-emerald-700 dark:text-emerald-300",
+    border: "border-emerald-200 dark:border-emerald-800"
+  };
+} else if (order.sentiment_valence === "Urgent/Negative") {
+  sentimentBadge = {
+    label: `Urgent/Negative (${order.sentiment_compound.toFixed(2)})`,
+    bg: "bg-rose-50 dark:bg-rose-950/40",
+    text: "text-rose-700 dark:text-rose-300",
+    border: "border-rose-200 dark:border-rose-800"
+  };
+}
+
+// Readability label
+let gradeLabel = "Grade " + order.flesch_kincaid_grade;
+if (order.flesch_kincaid_grade >= 16) gradeLabel = "Post-Graduate Legal";
+else if (order.flesch_kincaid_grade >= 13) gradeLabel = "College Level";
+else if (order.flesch_kincaid_grade >= 9) gradeLabel = "High School";
+
+// Date formatting
+const formattedDate = order.signing_date ? new Date(order.signing_date).toLocaleDateString("en-US", {
+  month: "short",
+  day: "numeric",
+  year: "numeric"
+}) : "Undated";
+---
+
+<article class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-200 flex flex-col justify-between">
+  <div>
+    <!-- Top Metadata Badges -->
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+      <div class="flex items-center gap-2">
+        {order.eo_number ? (
+          <span class="font-mono text-xs font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-900">
+            EO {order.eo_number}
+          </span>
+        ) : (
+          <span class="font-mono text-[11px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+            Order
+          </span>
+        )}
+        <span class="text-xs font-mono text-slate-500 dark:text-slate-400">
+          {formattedDate}
+        </span>
+      </div>
+
+      <!-- Sentiment Pill -->
+      <span class={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${sentimentBadge.bg} ${sentimentBadge.text} ${sentimentBadge.border}`}>
+        {sentimentBadge.label}
+      </span>
+    </div>
+
+    <!-- Title -->
+    <h3 class="font-serif font-bold text-slate-900 dark:text-white text-base sm:text-lg mb-2 line-clamp-2 hover:text-blue-600 dark:hover:text-blue-400">
+      <a href={`/orders/${order.id}`}>
+        {order.title}
+      </a>
+    </h3>
+
+    <!-- Snippet / Overview -->
+    {order.snippet ? (
+      <p class="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed mb-4">
+        {order.snippet}
+      </p>
+    ) : null}
+  </div>
+
+  <!-- Bottom Details Bar -->
+  <div class="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+    <div class="flex items-center gap-1.5 font-medium">
+      <img 
+        src={`/portraits/${order.president_slug || 'default'}.jpg`} 
+        alt=""
+        class="w-5 h-5 rounded-full object-cover border border-slate-300 dark:border-slate-600"
+        onerror="this.style.display='none'"
+      />
+      <span class="text-slate-700 dark:text-slate-300 truncate max-w-[140px] sm:max-w-none">
+        {order.president_name}
+      </span>
+    </div>
+
+    <div class="flex items-center gap-2 font-mono text-[11px]">
+      <span title="Estimated Reading Time">⏱ {order.reading_time_minutes}m</span>
+      <span class="opacity-40">•</span>
+      <span title="Word Count">{order.word_count.toLocaleString()} words</span>
+    </div>
+  </div>
+</article>

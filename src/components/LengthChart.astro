@@ -1,0 +1,65 @@
+---
+interface Props {
+  presidents: Array<{
+    name: string;
+    avgWordCount: number;
+    orderCount: number;
+    party: string;
+  }>;
+}
+
+const { presidents } = Astro.props;
+
+// Filter to presidents with orders and sort chronologically or by word count
+const validPresidents = presidents.filter(p => p.orderCount > 0);
+const maxWords = Math.max(...validPresidents.map(p => p.avgWordCount), 1500);
+---
+
+<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="font-serif font-bold text-slate-900 dark:text-white text-lg">
+        The Word Count Explosion
+      </h3>
+      <p class="text-xs text-slate-500 dark:text-slate-400">
+        Average words per Executive Order: concise historical decrees vs modern multi-thousand word regulatory directives
+      </p>
+    </div>
+    <span class="text-xs text-slate-400 font-mono">
+      200 wpm standard
+    </span>
+  </div>
+
+  <div class="space-y-3.5 mt-6">
+    {validPresidents.map(p => {
+      const pct = Math.min(100, Math.round((p.avgWordCount / maxWords) * 100));
+      const readingMinutes = Math.max(1, Math.round(p.avgWordCount / 200));
+
+      return (
+        <div>
+          <div class="flex justify-between text-xs mb-1.5">
+            <span class="font-medium text-slate-800 dark:text-slate-200">
+              {p.name}
+            </span>
+            <div class="font-mono text-slate-500 dark:text-slate-400 text-[11px] flex items-center gap-2">
+              <span class="font-bold text-slate-900 dark:text-slate-100">{p.avgWordCount.toLocaleString()} words</span>
+              <span class="opacity-40">•</span>
+              <span>~{readingMinutes} min</span>
+            </div>
+          </div>
+          <div class="w-full h-3.5 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+            <div 
+              style={`width: ${pct}%`}
+              class="h-full rounded-full bg-gradient-to-r from-blue-600 to-indigo-500 hover:from-blue-500 hover:to-indigo-400 transition-all"
+            ></div>
+          </div>
+        </div>
+      );
+    })}
+  </div>
+
+  <div class="mt-6 pt-4 border-t border-slate-100 dark:border-slate-800/80 text-[11px] text-slate-500 flex items-center justify-between">
+    <span>Shortest Era: Lincoln & 19th Century (~200 words)</span>
+    <span>Longest Era: 21st Century (~1,200 - 2,500+ words)</span>
+  </div>
+</div>

@@ -1,0 +1,104 @@
+---
+interface Props {
+  president: {
+    number: number;
+    name: string;
+    slug: string;
+    party: string;
+    terms: string[];
+    orderCount?: number;
+    avgWordCount?: number;
+    avgSentiment?: number;
+  };
+}
+
+const { president } = Astro.props;
+
+// Party styling
+const partyColors: Record<string, { bg: string; text: string; border: string }> = {
+  "Republican": { bg: "bg-red-50 dark:bg-red-950/40", text: "text-red-700 dark:text-red-400", border: "border-red-200 dark:border-red-900" },
+  "Democrat": { bg: "bg-blue-50 dark:bg-blue-950/40", text: "text-blue-700 dark:text-blue-400", border: "border-blue-200 dark:border-blue-900" },
+  "Democratic-Republican": { bg: "bg-emerald-50 dark:bg-emerald-950/40", text: "text-emerald-700 dark:text-emerald-400", border: "border-emerald-200 dark:border-emerald-900" },
+  "Federalist": { bg: "bg-amber-50 dark:bg-amber-950/40", text: "text-amber-700 dark:text-amber-400", border: "border-amber-200 dark:border-amber-900" },
+  "Whig": { bg: "bg-purple-50 dark:bg-purple-950/40", text: "text-purple-700 dark:text-purple-400", border: "border-purple-200 dark:border-purple-900" },
+  "Unaffiliated": { bg: "bg-slate-50 dark:bg-slate-900", text: "text-slate-700 dark:text-slate-400", border: "border-slate-200 dark:border-slate-800" },
+};
+
+const partyStyle = partyColors[president.party] || partyColors["Unaffiliated"];
+const count = president.orderCount || 0;
+
+// Format sentiment label cleanly in frontmatter
+let sentimentText = "";
+let sentimentClass = "text-slate-600 dark:text-slate-300";
+if (president.avgSentiment !== undefined) {
+  if (president.avgSentiment >= 0.05) {
+    sentimentText = `+${president.avgSentiment.toFixed(2)} (Optimistic)`;
+    sentimentClass = "text-emerald-600 dark:text-emerald-400";
+  } else if (president.avgSentiment <= -0.05) {
+    sentimentText = `${president.avgSentiment.toFixed(2)} (Urgent)`;
+    sentimentClass = "text-rose-600 dark:text-rose-400";
+  } else {
+    sentimentText = "0.00 (Neutral)";
+    sentimentClass = "text-slate-600 dark:text-slate-300";
+  }
+}
+---
+
+<a 
+  href={`/presidents/${president.slug}`}
+  class="group relative flex flex-col bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-200 overflow-hidden"
+>
+  <div class="flex items-start gap-4">
+    <!-- Portrait Image -->
+    <div class="relative w-16 h-20 sm:w-20 sm:h-24 flex-shrink-0 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-inner">
+      <img 
+        src={`/portraits/${president.slug}.jpg`} 
+        alt={`Official portrait of ${president.name}`}
+        loading="lazy"
+        class="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-300"
+        onerror="this.src='/portraits/default.svg'; this.onerror=null;"
+      />
+      <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent h-6"></div>
+      <span class="absolute bottom-1 left-1.5 text-[10px] font-bold text-white font-mono">
+        #{president.number}
+      </span>
+    </div>
+
+    <!-- Metadata & Details -->
+    <div class="flex-grow min-w-0">
+      <div class="flex items-center justify-between gap-1 mb-1">
+        <span class={`inline-block text-[11px] font-medium px-2 py-0.5 rounded-full border ${partyStyle.bg} ${partyStyle.text} ${partyStyle.border}`}>
+          {president.party}
+        </span>
+        <span class="text-[11px] font-mono text-slate-400">
+          {president.terms.join(", ")}
+        </span>
+      </div>
+
+      <h3 class="font-serif font-bold text-slate-900 dark:text-white text-base truncate group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+        {president.name}
+      </h3>
+
+      <div class="mt-2.5 flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400">
+        <div>
+          <span class="font-bold text-slate-900 dark:text-slate-100">{count}</span> orders
+        </div>
+        {president.avgWordCount ? (
+          <div>
+            <span class="opacity-40">•</span> ~<span class="font-bold text-slate-900 dark:text-slate-100">{president.avgWordCount}</span> words/order
+          </div>
+        ) : null}
+      </div>
+
+      <!-- Sentiment Indicator if available -->
+      {president.avgSentiment !== undefined ? (
+        <div class="mt-2 flex items-center gap-1.5 text-[11px]">
+          <span class="text-slate-400">Avg Sentiment:</span>
+          <span class={`font-semibold ${sentimentClass}`}>
+            {sentimentText}
+          </span>
+        </div>
+      ) : null}
+    </div>
+  </div>
+</a>

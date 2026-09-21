@@ -1,0 +1,240 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { generateOrderSummary } from '../../lib/summary';
+import rawOrders from '../../../data/site_orders.json';
+
+export async function getStaticPaths() {
+  return rawOrders.map(order => ({
+    params: { id: order.id },
+    props: { order }
+  }));
+}
+
+const { order } = Astro.props;
+
+// Plain English summary and directives
+const summary = generateOrderSummary({
+  title: order.title,
+  president_name: order.president_name,
+  signing_date: order.signing_date,
+  full_text: order.full_text || "",
+  sentiment_valence: order.sentiment_valence,
+  word_count: order.word_count
+});
+
+// Format date
+const formattedDate = order.signing_date ? new Date(order.signing_date).toLocaleDateString("en-US", {
+  weekday: "long",
+  year: "numeric",
+  month: "long",
+  day: "numeric"
+}) : "Date not specified";
+
+// Sentiment badge
+let sentimentColor = {
+  bg: "bg-slate-100 dark:bg-slate-800",
+  text: "text-slate-700 dark:text-slate-300",
+  border: "border-slate-300 dark:border-slate-700"
+};
+
+if (order.sentiment_valence === "Positive") {
+  sentimentColor = {
+    bg: "bg-emerald-50 dark:bg-emerald-950/40",
+    text: "text-emerald-700 dark:text-emerald-300",
+    border: "border-emerald-300 dark:border-emerald-800"
+  };
+} else if (order.sentiment_valence === "Urgent/Negative") {
+  sentimentColor = {
+    bg: "bg-rose-50 dark:bg-rose-950/40",
+    text: "text-rose-700 dark:text-rose-300",
+    border: "border-rose-300 dark:border-rose-800"
+  };
+}
+---
+
+<Layout 
+  title={`${order.title} | Executive Order`}
+  description={summary.plainEnglish}
+>
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    
+    <!-- Breadcrumb -->
+    <nav class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-6 font-mono">
+      <a href="/" class="hover:underline">Home</a>
+      <span>/</span>
+      <a href="/orders" class="hover:underline">Orders</a>
+      <span>/</span>
+      <span class="text-slate-800 dark:text-slate-200 truncate max-w-xs">{order.id}</span>
+    </nav>
+
+    <!-- Document Header -->
+    <header class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 mb-8 shadow-sm">
+      <div class="flex flex-wrap items-center gap-2.5 mb-4">
+        {order.eo_number ? (
+          <span class="font-mono text-sm font-bold px-2.5 py-1 rounded bg-blue-100 text-blue-900 dark:bg-blue-950 dark:text-blue-200 border border-blue-200 dark:border-blue-900">
+            Executive Order {order.eo_number}
+          </span>
+        ) : (
+          <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+            Executive Decree
+          </span>
+        )}
+
+        <span class={`text-xs font-semibold px-2.5 py-1 rounded-full border ${sentimentColor.bg} ${sentimentColor.text} ${sentimentColor.border}`}>
+          {order.sentiment_valence} ({order.sentiment_compound >= 0 ? '+' : ''}{order.sentiment_compound.toFixed(2)})
+        </span>
+
+        <span class="text-xs font-mono px-2.5 py-1 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-900/60 font-medium">
+          Grade {order.flesch_kincaid_grade} (Post-Grad)
+        </span>
+      </div>
+
+      <h1 class="font-serif font-extrabold text-2xl sm:text-4xl text-slate-900 dark:text-white leading-tight mb-6">
+        {order.title}
+      </h1>
+
+      <!-- President and Date Info -->
+      <div class="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-slate-100 dark:border-slate-800/80">
+        <a 
+          href={`/presidents/${order.president_slug}`} 
+          class="flex items-center gap-3 group"
+        >
+          <img 
+            src={`/portraits/${order.president_slug || 'default'}.jpg`} 
+            alt={order.president_name}
+            class="w-11 h-11 rounded-full object-cover border-2 border-amber-400/80 shadow-sm group-hover:scale-105 transition-transform"
+            onerror="this.src='/portraits/default.svg'; this.onerror=null;"
+          />
+          <div>
+            <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Signed by President</div>
+            <div class="font-serif font-bold text-slate-900 dark:text-white text-base group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+              {order.president_name}
+            </div>
+          </div>
+        </a>
+
+        <div class="text-right text-xs">
+          <div class="text-slate-400 uppercase tracking-wider font-semibold">Signing Date</div>
+          <div class="font-mono font-medium text-slate-800 dark:text-slate-200 text-sm">
+            {formattedDate}
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <!-- "What It Actually Does" - Plain-English Intelligence Breakdown -->
+    <section class="bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border-2 border-amber-400/40 dark:border-amber-500/30 rounded-2xl p-6 sm:p-8 mb-8 shadow-sm">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="w-6 h-6 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-bold text-xs">
+          💡
+        </span>
+        <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white">
+          What It Actually Does (Plain-English Summary)
+        </h2>
+      </div>
+
+      <p class="text-slate-800 dark:text-slate-200 text-base leading-relaxed mb-6 font-normal">
+        {summary.plainEnglish}
+      </p>
+
+      <!-- Key Directives -->
+      <div class="space-y-3 mb-6">
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+          Key Directives & Operative Actions
+        </h3>
+        <div class="grid grid-cols-1 gap-2.5">
+          {summary.keyDirectives.map(d => (
+            <div class="p-3.5 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-sm text-slate-700 dark:text-slate-300 flex items-start gap-3">
+              <span class="text-amber-500 font-bold mt-0.5">▪</span>
+              <span>{d.description}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <!-- Who It Affects -->
+      <div>
+        <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+          Who & What It Affects
+        </h3>
+        <div class="flex flex-wrap gap-2">
+          {summary.whoItAffects.map(entity => (
+            <span class="px-3 py-1 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 shadow-2xs">
+              🏛 {entity}
+            </span>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- Quantitative Metrics Panel -->
+    <section class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+      
+      <div class="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 text-center">
+        <div class="text-[11px] text-slate-400 uppercase tracking-wider font-semibold mb-1">Total Words</div>
+        <div class="text-2xl font-bold font-mono text-slate-900 dark:text-white">
+          {order.word_count.toLocaleString()}
+        </div>
+        <div class="text-[10px] text-slate-500 mt-1">{order.char_count.toLocaleString()} characters</div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 text-center">
+        <div class="text-[11px] text-slate-400 uppercase tracking-wider font-semibold mb-1">Estimated Read Time</div>
+        <div class="text-2xl font-bold font-mono text-slate-900 dark:text-white">
+          {order.reading_time_minutes} <span class="text-xs font-sans font-normal">min</span>
+        </div>
+        <div class="text-[10px] text-slate-500 mt-1">@ 200 words / min</div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 text-center">
+        <div class="text-[11px] text-slate-400 uppercase tracking-wider font-semibold mb-1">Flesch-Kincaid</div>
+        <div class="text-2xl font-bold font-mono text-slate-900 dark:text-white">
+          {order.flesch_kincaid_grade}
+        </div>
+        <div class="text-[10px] text-slate-500 mt-1">Post-Grad reading level</div>
+      </div>
+
+      <div class="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 text-center">
+        <div class="text-[11px] text-slate-400 uppercase tracking-wider font-semibold mb-1">Sentiment Score</div>
+        <div class="text-2xl font-bold font-mono text-slate-900 dark:text-white">
+          {order.sentiment_compound >= 0 ? '+' : ''}{order.sentiment_compound.toFixed(2)}
+        </div>
+        <div class="text-[10px] text-slate-500 mt-1">VADER Polarity index</div>
+      </div>
+
+    </section>
+
+    <!-- Full Official Document Text -->
+    <article class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-10 shadow-sm">
+      <div class="flex items-center justify-between pb-6 mb-6 border-b border-slate-200 dark:border-slate-800">
+        <div>
+          <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white">
+            Official Document Text
+          </h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400">
+            Source: {order.source === 'federal_register' ? 'Federal Register (Official Presidential Document)' : 'The American Presidency Project (UCSB Archive)'}
+          </p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          {order.source_url ? (
+            <a 
+              href={order.source_url} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
+            >
+              Original Source &rarr;
+            </a>
+          ) : null}
+        </div>
+      </div>
+
+      <!-- Legal Text Rendering -->
+      <div class="prose dark:prose-invert max-w-none font-serif text-slate-800 dark:text-slate-200 text-sm sm:text-base leading-loose whitespace-pre-line prose-legal">
+        {order.full_text || "Full document text is being harvested and will be displayed shortly."}
+      </div>
+    </article>
+
+  </div>
+</Layout>

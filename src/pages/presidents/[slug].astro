@@ -1,0 +1,159 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import OrderCard from '../../components/OrderCard.astro';
+import ToneChart from '../../components/ToneChart.astro';
+import presidents from '../../../data/presidents.json';
+import allOrders from '../../../data/site_orders_summary.json';
+
+export async function getStaticPaths() {
+  return presidents.map(president => ({
+    params: { slug: president.slug },
+    props: { president }
+  }));
+}
+
+const { president } = Astro.props;
+
+// Filter orders for this president
+const presOrders = allOrders.filter(o => {
+  if (o.president_slug === president.slug) return true;
+  if (president.slug === "donald-trump" && o.president_slug === "donald-j-trump-2nd-term") return true;
+  if (o.president_name && o.president_name.toLowerCase().includes(president.name.toLowerCase())) return true;
+  return false;
+});
+
+const totalOrders = presOrders.length;
+const totalWords = presOrders.reduce((sum, o) => sum + (o.word_count || 0), 0);
+const avgWords = totalOrders > 0 ? Math.round(totalWords / totalOrders) : 0;
+const avgReadingTime = totalOrders > 0 ? Math.round(presOrders.reduce((sum, o) => sum + (o.reading_time_minutes || 0), 0) / totalOrders) : 0;
+const avgSentiment = totalOrders > 0 ? (presOrders.reduce((sum, o) => sum + (o.sentiment_compound || 0), 0) / totalOrders).toFixed(2) : "0.00";
+
+const positiveCount = presOrders.filter(o => o.sentiment_valence === "Positive").length;
+const neutralCount = presOrders.filter(o => o.sentiment_valence === "Neutral").length;
+const urgentCount = presOrders.filter(o => o.sentiment_valence === "Urgent/Negative").length;
+
+// Party styling
+const partyColors: Record<string, { bg: string; text: string; border: string }> = {
+  "Republican": { bg: "bg-red-50 dark:bg-red-950/40", text: "text-red-700 dark:text-red-400", border: "border-red-200 dark:border-red-900" },
+  "Democrat": { bg: "bg-blue-50 dark:bg-blue-950/40", text: "text-blue-700 dark:text-blue-400", border: "border-blue-200 dark:border-blue-900" },
+  "Democratic-Republican": { bg: "bg-emerald-50 dark:bg-emerald-950/40", text: "text-emerald-700 dark:text-emerald-400", border: "border-emerald-200 dark:border-emerald-900" },
+  "Federalist": { bg: "bg-amber-50 dark:bg-amber-950/40", text: "text-amber-700 dark:text-amber-400", border: "border-amber-200 dark:border-amber-900" },
+  "Whig": { bg: "bg-purple-50 dark:bg-purple-950/40", text: "text-purple-700 dark:text-purple-400", border: "border-purple-200 dark:border-purple-900" },
+  "Unaffiliated": { bg: "bg-slate-50 dark:bg-slate-900", text: "text-slate-700 dark:text-slate-400", border: "border-slate-200 dark:border-slate-800" },
+};
+const partyStyle = partyColors[president.party] || partyColors["Unaffiliated"];
+---
+
+<Layout 
+  title={`${president.name} - Executive Orders | Presidential Archive`}
+  description={`Analysis, reading times, and sentiment scoring for all Executive Orders issued by President ${president.name}.`}
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    
+    <!-- Breadcrumb -->
+    <nav class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-6 font-mono">
+      <a href="/" class="hover:underline">Home</a>
+      <span>/</span>
+      <a href="/presidents" class="hover:underline">Presidents</a>
+      <span>/</span>
+      <span class="text-slate-800 dark:text-slate-200">{president.name}</span>
+    </nav>
+
+    <!-- President Profile Header Banner -->
+    <header class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 mb-8 shadow-sm">
+      <div class="flex flex-col sm:flex-row items-center sm:items-start gap-6 sm:gap-8">
+        
+        <!-- Large Official Portrait -->
+        <div class="relative w-32 h-40 sm:w-40 sm:h-52 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border-2 border-amber-400 shadow-md flex-shrink-0">
+          <img 
+            src={`/portraits/${president.slug}.jpg`} 
+            alt={`Official portrait of ${president.name}`}
+            class="w-full h-full object-cover object-top"
+            onerror="this.src='/portraits/default.svg'; this.onerror=null;"
+          />
+          <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2 text-center">
+            <span class="text-xs font-bold text-amber-300 font-mono tracking-wider">
+              {president.number}{president.number === 1 ? 'st' : president.number === 2 ? 'nd' : president.number === 3 ? 'rd' : 'th'} President
+            </span>
+          </div>
+        </div>
+
+        <!-- Bio & Meta -->
+        <div class="flex-grow text-center sm:text-left">
+          <div class="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-2">
+            <span class={`text-xs font-semibold px-2.5 py-0.5 rounded-full border ${partyStyle.bg} ${partyStyle.text} ${partyStyle.border}`}>
+              {president.party}
+            </span>
+            <span class="text-xs font-mono text-slate-500 dark:text-slate-400">
+              Terms: {president.terms.join(", ")}
+            </span>
+          </div>
+
+          <h1 class="font-serif font-extrabold text-3xl sm:text-4xl text-slate-900 dark:text-white mb-4">
+            {president.name}
+          </h1>
+
+          <!-- Summary Metric Cards -->
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-6">
+            <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 text-center">
+              <div class="text-[11px] text-slate-400 uppercase font-semibold">Orders Tracked</div>
+              <div class="text-xl font-bold font-serif text-slate-900 dark:text-white mt-0.5">{totalOrders}</div>
+            </div>
+
+            <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 text-center">
+              <div class="text-[11px] text-slate-400 uppercase font-semibold">Avg Words / Order</div>
+              <div class="text-xl font-bold font-serif text-slate-900 dark:text-white mt-0.5">{avgWords.toLocaleString()}</div>
+            </div>
+
+            <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 text-center">
+              <div class="text-[11px] text-slate-400 uppercase font-semibold">Avg Read Time</div>
+              <div class="text-xl font-bold font-serif text-slate-900 dark:text-white mt-0.5">~{avgReadingTime} min</div>
+            </div>
+
+            <div class="p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800 text-center">
+              <div class="text-[11px] text-slate-400 uppercase font-semibold">Avg Sentiment</div>
+              <div class="text-xl font-bold font-serif text-emerald-600 dark:text-emerald-400 mt-0.5">
+                {Number(avgSentiment) >= 0 ? '+' : ''}{avgSentiment}
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- Sentiment Distribution if orders present -->
+    {totalOrders > 0 ? (
+      <div class="mb-10">
+        <ToneChart 
+          positiveCount={positiveCount}
+          neutralCount={neutralCount}
+          urgentCount={urgentCount}
+          totalOrders={totalOrders}
+        />
+      </div>
+    ) : null}
+
+    <!-- Orders Section -->
+    <div>
+      <h2 class="font-serif font-bold text-2xl text-slate-900 dark:text-white mb-6">
+        Executive Orders Issued ({totalOrders})
+      </h2>
+
+      {totalOrders > 0 ? (
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {presOrders.map(order => (
+            <OrderCard order={order} />
+          ))}
+        </div>
+      ) : (
+        <div class="bg-white dark:bg-slate-900 rounded-2xl p-10 border border-slate-200 dark:border-slate-800 text-center">
+          <p class="text-slate-500 dark:text-slate-400 text-sm max-w-md mx-auto leading-relaxed">
+            Historical orders for this presidency are currently queued in the background ingest pipeline. Run the historical harvester to load all records from the National Archives and UCSB.
+          </p>
+        </div>
+      )}
+    </div>
+
+  </div>
+</Layout>

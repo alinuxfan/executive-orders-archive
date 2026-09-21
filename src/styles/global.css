@@ -1,0 +1,16 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-50 text-slate-900 antialiased dark:bg-slate-950 dark:text-slate-100 min-h-screen flex flex-col font-sans;
+  }
+}
+
+.prose-legal {
+  line-height: 1.8;
+}
+.prose-legal p {
+  margin-bottom: 1.25rem;
+}

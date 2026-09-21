@@ -1,0 +1,184 @@
+---
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { 
+  title, 
+  description = "Explore every United States Presidential Executive Order with sentiment analysis, reading times, legal complexity metrics, and plain-English explanations." 
+} = Astro.props;
+
+import '../styles/global.css';
+import syncStatus from '../../data/sync_status.json';
+
+const lastSyncDate = syncStatus?.last_sync_timestamp ? new Date(syncStatus.last_sync_timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Recent";
+---
+
+<!doctype html>
+<html lang="en" class="scroll-smooth">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title} | US Executive Orders Archive</title>
+    <meta name="description" content={description} />
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@300;400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&display=swap" rel="stylesheet">
+
+    <script is:inline>
+      // Support light/dark mode preference
+      if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    </script>
+  </head>
+  <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col min-h-screen">
+    <!-- Top Sync Banner -->
+    <div class="bg-flag-blue text-slate-200 text-xs py-1.5 px-4 text-center border-b border-blue-900 flex justify-center items-center gap-2">
+      <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+      <span>Automated Sync Active • Database updated as of <strong>{lastSyncDate}</strong></span>
+      <span class="opacity-40">•</span>
+      <a href="/orders" class="text-flag-accent hover:underline font-medium">Browse All Orders &rarr;</a>
+    </div>
+
+    <!-- Main Navigation Header -->
+    <header class="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        
+        <!-- Brand Logo -->
+        <a href="/" class="flex items-center gap-3 group">
+          <div class="w-10 h-10 rounded-full bg-flag-blue text-amber-400 flex items-center justify-center font-bold text-xl shadow-md border-2 border-amber-400 group-hover:scale-105 transition-transform font-serif">
+            ★
+          </div>
+          <div>
+            <div class="font-bold tracking-tight text-slate-900 dark:text-white text-lg font-serif flex items-center gap-1.5">
+              <span>Executive Orders</span>
+              <span class="text-xs font-sans uppercase tracking-widest px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50">Archive</span>
+            </div>
+            <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-none">Every President • 1789 to Present</p>
+          </div>
+        </a>
+
+        <!-- Desktop Navigation Links -->
+        <nav class="hidden md:flex items-center gap-1 text-sm font-medium">
+          <a href="/orders" class="px-3.5 py-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            All Orders
+          </a>
+          <a href="/presidents" class="px-3.5 py-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+            Presidents
+          </a>
+          <a href="/analytics" class="px-3.5 py-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1">
+            <span>Analytics & Trends</span>
+            <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+          </a>
+        </nav>
+
+        <!-- Right Side Actions: Search & Dark Mode Toggle -->
+        <div class="flex items-center gap-2">
+          <!-- Search trigger button -->
+          <a href="/search" class="flex items-center gap-2 px-3 py-1.5 text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-700 transition-colors">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <span>Search orders...</span>
+            <kbd class="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded text-slate-600 dark:text-slate-300">⌘K</kbd>
+          </a>
+
+          <!-- Theme toggle -->
+          <button id="theme-toggle" type="button" aria-label="Toggle dark mode" class="p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-sm transition-colors">
+            <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
+            <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
+          </button>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- Main Content Area -->
+    <main class="flex-grow">
+      <slot />
+    </main>
+
+    <!-- Global Footer -->
+    <footer class="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-12 text-sm">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-8">
+        
+        <div class="md:col-span-2 space-y-3">
+          <div class="flex items-center gap-2">
+            <span class="text-amber-500 font-serif font-bold text-lg">★</span>
+            <span class="font-bold text-slate-900 dark:text-white font-serif">Executive Orders Archive</span>
+          </div>
+          <p class="text-slate-500 dark:text-slate-400 text-xs leading-relaxed max-w-md">
+            An open research portal providing transparent access, computational linguistics, sentiment scoring, and plain-English distillations of every Executive Order signed by United States Presidents.
+          </p>
+          <div class="pt-2 text-xs text-slate-400 dark:text-slate-500">
+            Hosted statically for $0.00/mo on Cloudflare Pages. Built with Astro, SQLite & Tailwind.
+          </div>
+        </div>
+
+        <div>
+          <h4 class="font-semibold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-3">Data Sources</h4>
+          <ul class="space-y-2 text-xs text-slate-600 dark:text-slate-400">
+            <li><a href="https://www.federalregister.gov" target="_blank" rel="noopener" class="hover:underline">Federal Register API (1994-Present)</a></li>
+            <li><a href="https://www.presidency.ucsb.edu" target="_blank" rel="noopener" class="hover:underline">UCSB American Presidency Project (1789-1993)</a></li>
+            <li><a href="https://www.archives.gov" target="_blank" rel="noopener" class="hover:underline">National Archives (NARA)</a></li>
+            <li><a href="https://commons.wikimedia.org" target="_blank" rel="noopener" class="hover:underline">Wikimedia Commons (Public Domain Portraits)</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="font-semibold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-3">Navigation</h4>
+          <ul class="space-y-2 text-xs text-slate-600 dark:text-slate-400">
+            <li><a href="/orders" class="hover:underline">All Executive Orders</a></li>
+            <li><a href="/presidents" class="hover:underline">Presidential Directory</a></li>
+            <li><a href="/analytics" class="hover:underline">Sentiment & Length Graphs</a></li>
+            <li><a href="/search" class="hover:underline">Full-Text Search</a></li>
+          </ul>
+        </div>
+
+      </div>
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 pt-8 border-t border-slate-100 dark:border-slate-800 text-xs text-center text-slate-400">
+        Public Domain and Open Source Data Project. Not affiliated with the United States Government.
+      </div>
+    </footer>
+
+    <script is:inline>
+      // Theme toggle functionality
+      const themeToggleBtn = document.getElementById('theme-toggle');
+      const themeToggleDarkIcon = document.getElementById('theme-toggle-dark-icon');
+      const themeToggleLightIcon = document.getElementById('theme-toggle-light-icon');
+
+      if (document.documentElement.classList.contains('dark')) {
+        themeToggleLightIcon?.classList.remove('hidden');
+      } else {
+        themeToggleDarkIcon?.classList.remove('hidden');
+      }
+
+      themeToggleBtn?.addEventListener('click', function() {
+        themeToggleDarkIcon?.classList.toggle('hidden');
+        themeToggleLightIcon?.classList.toggle('hidden');
+
+        if (document.documentElement.classList.contains('dark')) {
+          document.documentElement.classList.remove('dark');
+          localStorage.setItem('color-theme', 'light');
+        } else {
+          document.documentElement.classList.add('dark');
+          localStorage.setItem('color-theme', 'dark');
+        }
+      });
+
+      // Keyboard shortcut ⌘K / Ctrl+K to jump to search
+      window.addEventListener('keydown', (e) => {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+          e.preventDefault();
+          window.location.href = '/search';
+        }
+      });
+    </script>
+  </body>
+</html>

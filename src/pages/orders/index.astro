@@ -1,0 +1,158 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import OrderCard from '../../components/OrderCard.astro';
+import orders from '../../../data/site_orders_summary.json';
+import presidents from '../../../data/presidents.json';
+
+const totalOrders = orders.length;
+---
+
+<Layout 
+  title="All Executive Orders | Presidential Archive"
+  description="Browse and filter every United States Presidential Executive Order with sentiment ratings, reading time, and plain English summaries."
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    
+    <!-- Header -->
+    <div class="mb-8">
+      <div class="text-xs font-bold uppercase tracking-wider text-blue-600 dark:text-blue-400 font-sans mb-1">
+        Presidential Decrees & Proclamations
+      </div>
+      <h1 class="font-serif font-extrabold text-3xl sm:text-4xl text-slate-900 dark:text-white">
+        Executive Orders Archive ({totalOrders})
+      </h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-2xl">
+        Filter by sentiment, era, or search by keywords. Every order includes quantitative reading time and plain-English distillations.
+      </p>
+    </div>
+
+    <!-- Client-side Interactive Filter Bar -->
+    <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm mb-8 space-y-4">
+      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        
+        <!-- Keyword Search -->
+        <div>
+          <label for="order-search" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+            Search Titles & Topics
+          </label>
+          <input 
+            type="text" 
+            id="order-search"
+            placeholder="Type keywords (e.g. defense, tariff)..."
+            class="w-full px-3.5 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+          />
+        </div>
+
+        <!-- President Filter -->
+        <div>
+          <label for="president-select" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+            Filter by President
+          </label>
+          <select 
+            id="president-select"
+            class="w-full px-3.5 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+          >
+            <option value="">All Presidents</option>
+            {presidents.map(p => (
+              <option value={p.name}>{p.name} (#{p.number})</option>
+            ))}
+          </select>
+        </div>
+
+        <!-- Sentiment Valence Filter -->
+        <div>
+          <label for="sentiment-select" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+            Filter by Sentiment Tone
+          </label>
+          <select 
+            id="sentiment-select"
+            class="w-full px-3.5 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+          >
+            <option value="">All Sentiment Tones</option>
+            <option value="Positive">Positive / Constructive (+)</option>
+            <option value="Urgent/Negative">Urgent / Crisis Response (-)</option>
+            <option value="Neutral">Neutral / Routine</option>
+          </select>
+        </div>
+
+      </div>
+
+      <!-- Quick Active Filter Tags & Count -->
+      <div class="flex items-center justify-between text-xs text-slate-500 pt-2 border-t border-slate-100 dark:border-slate-800">
+        <span id="match-counter">Showing {totalOrders} orders</span>
+        <button id="reset-filters" class="text-blue-600 dark:text-blue-400 hover:underline">Reset Filters</button>
+      </div>
+    </div>
+
+    <!-- Orders Grid -->
+    <div id="orders-container" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {orders.map(order => (
+        <div 
+          class="order-item" 
+          data-title={order.title.toLowerCase()} 
+          data-president={order.president_name} 
+          data-valence={order.sentiment_valence}
+        >
+          <OrderCard order={order} />
+        </div>
+      ))}
+    </div>
+
+    <div id="no-results" class="hidden text-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
+      <p class="text-slate-500 dark:text-slate-400 text-sm">No executive orders match your filter criteria.</p>
+    </div>
+
+  </div>
+
+  <script is:inline>
+    const searchInput = document.getElementById('order-search');
+    const presSelect = document.getElementById('president-select');
+    const sentSelect = document.getElementById('sentiment-select');
+    const resetBtn = document.getElementById('reset-filters');
+    const counter = document.getElementById('match-counter');
+    const noResults = document.getElementById('no-results');
+    const items = document.querySelectorAll('.order-item');
+
+    function applyFilters() {
+      const q = (searchInput?.value || '').toLowerCase().trim();
+      const pres = presSelect?.value || '';
+      const sent = sentSelect?.value || '';
+
+      let visibleCount = 0;
+
+      items.forEach(item => {
+        const title = item.getAttribute('data-title') || '';
+        const itemPres = item.getAttribute('data-president') || '';
+        const itemVal = item.getAttribute('data-valence') || '';
+
+        const matchQ = !q || title.includes(q);
+        const matchPres = !pres || itemPres.toLowerCase().includes(pres.toLowerCase());
+        const matchSent = !sent || itemVal === sent;
+
+        if (matchQ && matchPres && matchSent) {
+          item.classList.remove('hidden');
+          visibleCount++;
+        } else {
+          item.classList.add('hidden');
+        }
+      });
+
+      if (counter) counter.textContent = `Showing ${visibleCount} orders`;
+      if (noResults) {
+        if (visibleCount === 0) noResults.classList.remove('hidden');
+        else noResults.classList.add('hidden');
+      }
+    }
+
+    searchInput?.addEventListener('input', applyFilters);
+    presSelect?.addEventListener('change', applyFilters);
+    sentSelect?.addEventListener('change', applyFilters);
+
+    resetBtn?.addEventListener('click', () => {
+      if (searchInput) searchInput.value = '';
+      if (presSelect) presSelect.value = '';
+      if (sentSelect) sentSelect.value = '';
+      applyFilters();
+    });
+  </script>
+</Layout>

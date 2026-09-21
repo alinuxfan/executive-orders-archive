@@ -1,0 +1,65 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import PresidentCard from '../../components/PresidentCard.astro';
+import presidents from '../../../data/presidents.json';
+import orders from '../../../data/site_orders_summary.json';
+
+// Group orders by president slug
+const presidentStats = new Map<string, { count: number; totalWords: number; totalSentiment: number }>();
+for (const o of orders) {
+  const slug = o.president_slug || "";
+  const cur = presidentStats.get(slug) || { count: 0, totalWords: 0, totalSentiment: 0 };
+  cur.count += 1;
+  cur.totalWords += (o.word_count || 0);
+  cur.totalSentiment += (o.sentiment_compound || 0);
+  presidentStats.set(slug, cur);
+}
+
+const enrichedPresidents = presidents.map(p => {
+  let stats = presidentStats.get(p.slug);
+  if (!stats && p.slug === "donald-trump") {
+    const term2 = presidentStats.get("donald-j-trump-2nd-term");
+    if (term2) stats = term2;
+  }
+
+  const count = stats?.count || 0;
+  const avgWordCount = count > 0 ? Math.round(stats!.totalWords / count) : 0;
+  const avgSentiment = count > 0 ? stats!.totalSentiment / count : undefined;
+
+  return {
+    ...p,
+    orderCount: count,
+    avgWordCount,
+    avgSentiment
+  };
+});
+---
+
+<Layout 
+  title="All 45 US Presidents | Executive Orders Archive"
+  description="Explore the executive actions of all 45 United States Presidents, from George Washington to the present day."
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    
+    <!-- Page Header -->
+    <div class="mb-10 text-center max-w-3xl mx-auto">
+      <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 text-xs font-semibold uppercase tracking-wider mb-4 border border-amber-200 dark:border-amber-900">
+        ★ The American Presidency ★
+      </div>
+      <h1 class="font-serif font-extrabold text-3xl sm:text-5xl text-slate-900 dark:text-white leading-tight">
+        Presidential Directory
+      </h1>
+      <p class="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-3">
+        Explore executive decrees, average document length, and sentiment distribution across every administration from 1789 to today.
+      </p>
+    </div>
+
+    <!-- 45 Presidents Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      {enrichedPresidents.map(president => (
+        <PresidentCard president={president} />
+      ))}
+    </div>
+
+  </div>
+</Layout>

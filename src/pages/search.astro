@@ -1,0 +1,132 @@
+---
+import Layout from '../layouts/Layout.astro';
+import OrderCard from '../components/OrderCard.astro';
+import orders from '../../data/site_orders_summary.json';
+---
+
+<Layout 
+  title="Search Executive Orders | Presidential Archive"
+  description="Instant full-text search across all United States Presidential Executive Orders."
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    
+    <!-- Header -->
+    <div class="max-w-3xl mx-auto text-center mb-8">
+      <h1 class="font-serif font-extrabold text-3xl sm:text-4xl text-slate-900 dark:text-white">
+        Search Executive Orders
+      </h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-2">
+        Instant search across titles, presidential administrations, and policy topics.
+      </p>
+
+      <!-- Search Input Box -->
+      <div class="mt-6 relative max-w-xl mx-auto">
+        <input 
+          type="text" 
+          id="search-input"
+          autofocus
+          placeholder="Type to search (e.g. defense, tariff, energy, lincoln, vaccines)..."
+          class="w-full pl-12 pr-4 py-3.5 rounded-xl bg-white dark:bg-slate-900 border-2 border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 shadow-sm text-base"
+        />
+        <div class="absolute left-4 top-4 text-slate-400">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+        </div>
+      </div>
+
+      <div class="flex items-center justify-center gap-2 mt-3 text-xs text-slate-400">
+        <span>Suggested:</span>
+        <button class="suggest-btn text-blue-600 dark:text-blue-400 hover:underline">Lincoln</button>
+        <span>•</span>
+        <button class="suggest-btn text-blue-600 dark:text-blue-400 hover:underline">Defense</button>
+        <span>•</span>
+        <button class="suggest-btn text-blue-600 dark:text-blue-400 hover:underline">Tariff</button>
+        <span>•</span>
+        <button class="suggest-btn text-blue-600 dark:text-blue-400 hover:underline">Energy</button>
+        <span>•</span>
+        <button class="suggest-btn text-blue-600 dark:text-blue-400 hover:underline">Vaccine</button>
+      </div>
+    </div>
+
+    <!-- Match Status -->
+    <div class="flex items-center justify-between text-xs text-slate-500 mb-6 pb-2 border-b border-slate-200 dark:border-slate-800">
+      <span id="search-status">Enter a keyword or browse below</span>
+      <span class="font-mono" id="total-count">{orders.length} total orders indexed</span>
+    </div>
+
+    <!-- Search Results Container -->
+    <div id="results-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+      {orders.map(order => (
+        <div 
+          class="search-item" 
+          data-text={`${order.title} ${order.president_name} ${order.eo_number || ''} ${order.snippet || ''}`.toLowerCase()}
+        >
+          <OrderCard order={order} />
+        </div>
+      ))}
+    </div>
+
+    <div id="empty-state" class="hidden text-center py-20 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 mt-4">
+      <p class="text-slate-600 dark:text-slate-400 text-base font-serif">No executive orders found matching your search.</p>
+      <p class="text-slate-400 text-xs mt-1">Try another keyword or search by president's name.</p>
+    </div>
+
+  </div>
+
+  <script is:inline>
+    const input = document.getElementById('search-input');
+    const status = document.getElementById('search-status');
+    const emptyState = document.getElementById('empty-state');
+    const items = document.querySelectorAll('.search-item');
+    const suggestBtns = document.querySelectorAll('.suggest-btn');
+
+    // Parse URL query parameter if present
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialQuery = urlParams.get('q');
+    if (initialQuery && input) {
+      input.value = initialQuery;
+      performSearch(initialQuery);
+    }
+
+    function performSearch(query) {
+      const q = (query || '').toLowerCase().trim();
+      let matchCount = 0;
+
+      items.forEach(item => {
+        const text = item.getAttribute('data-text') || '';
+        if (!q || text.includes(q)) {
+          item.classList.remove('hidden');
+          matchCount++;
+        } else {
+          item.classList.add('hidden');
+        }
+      });
+
+      if (status) {
+        if (q) {
+          status.textContent = `Found ${matchCount} match${matchCount === 1 ? '' : 'es'} for "${query}"`;
+        } else {
+          status.textContent = `Showing all ${matchCount} executive orders`;
+        }
+      }
+
+      if (emptyState) {
+        if (matchCount === 0) emptyState.classList.remove('hidden');
+        else emptyState.classList.add('hidden');
+      }
+    }
+
+    input?.addEventListener('input', (e) => {
+      performSearch(e.target.value);
+    });
+
+    suggestBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (input) {
+          input.value = btn.textContent;
+          performSearch(btn.textContent);
+          input.focus();
+        }
+      });
+    });
+  </script>
+</Layout>

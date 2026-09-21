@@ -1,0 +1,87 @@
+---
+interface Props {
+  positiveCount: number;
+  neutralCount: number;
+  urgentCount: number;
+  totalOrders: number;
+}
+
+const { positiveCount, neutralCount, urgentCount, totalOrders } = Astro.props;
+
+const posPct = totalOrders > 0 ? Math.round((positiveCount / totalOrders) * 100) : 0;
+const neuPct = totalOrders > 0 ? Math.round((neutralCount / totalOrders) * 100) : 0;
+const urgPct = totalOrders > 0 ? Math.round((urgentCount / totalOrders) * 100) : 0;
+---
+
+<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="font-serif font-bold text-slate-900 dark:text-white text-lg">
+        Presidential Sentiment & Tone
+      </h3>
+      <p class="text-xs text-slate-500 dark:text-slate-400">
+        VADER sentiment analysis scoring across all operative mandates
+      </p>
+    </div>
+    <span class="text-xs font-mono px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold">
+      {totalOrders} Analyzed
+    </span>
+  </div>
+
+  <!-- Segmented Progress Bar -->
+  <div class="w-full h-5 rounded-full overflow-hidden flex shadow-inner bg-slate-100 dark:bg-slate-800 mb-6">
+    <div 
+      style={`width: ${posPct}%`} 
+      class="bg-emerald-500 hover:bg-emerald-600 transition-all cursor-pointer relative group" 
+      title={`Positive/Constructive: ${positiveCount} (${posPct}%)`}
+    ></div>
+    <div 
+      style={`width: ${neuPct}%`} 
+      class="bg-amber-400 hover:bg-amber-500 transition-all cursor-pointer relative group" 
+      title={`Neutral/Routine: ${neutralCount} (${neuPct}%)`}
+    ></div>
+    <div 
+      style={`width: ${urgPct}%`} 
+      class="bg-rose-500 hover:bg-rose-600 transition-all cursor-pointer relative group" 
+      title={`Urgent/Negative: ${urgentCount} (${urgPct}%)`}
+    ></div>
+  </div>
+
+  <!-- Legend & Metrics Grid -->
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
+    
+    <div class="flex items-start gap-3 p-3 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40">
+      <div class="w-3.5 h-3.5 rounded bg-emerald-500 mt-0.5 flex-shrink-0"></div>
+      <div>
+        <div class="font-bold text-slate-900 dark:text-slate-100 text-sm">
+          {positiveCount} <span class="text-xs font-normal text-slate-500">({posPct}%)</span>
+        </div>
+        <div class="font-semibold text-emerald-700 dark:text-emerald-400">Positive & Constructive</div>
+        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Public works, program establishment, economic growth</div>
+      </div>
+    </div>
+
+    <div class="flex items-start gap-3 p-3 rounded-lg bg-amber-50/60 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/40">
+      <div class="w-3.5 h-3.5 rounded bg-amber-400 mt-0.5 flex-shrink-0"></div>
+      <div>
+        <div class="font-bold text-slate-900 dark:text-slate-100 text-sm">
+          {neutralCount} <span class="text-xs font-normal text-slate-500">({neuPct}%)</span>
+        </div>
+        <div class="font-semibold text-amber-700 dark:text-amber-400">Neutral & Procedural</div>
+        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Routine delegations, holidays, committee extensions</div>
+      </div>
+    </div>
+
+    <div class="flex items-start gap-3 p-3 rounded-lg bg-rose-50/60 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/40">
+      <div class="w-3.5 h-3.5 rounded bg-rose-500 mt-0.5 flex-shrink-0"></div>
+      <div>
+        <div class="font-bold text-slate-900 dark:text-slate-100 text-sm">
+          {urgentCount} <span class="text-xs font-normal text-slate-500">({urgPct}%)</span>
+        </div>
+        <div class="font-semibold text-rose-700 dark:text-rose-400">Urgent & Crisis</div>
+        <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">National emergencies, sanctions, wartime seizures</div>
+      </div>
+    </div>
+
+  </div>
+</div>

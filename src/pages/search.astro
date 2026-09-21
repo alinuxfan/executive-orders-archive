@@ -1,7 +1,10 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import OrderCard from '../components/OrderCard.astro';
 import orders from '../../data/site_orders_summary.json';
+
+const totalIndexed = orders.length;
+// Pass first 24 orders as initial preview before search is triggered
+const initialOrders = orders.slice(0, 24);
 ---
 
 <Layout 
@@ -16,7 +19,7 @@ import orders from '../../data/site_orders_summary.json';
         Search Executive Orders
       </h1>
       <p class="text-sm text-slate-500 dark:text-slate-400 mt-2">
-        Instant search across titles, presidential administrations, and policy topics.
+        Instant search across titles, presidential administrations, topics, and constitutional postures.
       </p>
 
       <!-- Search Input Box -->
@@ -49,20 +52,23 @@ import orders from '../../data/site_orders_summary.json';
 
     <!-- Match Status -->
     <div class="flex items-center justify-between text-xs text-slate-500 mb-6 pb-2 border-b border-slate-200 dark:border-slate-800">
-      <span id="search-status">Enter a keyword or browse below</span>
-      <span class="font-mono" id="total-count">{orders.length} total orders indexed</span>
+      <span id="search-status">Showing recent executive orders</span>
+      <span class="font-mono" id="total-count">{totalIndexed.toLocaleString()} total orders indexed</span>
     </div>
 
     <!-- Search Results Container -->
     <div id="results-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-      {orders.map(order => (
-        <div 
-          class="search-item" 
-          data-text={`${order.title} ${order.president_name} ${order.eo_number || ''} ${order.snippet || ''}`.toLowerCase()}
-        >
-          <OrderCard order={order} />
-        </div>
-      ))}
+      <!-- Cards rendered here -->
+    </div>
+
+    <!-- Load More Matches Button -->
+    <div id="load-more-container" class="hidden text-center mt-8 mb-6">
+      <button 
+        id="load-more-btn"
+        class="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow transition-colors"
+      >
+        Show More Matches
+      </button>
     </div>
 
     <div id="empty-state" class="hidden text-center py-20 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 mt-4">
@@ -72,14 +78,171 @@ import orders from '../../data/site_orders_summary.json';
 
   </div>
 
-  <script is:inline>
+  <script is:inline define:vars={{ initialOrders }}>
     const input = document.getElementById('search-input');
     const status = document.getElementById('search-status');
+    const resultsGrid = document.getElementById('results-grid');
     const emptyState = document.getElementById('empty-state');
-    const items = document.querySelectorAll('.search-item');
+    const loadMoreContainer = document.getElementById('load-more-container');
+    const loadMoreBtn = document.getElementById('load-more-btn');
     const suggestBtns = document.querySelectorAll('.suggest-btn');
 
-    // Parse URL query parameter if present
+    let allOrders = null;
+    let currentMatches = [];
+    let displayedCount = 0;
+    const PAGE_SIZE = 40;
+
+    function renderCard(order) {
+      let sentimentBadge = {
+        label: "Constitutional Neutral",
+        bg: "bg-slate-100 dark:bg-slate-800",
+        text: "text-slate-700 dark:text-slate-300",
+        border: "border-slate-200 dark:border-slate-700"
+      };
+
+      const val = order.val || order.sentiment_valence;
+      const comp = order.comp !== undefined ? order.comp : (order.sentiment_compound || 0);
+
+      if (val === "Constitutional Fidelity" || val === "Positive") {
+        sentimentBadge = {
+          label: `Fidelity (${comp >= 0 ? '+' : ''}${comp.toFixed(2)})`,
+          bg: "bg-emerald-50 dark:bg-emerald-950/40",
+          text: "text-emerald-700 dark:text-emerald-300",
+          border: "border-emerald-200 dark:border-emerald-800"
+        };
+      } else if (val === "Constitutional Friction / Overreach" || val === "Urgent/Negative") {
+        sentimentBadge = {
+          label: `Friction (${comp.toFixed(2)})`,
+          bg: "bg-rose-50 dark:bg-rose-950/40",
+          text: "text-rose-700 dark:text-rose-300",
+          border: "border-rose-200 dark:border-rose-800"
+        };
+      }
+
+      const rawDate = order.date || order.signing_date;
+      const formattedDate = rawDate ? new Date(rawDate).toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric"
+      }) : "Undated";
+
+      const num = order.num !== undefined ? order.num : order.eo_number;
+      const eoBadge = num ? 
+        `<span class="font-mono text-xs font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-900">EO ${num}</span>` :
+        `<span class="font-mono text-[11px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">Order</span>`;
+
+      const presName = order.pres || order.president_name;
+      const slug = order.slug || order.president_slug || 'default';
+      const readTime = order.time || order.reading_time_minutes || 1;
+      const wordCount = (order.words || order.word_count || 0).toLocaleString();
+      const toneTag = order.tag || order.tone_tag;
+      const snippet = order.snip || order.snippet;
+
+      return `
+        <article class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-200 flex flex-col justify-between">
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+              <div class="flex items-center gap-2">
+                ${eoBadge}
+                <span class="text-xs font-mono text-slate-500 dark:text-slate-400">${formattedDate}</span>
+              </div>
+              <span class="text-[11px] font-medium px-2 py-0.5 rounded-full border ${sentimentBadge.bg} ${sentimentBadge.text} ${sentimentBadge.border}">
+                ${sentimentBadge.label}
+              </span>
+            </div>
+            <h3 class="font-serif font-bold text-slate-900 dark:text-white text-base sm:text-lg mb-2 line-clamp-2 hover:text-blue-600 dark:hover:text-blue-400">
+              <a href="/orders/${order.id}">${order.title}</a>
+            </h3>
+            ${toneTag ? `
+              <div class="mb-3">
+                <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-900/60 font-medium">
+                  🏛️ ${toneTag}
+                </span>
+              </div>
+            ` : ''}
+            ${snippet ? `<p class="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed mb-4">${snippet}</p>` : ''}
+          </div>
+          <div class="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+            <div class="flex items-center gap-1.5 font-medium">
+              <img src="/portraits/${slug}.jpg" alt="" class="w-5 h-5 rounded-full object-cover border border-slate-300 dark:border-slate-600" onerror="this.style.display='none'" />
+              <span class="text-slate-700 dark:text-slate-300 truncate max-w-[140px] sm:max-w-none">${presName}</span>
+            </div>
+            <div class="flex items-center gap-2 font-mono text-[11px]">
+              <span title="Estimated Reading Time">⏱ ${readTime}m</span>
+              <span class="opacity-40">•</span>
+              <span title="Word Count">${wordCount} words</span>
+            </div>
+          </div>
+        </article>
+      `;
+    }
+
+    function displayMatches(reset = false) {
+      if (reset) {
+        resultsGrid.innerHTML = '';
+        displayedCount = 0;
+      }
+
+      const nextBatch = currentMatches.slice(displayedCount, displayedCount + PAGE_SIZE);
+      if (nextBatch.length > 0) {
+        resultsGrid.innerHTML += nextBatch.map(renderCard).join('');
+        displayedCount += nextBatch.length;
+      }
+
+      if (displayedCount < currentMatches.length) {
+        loadMoreContainer.classList.remove('hidden');
+      } else {
+        loadMoreContainer.classList.add('hidden');
+      }
+
+      if (currentMatches.length === 0) {
+        emptyState.classList.remove('hidden');
+      } else {
+        emptyState.classList.add('hidden');
+      }
+    }
+
+    async function loadIndex() {
+      if (allOrders) return allOrders;
+      try {
+        const res = await fetch('/search_index.json');
+        allOrders = await res.json();
+      } catch (e) {
+        console.error('Failed to load search index:', e);
+        allOrders = initialOrders;
+      }
+      return allOrders;
+    }
+
+    async function performSearch(query) {
+      const q = (query || '').toLowerCase().trim();
+      const dataset = await loadIndex();
+
+      if (!q) {
+        currentMatches = dataset.slice(0, 40);
+        status.textContent = 'Showing recent executive orders';
+        displayMatches(true);
+        return;
+      }
+
+      const terms = q.split(/\s+/).filter(Boolean);
+      currentMatches = dataset.filter(order => {
+        const hay = `${order.title} ${order.pres || order.president_name} ${order.num || order.eo_number || ''} ${order.snip || order.snippet || ''} ${order.tag || ''}`.toLowerCase();
+        return terms.every(term => hay.includes(term));
+      });
+
+      status.textContent = `Found ${currentMatches.length.toLocaleString()} match${currentMatches.length === 1 ? '' : 'es'} for "${query}"`;
+      displayMatches(true);
+    }
+
+    // Initialize with preview
+    currentMatches = initialOrders;
+    displayMatches(true);
+
+    // Warm up search index in background
+    setTimeout(loadIndex, 500);
+
+    // Check URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const initialQuery = urlParams.get('q');
     if (initialQuery && input) {
@@ -87,36 +250,12 @@ import orders from '../../data/site_orders_summary.json';
       performSearch(initialQuery);
     }
 
-    function performSearch(query) {
-      const q = (query || '').toLowerCase().trim();
-      let matchCount = 0;
-
-      items.forEach(item => {
-        const text = item.getAttribute('data-text') || '';
-        if (!q || text.includes(q)) {
-          item.classList.remove('hidden');
-          matchCount++;
-        } else {
-          item.classList.add('hidden');
-        }
-      });
-
-      if (status) {
-        if (q) {
-          status.textContent = `Found ${matchCount} match${matchCount === 1 ? '' : 'es'} for "${query}"`;
-        } else {
-          status.textContent = `Showing all ${matchCount} executive orders`;
-        }
-      }
-
-      if (emptyState) {
-        if (matchCount === 0) emptyState.classList.remove('hidden');
-        else emptyState.classList.add('hidden');
-      }
-    }
-
+    let debounceTimer;
     input?.addEventListener('input', (e) => {
-      performSearch(e.target.value);
+      clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(() => {
+        performSearch(e.target.value);
+      }, 150);
     });
 
     suggestBtns.forEach(btn => {
@@ -127,6 +266,10 @@ import orders from '../../data/site_orders_summary.json';
           input.focus();
         }
       });
+    });
+
+    loadMoreBtn?.addEventListener('click', () => {
+      displayMatches(false);
     });
   </script>
 </Layout>

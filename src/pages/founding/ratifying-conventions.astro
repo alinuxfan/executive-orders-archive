@@ -1,0 +1,91 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import docs from '../../../data/founding/ratifying_conventions.json';
+---
+
+<Layout 
+  title="Ratifying Convention Documents & Debates (1787–1788) | Executive Orders Archive"
+  description="Historical state ratifying convention resolutions, George Washington's transmittal letter, Virginia's proposed Bill of Rights, and Alexander Hamilton's Federalist 69 & 70."
+>
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    
+    <!-- Breadcrumb -->
+    <nav class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-6 font-mono">
+      <a href="/" class="hover:underline">Home</a>
+      <span>/</span>
+      <a href="/founding" class="hover:underline">Founding Documents</a>
+      <span>/</span>
+      <span class="text-slate-800 dark:text-slate-200">Ratifying Conventions & Debates</span>
+    </nav>
+
+    <!-- Header Banner -->
+    <header class="bg-purple-50/70 dark:bg-slate-900 border-2 border-purple-200 dark:border-purple-900/60 rounded-3xl p-6 sm:p-10 mb-8 shadow-sm text-center">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-purple-100 text-purple-950 dark:bg-purple-950 dark:text-purple-300 text-xs font-semibold uppercase tracking-wider mb-3 font-sans border border-purple-200 dark:border-purple-800">
+        <span>🖋️ The Crucible of Ratification</span>
+        <span>•</span>
+        <span>1787 to 1788</span>
+      </div>
+      <h1 class="font-serif font-extrabold text-3xl sm:text-4xl lg:text-5xl text-slate-900 dark:text-white leading-tight">
+        Ratifying Conventions & Historical Debates
+      </h1>
+      <p class="font-serif text-base text-slate-600 dark:text-slate-300 mt-2 max-w-2xl mx-auto">
+        How the States contested, negotiated, and ultimately ratified the Constitution—and how the intense debate over presidential tyranny forced the creation of the Bill of Rights.
+      </p>
+
+      <div class="flex flex-wrap items-center justify-center gap-4 mt-6 pt-6 border-t border-purple-200/60 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 font-mono">
+        <span>Documents: <strong>6 Historic Records</strong></span>
+        <span>•</span>
+        <span>Key Debaters: <strong>Madison, Washington, Hamilton, Patrick Henry</strong></span>
+      </div>
+    </header>
+
+    <!-- Documents List -->
+    <div class="space-y-12">
+      {docs.map(doc => (
+        <article id={doc.id} class="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-10 border border-slate-200 dark:border-slate-800 shadow-sm scroll-mt-28">
+          
+          <div class="border-b border-slate-100 dark:border-slate-800 pb-6 mb-6">
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+              <span class="text-xs font-mono font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">
+                {doc.formatted_date} • {doc.location}
+              </span>
+              <span class="text-xs font-sans font-semibold text-slate-500">
+                {doc.author}
+              </span>
+            </div>
+
+            <h2 class="font-serif font-bold text-2xl sm:text-3xl text-slate-900 dark:text-white">
+              {doc.title}
+            </h2>
+
+            <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-sans mt-2 leading-relaxed">
+              {doc.summary}
+            </p>
+
+            <!-- Notable Quote Pullout -->
+            <div class="mt-4 p-4 rounded-xl bg-purple-50/60 dark:bg-purple-950/20 border-l-4 border-purple-500 text-sm font-serif italic text-purple-950 dark:text-purple-200">
+              "{doc.quote}"
+            </div>
+          </div>
+
+          <!-- Document Full Text -->
+          <div class="p-6 rounded-2xl bg-slate-50/60 dark:bg-slate-800/40 border border-slate-200/60 dark:border-slate-800 font-serif text-sm sm:text-base text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-line">
+            {doc.text}
+          </div>
+
+        </article>
+      ))}
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="mt-12 flex items-center justify-between text-xs font-mono">
+      <a href="/founding/amendments" class="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
+        &larr; Previous: The 27 Amendments
+      </a>
+      <a href="/founding" class="text-purple-600 dark:text-purple-400 font-bold hover:underline">
+        Back to Founding Hub &rarr;
+      </a>
+    </div>
+
+  </div>
+</Layout>

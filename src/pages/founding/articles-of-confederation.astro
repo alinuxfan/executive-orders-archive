@@ -1,0 +1,94 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import doc from '../../../data/founding/articles_of_confederation.json';
+---
+
+<Layout 
+  title="The Articles of Confederation (1777/1781) | America's First Constitution"
+  description="Read the complete unabridged text of the Articles of Confederation and Perpetual Union, with analysis of why the lack of an executive branch prompted the 1787 Constitution."
+>
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    
+    <!-- Breadcrumb -->
+    <nav class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-6 font-mono">
+      <a href="/" class="hover:underline">Home</a>
+      <span>/</span>
+      <a href="/founding" class="hover:underline">Founding Documents</a>
+      <span>/</span>
+      <span class="text-slate-800 dark:text-slate-200">Articles of Confederation</span>
+    </nav>
+
+    <!-- Header Banner -->
+    <header class="bg-slate-100 dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-10 mb-10 shadow-sm text-center">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-200 text-slate-800 dark:bg-slate-800 dark:text-slate-300 text-xs font-semibold uppercase tracking-wider mb-3 font-sans border border-slate-300 dark:border-slate-700">
+        <span>⚖️ First National Constitution</span>
+        <span>•</span>
+        <span>{doc.location}</span>
+      </div>
+      <h1 class="font-serif font-extrabold text-3xl sm:text-4xl lg:text-5xl text-slate-900 dark:text-white leading-tight">
+        {doc.title}
+      </h1>
+      <p class="font-serif italic text-base text-slate-600 dark:text-slate-300 mt-2 max-w-2xl mx-auto">
+        {doc.formatted_date}
+      </p>
+
+      <div class="flex flex-wrap items-center justify-center gap-4 mt-6 pt-6 border-t border-slate-200 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 font-mono">
+        <span>Word Count: <strong>{doc.word_count.toLocaleString()} words</strong></span>
+        <span>•</span>
+        <span>Articles: <strong>13 Articles</strong></span>
+        <span>•</span>
+        <span>Requirement to Amend: <strong>Unanimous (13/13)</strong></span>
+      </div>
+    </header>
+
+    <!-- Executive Power Relevance Callout -->
+    <div class="mb-10 bg-white dark:bg-slate-900 rounded-2xl p-6 border-l-4 border-slate-500 border-y border-r border-slate-200 dark:border-slate-800 shadow-sm">
+      <div class="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-1 font-sans">
+        Why It Failed: The Fatal Absence of Executive Power
+      </div>
+      <p class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+        {doc.constitutional_relevance}
+      </p>
+    </div>
+
+    <!-- Preamble -->
+    <div class="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-sm mb-8">
+      <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white mb-3">
+        The Preamble
+      </h2>
+      <p class="text-sm sm:text-base text-slate-700 dark:text-slate-300 leading-relaxed font-serif">
+        {doc.preamble}
+      </p>
+    </div>
+
+    <!-- Articles I through XIII -->
+    <div class="space-y-6">
+      {doc.articles.map(art => (
+        <article class="bg-white dark:bg-slate-900 rounded-2xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-sm">
+          <div class="flex items-center gap-3 mb-3">
+            <span class="px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 font-mono font-bold text-xs border border-slate-200 dark:border-slate-700">
+              Article {art.article}
+            </span>
+            <h3 class="font-serif font-bold text-lg sm:text-xl text-slate-900 dark:text-white">
+              {art.title}
+            </h3>
+          </div>
+          <p class="text-sm sm:text-base text-slate-700 dark:text-slate-300 font-serif leading-relaxed whitespace-pre-line">
+            {art.text}
+          </p>
+        </article>
+      ))}
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="mt-12 flex items-center justify-between text-xs font-mono">
+      <a href="/founding/declaration" class="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
+        &larr; Previous: Declaration of Independence
+      </a>
+      <a href="/founding/constitution" class="text-blue-600 dark:text-blue-400 font-bold hover:underline">
+        Next: The United States Constitution (1787) &rarr;
+      </a>
+    </div>
+
+  </div>
+</Layout>

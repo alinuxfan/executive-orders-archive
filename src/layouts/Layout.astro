@@ -1,4 +1,6 @@
 ---
+import syncStatus from '../../data/stats.json';
+
 interface Props {
   title: string;
   description?: string;
@@ -6,11 +8,8 @@ interface Props {
 
 const { 
   title, 
-  description = "Explore every United States Presidential Executive Order with sentiment analysis, reading times, legal complexity metrics, and plain-English explanations." 
+  description = "A comprehensive historical archive of United States Presidential Executive Orders from 1789 to present, featuring sentiment analysis, length metrics, and plain English summaries." 
 } = Astro.props;
-
-import '../styles/global.css';
-import syncStatus from '../../data/sync_status.json';
 
 const lastSyncDate = syncStatus?.last_sync_timestamp ? new Date(syncStatus.last_sync_timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Recent";
 ---
@@ -68,15 +67,19 @@ const lastSyncDate = syncStatus?.last_sync_timestamp ? new Date(syncStatus.last_
 
         <!-- Desktop Navigation Links -->
         <nav class="hidden md:flex items-center gap-1 text-sm font-medium">
-          <a href="/orders" class="px-3.5 py-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+          <a href="/orders" class="px-3 py-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
             All Orders
           </a>
-          <a href="/presidents" class="px-3.5 py-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+          <a href="/presidents" class="px-3 py-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
             Presidents
           </a>
-          <a href="/analytics" class="px-3.5 py-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1">
-            <span>Analytics & Trends</span>
+          <a href="/analytics" class="px-3 py-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1">
+            <span>Analytics</span>
             <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
+          </a>
+          <a href="/founding" class="px-3 py-2 rounded-lg text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 border border-amber-200/80 dark:border-amber-900/60 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors flex items-center gap-1.5 font-serif font-bold text-xs uppercase tracking-wider">
+            <span>📜</span>
+            <span>Founding Documents</span>
           </a>
         </nav>
 
@@ -108,17 +111,39 @@ const lastSyncDate = syncStatus?.last_sync_timestamp ? new Date(syncStatus.last_
     <footer class="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-12 text-sm">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-8">
         
-        <div class="md:col-span-2 space-y-3">
+        <div class="md:col-span-1 space-y-3">
           <div class="flex items-center gap-2">
             <span class="text-amber-500 font-serif font-bold text-lg">★</span>
             <span class="font-bold text-slate-900 dark:text-white font-serif">Executive Orders Archive</span>
           </div>
-          <p class="text-slate-500 dark:text-slate-400 text-xs leading-relaxed max-w-md">
-            An open research portal providing transparent access, computational linguistics, sentiment scoring, and plain-English distillations of every Executive Order signed by United States Presidents.
+          <p class="text-slate-500 dark:text-slate-400 text-xs leading-relaxed">
+            An open research portal providing transparent access, computational linguistics, constitutional scoring, and plain-English distillations of every Executive Order signed by United States Presidents.
           </p>
           <div class="pt-2 text-xs text-slate-400 dark:text-slate-500">
-            Hosted statically for $0.00/mo on Cloudflare Pages. Built with Astro, SQLite & Tailwind.
+            Hosted statically for $0.00/mo on Cloudflare Pages.
           </div>
+        </div>
+
+        <div>
+          <h4 class="font-semibold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-3">Founding Charters</h4>
+          <ul class="space-y-2 text-xs text-slate-600 dark:text-slate-400">
+            <li><a href="/founding" class="hover:underline font-bold text-amber-600 dark:text-amber-400">Founding Library Overview</a></li>
+            <li><a href="/founding/constitution" class="hover:underline">The Constitution (1787)</a></li>
+            <li><a href="/founding/amendments" class="hover:underline">All 27 Amendments</a></li>
+            <li><a href="/founding/declaration" class="hover:underline">Declaration of Independence (1776)</a></li>
+            <li><a href="/founding/articles-of-confederation" class="hover:underline">Articles of Confederation (1777)</a></li>
+            <li><a href="/founding/ratifying-conventions" class="hover:underline">Ratifying Conventions & Debates</a></li>
+          </ul>
+        </div>
+
+        <div>
+          <h4 class="font-semibold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-3">Executive Orders</h4>
+          <ul class="space-y-2 text-xs text-slate-600 dark:text-slate-400">
+            <li><a href="/orders" class="hover:underline">All Executive Orders</a></li>
+            <li><a href="/presidents" class="hover:underline">Presidential Directory</a></li>
+            <li><a href="/analytics" class="hover:underline">Sentiment & Length Graphs</a></li>
+            <li><a href="/search" class="hover:underline">Full-Text Search</a></li>
+          </ul>
         </div>
 
         <div>
@@ -127,17 +152,7 @@ const lastSyncDate = syncStatus?.last_sync_timestamp ? new Date(syncStatus.last_
             <li><a href="https://www.federalregister.gov" target="_blank" rel="noopener" class="hover:underline">Federal Register API (1994-Present)</a></li>
             <li><a href="https://www.presidency.ucsb.edu" target="_blank" rel="noopener" class="hover:underline">UCSB American Presidency Project (1789-1993)</a></li>
             <li><a href="https://www.archives.gov" target="_blank" rel="noopener" class="hover:underline">National Archives (NARA)</a></li>
-            <li><a href="https://commons.wikimedia.org" target="_blank" rel="noopener" class="hover:underline">Wikimedia Commons (Public Domain Portraits)</a></li>
-          </ul>
-        </div>
-
-        <div>
-          <h4 class="font-semibold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-3">Navigation</h4>
-          <ul class="space-y-2 text-xs text-slate-600 dark:text-slate-400">
-            <li><a href="/orders" class="hover:underline">All Executive Orders</a></li>
-            <li><a href="/presidents" class="hover:underline">Presidential Directory</a></li>
-            <li><a href="/analytics" class="hover:underline">Sentiment & Length Graphs</a></li>
-            <li><a href="/search" class="hover:underline">Full-Text Search</a></li>
+            <li><a href="https://commons.wikimedia.org" target="_blank" rel="noopener" class="hover:underline">Wikimedia Commons (Portraits)</a></li>
           </ul>
         </div>
 
@@ -169,14 +184,6 @@ const lastSyncDate = syncStatus?.last_sync_timestamp ? new Date(syncStatus.last_
         } else {
           document.documentElement.classList.add('dark');
           localStorage.setItem('color-theme', 'dark');
-        }
-      });
-
-      // Keyboard shortcut ⌘K / Ctrl+K to jump to search
-      window.addEventListener('keydown', (e) => {
-        if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-          e.preventDefault();
-          window.location.href = '/search';
         }
       });
     </script>

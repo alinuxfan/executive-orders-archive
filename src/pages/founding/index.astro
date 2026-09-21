@@ -1,0 +1,228 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import declaration from '../../../data/founding/declaration_of_independence.json';
+import articles from '../../../data/founding/articles_of_confederation.json';
+import constitution from '../../../data/founding/constitution.json';
+import amendments from '../../../data/founding/amendments.json';
+import ratifying from '../../../data/founding/ratifying_conventions.json';
+
+const foundingDocuments = [
+  {
+    id: "declaration",
+    href: "/founding/declaration",
+    title: "Declaration of Independence",
+    year: "1776",
+    role: "The Moral Charter",
+    icon: "📜",
+    tagline: "Dissolving Allegiance to the Crown",
+    summary: "Asserts unalienable rights to Life, Liberty, and the pursuit of Happiness, enumerating 27 specific executive tyrannies committed by King George III that informed future limits on executive power.",
+    wordCount: declaration.word_count,
+    badge: "Organic Law of the United States",
+    badgeColor: "bg-amber-100 text-amber-900 border-amber-300 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-800"
+  },
+  {
+    id: "articles-of-confederation",
+    href: "/founding/articles-of-confederation",
+    title: "Articles of Confederation",
+    year: "1777 / 1781",
+    role: "The First National Charter",
+    icon: "⚖️",
+    tagline: "A Firm League of Friendship",
+    summary: "America's initial constitutional framework. The total lack of an executive magistrate and inability to enforce national laws exposed the fatal flaw that prompted the 1787 Philadelphia Convention.",
+    wordCount: articles.word_count,
+    badge: "First Constitution",
+    badgeColor: "bg-slate-100 text-slate-800 border-slate-300 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
+  },
+  {
+    id: "constitution",
+    href: "/founding/constitution",
+    title: "The United States Constitution",
+    year: "1787",
+    role: "The Supreme Law of the Land",
+    icon: "🏛️",
+    tagline: "Articles I through VII",
+    summary: "Establishes the tripartite separated powers of government. Article II creates the Presidency, grants Commander-in-Chief powers, and commands the executive to 'take Care that the Laws be faithfully executed.'",
+    wordCount: constitution.word_count,
+    badge: "Supreme Legal Authority",
+    badgeColor: "bg-blue-100 text-blue-900 border-blue-300 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-800"
+  },
+  {
+    id: "amendments",
+    href: "/founding/amendments",
+    title: "All 27 Constitutional Amendments",
+    year: "1791 – 1992",
+    role: "The Bill of Rights & Organic Alterations",
+    icon: "🛡️",
+    tagline: "From Madison's Rights to Modern Limits",
+    summary: "Full text of the Bill of Rights (Amendments 1–10), the Civil War Reconstruction Amendments (13–15), and 20th-century expansions including the 22nd Amendment's two-term presidential limit.",
+    wordCount: amendments.reduce((sum, a) => sum + a.text.split(/\s+/).length, 0),
+    badge: "27 Enacted Amendments",
+    badgeColor: "bg-emerald-100 text-emerald-900 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800"
+  },
+  {
+    id: "ratifying-conventions",
+    href: "/founding/ratifying-conventions",
+    title: "Ratifying Conventions & Debates",
+    year: "1787 – 1788",
+    role: "The Constitutional Crucible",
+    icon: "🖋️",
+    tagline: "Madison, Henry, Washington & Hamilton",
+    summary: "George Washington's transmittal letter, the Massachusetts Compromise, Virginia's proposed Bill of Rights, and Alexander Hamilton's foundational essays on executive energy (Federalist 69 & 70).",
+    wordCount: ratifying.reduce((sum, r) => sum + r.text.split(/\s+/).length, 0),
+    badge: "Historical Ratification Records",
+    badgeColor: "bg-purple-100 text-purple-900 border-purple-300 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800"
+  }
+];
+---
+
+<Layout 
+  title="The Founding Documents & Constitutional Charters | US Executive Orders Archive"
+  description="Explore the full unabridged texts of the Declaration of Independence, Articles of Confederation, United States Constitution, all 27 Amendments, and State Ratifying Convention documents."
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    
+    <!-- Hero Header -->
+    <div class="text-center max-w-3xl mx-auto mb-12">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 text-xs font-semibold uppercase tracking-wider mb-4 border border-amber-300 dark:border-amber-800">
+        <span>📜</span>
+        <span>The Organic Charters of American Liberty</span>
+      </div>
+      <h1 class="font-serif font-extrabold text-3xl sm:text-5xl text-slate-900 dark:text-white leading-tight">
+        The Founding Documents & Constitutional Library
+      </h1>
+      <p class="text-sm sm:text-base text-slate-600 dark:text-slate-400 mt-4 leading-relaxed">
+        Every presidential executive order in United States history derives its legitimacy solely from the powers granted in <strong class="text-slate-900 dark:text-white">Article II of the 1787 Constitution</strong>. Explore the authentic, unabridged texts that formed the American Republic and defined the constitutional limits of executive authority.
+      </p>
+    </div>
+
+    <!-- Essential Connection Callout: Article II and Executive Orders -->
+    <div class="mb-12 bg-gradient-to-r from-amber-50 via-white to-amber-50 dark:from-slate-900 dark:via-slate-850 dark:to-slate-900 border-2 border-amber-300/80 dark:border-amber-700/60 rounded-2xl p-6 sm:p-8 shadow-sm">
+      <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+        <div class="space-y-2 max-w-2xl">
+          <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-400">
+            <span>🏛️ Constitutional Nexus</span>
+            <span>•</span>
+            <span>Why These Texts Matter</span>
+          </div>
+          <h2 class="font-serif font-bold text-xl sm:text-2xl text-slate-900 dark:text-white">
+            The Fountainhead of All Executive Orders
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+            The Constitution never mentions the words "Executive Order." Instead, presidents issue orders pursuant to the <strong class="text-amber-900 dark:text-amber-300">Executive Vesting Clause</strong> ("The executive Power shall be vested in a President"), Commander-in-Chief authority, and the affirmative duty under Section 3 to <strong class="text-amber-900 dark:text-amber-300">"take Care that the Laws be faithfully executed."</strong> When an order oversteps statutory authorization or invades Article I legislative turf, it violates the Framers' tripartite balance.
+          </p>
+        </div>
+        <div class="flex-shrink-0">
+          <a 
+            href="/founding/constitution#article-2"
+            class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs shadow-md transition-all font-sans"
+          >
+            <span>Read Article II (Executive)</span>
+            <span>&rarr;</span>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Documents Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
+      {foundingDocuments.map(doc => (
+        <a 
+          href={doc.href}
+          class="group block bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-400 dark:hover:border-amber-600 rounded-2xl p-6 shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+        >
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-4">
+              <span class="text-2xl p-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-100 dark:border-slate-700/60 group-hover:scale-110 transition-transform">
+                {doc.icon}
+              </span>
+              <span class={`text-[11px] font-bold px-2.5 py-0.5 rounded-full border ${doc.badgeColor} font-sans`}>
+                {doc.year}
+              </span>
+            </div>
+
+            <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1 font-sans">
+              {doc.role}
+            </div>
+
+            <h3 class="font-serif font-bold text-xl text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors mb-2">
+              {doc.title}
+            </h3>
+
+            <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-4">
+              {doc.summary}
+            </p>
+          </div>
+
+          <div class="pt-4 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 font-mono">
+            <span>{doc.wordCount.toLocaleString()} words</span>
+            <span class="text-amber-600 dark:text-amber-400 font-bold group-hover:translate-x-1 transition-transform inline-flex items-center gap-1 font-sans">
+              Read Authentic Text &rarr;
+            </span>
+          </div>
+        </a>
+      ))}
+    </div>
+
+    <!-- Chronological Constitutional Timeline -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8">
+      <div class="max-w-2xl mb-8">
+        <h2 class="font-serif font-bold text-2xl text-slate-900 dark:text-white">
+          The Constitutional Evolution Timeline
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+          How American governance transitioned from anti-monarchical rebellion to an enduring federal republic.
+        </p>
+      </div>
+
+      <div class="relative border-l-2 border-amber-300 dark:border-amber-700 ml-4 sm:ml-6 pl-6 sm:pl-8 space-y-8">
+        
+        <div class="relative">
+          <div class="absolute -left-[31px] sm:-left-[39px] top-0 w-4 h-4 rounded-full bg-amber-500 border-4 border-white dark:border-slate-900"></div>
+          <span class="text-xs font-mono font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider">July 4, 1776</span>
+          <h3 class="font-serif font-bold text-base text-slate-900 dark:text-white mt-0.5">The Declaration of Independence</h3>
+          <p class="text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-xl">
+            Thirteen united colonies sever ties with King George III, itemizing arbitrary royal executive mandates, unlawful military occupations, and taxes without legislative representation.
+          </p>
+        </div>
+
+        <div class="relative">
+          <div class="absolute -left-[31px] sm:-left-[39px] top-0 w-4 h-4 rounded-full bg-slate-400 border-4 border-white dark:border-slate-900"></div>
+          <span class="text-xs font-mono font-bold text-slate-500 uppercase tracking-wider">1777–1781</span>
+          <h3 class="font-serif font-bold text-base text-slate-900 dark:text-white mt-0.5">The Articles of Confederation</h3>
+          <p class="text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-xl">
+            America's initial government operated without a national executive or judicial branch. Unable to levy taxes, pay war debt, or enforce treaties, the confederation stumbled into paralysis.
+          </p>
+        </div>
+
+        <div class="relative">
+          <div class="absolute -left-[31px] sm:-left-[39px] top-0 w-4 h-4 rounded-full bg-blue-600 border-4 border-white dark:border-slate-900"></div>
+          <span class="text-xs font-mono font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">September 17, 1787</span>
+          <h3 class="font-serif font-bold text-base text-slate-900 dark:text-white mt-0.5">The United States Constitution Signed</h3>
+          <p class="text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-xl">
+            Delegates in Philadelphia draft a robust tripartite republic. They intentionally construct Article II to provide energetic leadership while embedding strict legislative and judicial counterweights.
+          </p>
+        </div>
+
+        <div class="relative">
+          <div class="absolute -left-[31px] sm:-left-[39px] top-0 w-4 h-4 rounded-full bg-purple-600 border-4 border-white dark:border-slate-900"></div>
+          <span class="text-xs font-mono font-bold text-purple-600 dark:text-purple-400 uppercase tracking-wider">1787–1788</span>
+          <h3 class="font-serif font-bold text-base text-slate-900 dark:text-white mt-0.5">The State Ratifying Conventions</h3>
+          <p class="text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-xl">
+            Epic debates in Massachusetts, Virginia, and New York over presidential tyranny. Federalists secured ratification only by promising an immediate federal Bill of Rights.
+          </p>
+        </div>
+
+        <div class="relative">
+          <div class="absolute -left-[31px] sm:-left-[39px] top-0 w-4 h-4 rounded-full bg-emerald-600 border-4 border-white dark:border-slate-900"></div>
+          <span class="text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">December 15, 1791</span>
+          <h3 class="font-serif font-bold text-base text-slate-900 dark:text-white mt-0.5">The Bill of Rights Ratified</h3>
+          <p class="text-xs text-slate-600 dark:text-slate-400 mt-1 max-w-xl">
+            Ten amendments drafted by James Madison protect speech, religion, arms, due process, trial by jury, and federalism—establishing the explicit boundaries that no president or executive order can breach.
+          </p>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</Layout>

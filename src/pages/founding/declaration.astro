@@ -1,0 +1,159 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import doc from '../../../data/founding/declaration_of_independence.json';
+
+const totalGrievances = doc.grievances.length;
+---
+
+<Layout 
+  title="The Declaration of Independence (1776) | Full Text & Executive Grievances"
+  description="Read the complete, unabridged Declaration of Independence with full text of all 27 grievances against King George III and signers by state."
+>
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    
+    <!-- Breadcrumb -->
+    <nav class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-6 font-mono">
+      <a href="/" class="hover:underline">Home</a>
+      <span>/</span>
+      <a href="/founding" class="hover:underline">Founding Documents</a>
+      <span>/</span>
+      <span class="text-slate-800 dark:text-slate-200">Declaration of Independence</span>
+    </nav>
+
+    <!-- Header Banner -->
+    <header class="bg-amber-50/70 dark:bg-slate-900 border-2 border-amber-200 dark:border-amber-900/60 rounded-3xl p-6 sm:p-10 mb-10 shadow-sm text-center">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-200/80 text-amber-950 dark:bg-amber-950/80 dark:text-amber-300 text-xs font-semibold uppercase tracking-wider mb-3 font-sans border border-amber-300 dark:border-amber-800">
+        <span>📜 {doc.formatted_date}</span>
+        <span>•</span>
+        <span>{doc.location}</span>
+      </div>
+      <h1 class="font-serif font-extrabold text-3xl sm:text-4xl lg:text-5xl text-slate-900 dark:text-white leading-tight">
+        {doc.title}
+      </h1>
+      <p class="font-serif italic text-base sm:text-lg text-slate-600 dark:text-slate-300 mt-2 max-w-2xl mx-auto">
+        "{doc.subtitle}"
+      </p>
+
+      <div class="flex flex-wrap items-center justify-center gap-4 mt-6 pt-6 border-t border-amber-200/60 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 font-mono">
+        <span>Word Count: <strong>{doc.word_count.toLocaleString()} words</strong></span>
+        <span>•</span>
+        <span>Grievances Itemized: <strong>{totalGrievances} abuses</strong></span>
+        <span>•</span>
+        <span>Signers: <strong>56 Patriots</strong></span>
+      </div>
+    </header>
+
+    <!-- Executive Power Relevance Callout -->
+    <div class="mb-10 bg-white dark:bg-slate-900 rounded-2xl p-6 border-l-4 border-amber-500 border-y border-r border-slate-200 dark:border-slate-800 shadow-sm">
+      <div class="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 mb-1 font-sans">
+        Constitutional Relevance to Presidential Orders
+      </div>
+      <p class="text-xs sm:text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+        {doc.constitutional_relevance}
+      </p>
+    </div>
+
+    <!-- Document Content Article -->
+    <article class="prose prose-slate dark:prose-invert max-w-none font-serif space-y-8 bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-12 border border-slate-200 dark:border-slate-800 shadow-sm leading-relaxed">
+      
+      <!-- Preamble -->
+      <section class="border-b border-slate-100 dark:border-slate-800 pb-8">
+        <h2 class="font-serif font-bold text-xl sm:text-2xl text-slate-900 dark:text-white not-prose mb-4">
+          The Preamble
+        </h2>
+        <p class="text-base sm:text-lg text-slate-800 dark:text-slate-200 leading-relaxed font-serif">
+          {doc.preamble}
+        </p>
+      </section>
+
+      <!-- Declaration of Rights -->
+      <section class="border-b border-slate-100 dark:border-slate-800 pb-8">
+        <h2 class="font-serif font-bold text-xl sm:text-2xl text-slate-900 dark:text-white not-prose mb-4">
+          A Declaration of Human Rights
+        </h2>
+        <p class="text-base sm:text-lg text-slate-800 dark:text-slate-200 leading-relaxed font-serif">
+          {doc.declaration_of_rights}
+        </p>
+      </section>
+
+      <!-- The 27 Grievances -->
+      <section class="border-b border-slate-100 dark:border-slate-800 pb-8">
+        <div class="not-prose mb-6">
+          <span class="text-xs font-bold font-sans uppercase tracking-wider text-amber-600 dark:text-amber-400">The Indictment of Monarchy</span>
+          <h2 class="font-serif font-bold text-2xl sm:text-3xl text-slate-900 dark:text-white">
+            The 27 Grievances Against the Crown
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-sans mt-1">
+            King George III's systematic executive abuses that compelled separation.
+          </p>
+        </div>
+
+        <ol class="space-y-4 not-prose list-none p-0">
+          {doc.grievances.map(g => (
+            <li class="flex items-start gap-4 p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/70 dark:border-slate-800">
+              <span class="flex-shrink-0 w-7 h-7 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-300 font-bold font-mono text-xs flex items-center justify-center border border-amber-300/80 dark:border-amber-800">
+                {g.num}
+              </span>
+              <p class="text-sm sm:text-base text-slate-800 dark:text-slate-200 font-serif leading-relaxed pt-0.5">
+                {g.text}
+              </p>
+            </li>
+          ))}
+        </ol>
+      </section>
+
+      <!-- Petitions Ignored -->
+      <section class="border-b border-slate-100 dark:border-slate-800 pb-8">
+        <h2 class="font-serif font-bold text-xl sm:text-2xl text-slate-900 dark:text-white not-prose mb-4">
+          Petitions for Redress Answered by Injury
+        </h2>
+        <div class="text-base text-slate-800 dark:text-slate-200 leading-relaxed font-serif space-y-4 whitespace-pre-line">
+          {doc.petitions_ignored}
+        </div>
+      </section>
+
+      <!-- Conclusion and Pledge -->
+      <section class="border-b border-slate-100 dark:border-slate-800 pb-8">
+        <h2 class="font-serif font-bold text-xl sm:text-2xl text-slate-900 dark:text-white not-prose mb-4">
+          The Declaration of Independence & Solemn Pledge
+        </h2>
+        <div class="p-6 rounded-2xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-900/40 text-base sm:text-lg text-slate-900 dark:text-slate-100 leading-relaxed font-serif not-prose">
+          {doc.conclusion}
+        </div>
+      </section>
+
+      <!-- Signers by State -->
+      <section class="not-prose pt-4">
+        <h2 class="font-serif font-bold text-2xl text-slate-900 dark:text-white mb-6">
+          The Fifty-Six Signers of the Declaration
+        </h2>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+          {doc.signers.map(group => (
+            <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800">
+              <div class="font-serif font-bold text-sm text-amber-700 dark:text-amber-400 mb-2 border-b border-slate-200 dark:border-slate-700/60 pb-1">
+                {group.state}
+              </div>
+              <ul class="text-xs text-slate-700 dark:text-slate-300 space-y-1 font-sans">
+                {group.names.map(name => (
+                  <li>• {name}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      </section>
+
+    </article>
+
+    <!-- Bottom Navigation -->
+    <div class="mt-12 flex items-center justify-between text-xs font-mono">
+      <a href="/founding" class="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
+        &larr; Back to Founding Hub
+      </a>
+      <a href="/founding/articles-of-confederation" class="text-amber-600 dark:text-amber-400 font-bold hover:underline">
+        Next: Articles of Confederation (1777) &rarr;
+      </a>
+    </div>
+
+  </div>
+</Layout>

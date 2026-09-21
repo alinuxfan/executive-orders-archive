@@ -1,0 +1,180 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import amendments from '../../../data/founding/amendments.json';
+
+const billOfRights = amendments.filter(a => a.group === "Bill of Rights");
+const reconstruction = amendments.filter(a => a.group === "Reconstruction");
+const other = amendments.filter(a => a.group !== "Bill of Rights" && a.group !== "Reconstruction");
+---
+
+<Layout 
+  title="All 27 Constitutional Amendments | Bill of Rights to 27th Amendment"
+  description="Read the complete, unabridged texts of all 27 Amendments to the United States Constitution. Filter by Bill of Rights, Reconstruction, and modern eras."
+>
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    
+    <!-- Breadcrumb -->
+    <nav class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-6 font-mono">
+      <a href="/" class="hover:underline">Home</a>
+      <span>/</span>
+      <a href="/founding" class="hover:underline">Founding Documents</a>
+      <span>/</span>
+      <span class="text-slate-800 dark:text-slate-200">Constitutional Amendments</span>
+    </nav>
+
+    <!-- Header Banner -->
+    <header class="bg-emerald-50/70 dark:bg-slate-900 border-2 border-emerald-200 dark:border-emerald-900/60 rounded-3xl p-6 sm:p-10 mb-8 shadow-sm text-center">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100 text-emerald-950 dark:bg-emerald-950 dark:text-emerald-300 text-xs font-semibold uppercase tracking-wider mb-3 font-sans border border-emerald-200 dark:border-emerald-800">
+        <span>🛡️ The Organic Alterations of the Supreme Law</span>
+        <span>•</span>
+        <span>1791 to 1992</span>
+      </div>
+      <h1 class="font-serif font-extrabold text-3xl sm:text-4xl lg:text-5xl text-slate-900 dark:text-white leading-tight">
+        The 27 Constitutional Amendments
+      </h1>
+      <p class="font-serif text-base text-slate-600 dark:text-slate-300 mt-2 max-w-2xl mx-auto">
+        From James Madison's Bill of Rights to the 22nd Amendment's two-term limit on the Presidency.
+      </p>
+
+      <div class="flex flex-wrap items-center justify-center gap-4 mt-6 pt-6 border-t border-emerald-200/60 dark:border-slate-800 text-xs text-slate-600 dark:text-slate-400 font-mono">
+        <span>Total Amendments: <strong>27 Enacted</strong></span>
+        <span>•</span>
+        <span>Bill of Rights: <strong>10 Amendments (1791)</strong></span>
+        <span>•</span>
+        <span>Reconstruction: <strong>3 Amendments (1865-1870)</strong></span>
+      </div>
+    </header>
+
+    <!-- Filter Buttons -->
+    <div class="sticky top-20 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 rounded-2xl p-3 shadow-md mb-8 flex flex-wrap items-center justify-between gap-2 font-sans">
+      <div class="flex items-center gap-1.5 text-xs font-medium">
+        <button id="btn-all" class="px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold transition-colors">
+          All (27)
+        </button>
+        <button id="btn-bor" class="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors">
+          Bill of Rights (1–10)
+        </button>
+        <button id="btn-recon" class="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors">
+          Reconstruction (13–15)
+        </button>
+        <button id="btn-modern" class="px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors">
+          20th Century & Modern
+        </button>
+      </div>
+
+      <span id="counter" class="text-xs text-slate-500 font-mono">Showing 27 amendments</span>
+    </div>
+
+    <!-- Amendments List -->
+    <div id="amendments-container" class="space-y-6">
+      {amendments.map(a => (
+        <article 
+          class="amendment-card bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-8 border border-slate-200 dark:border-slate-800 shadow-sm transition-all"
+          data-group={a.group}
+          data-num={a.num}
+        >
+          <div class="flex flex-wrap items-center justify-between gap-2 mb-3">
+            <div class="flex items-center gap-2">
+              <span class="px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-950/80 text-emerald-800 dark:text-emerald-300 font-mono font-bold text-xs border border-emerald-300/80 dark:border-emerald-800">
+                Amendment {a.roman} ({a.num})
+              </span>
+              <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-sans">
+                {a.group}
+              </span>
+            </div>
+            <span class="text-xs font-mono text-slate-500">
+              Ratified: {a.formatted_date}
+            </span>
+          </div>
+
+          <h2 class="font-serif font-bold text-xl sm:text-2xl text-slate-900 dark:text-white mb-2">
+            {a.title}
+          </h2>
+
+          <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 font-sans mb-4 leading-relaxed">
+            {a.summary}
+          </p>
+
+          <!-- Executive Significance Callout -->
+          <div class="mb-5 p-3.5 rounded-xl bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/80 dark:border-amber-900/40 text-xs text-amber-900 dark:text-amber-200 font-sans leading-relaxed">
+            <strong class="font-bold flex items-center gap-1 mb-0.5">
+              <span>🏛️ Executive Order Impact:</span>
+            </strong>
+            {a.executive_significance}
+          </div>
+
+          <!-- Authentic Text Block -->
+          <div class="p-5 rounded-2xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200/80 dark:border-slate-800 font-serif text-sm sm:text-base text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-line">
+            {a.text}
+          </div>
+        </article>
+      ))}
+    </div>
+
+    <!-- Bottom Navigation -->
+    <div class="mt-12 flex items-center justify-between text-xs font-mono">
+      <a href="/founding/constitution" class="text-slate-500 hover:text-slate-800 dark:hover:text-slate-200">
+        &larr; Previous: The Constitution
+      </a>
+      <a href="/founding/ratifying-conventions" class="text-purple-600 dark:text-purple-400 font-bold hover:underline">
+        Next: Ratifying Conventions & Debates &rarr;
+      </a>
+    </div>
+
+  </div>
+
+  <script is:inline>
+    const btnAll = document.getElementById('btn-all');
+    const btnBor = document.getElementById('btn-bor');
+    const btnRecon = document.getElementById('btn-recon');
+    const btnModern = document.getElementById('btn-modern');
+    const counter = document.getElementById('counter');
+    const cards = document.querySelectorAll('.amendment-card');
+
+    function setActiveBtn(active) {
+      [btnAll, btnBor, btnRecon, btnModern].forEach(btn => {
+        if (!btn) return;
+        if (btn === active) {
+          btn.className = "px-3 py-1.5 rounded-lg bg-emerald-600 text-white font-bold transition-colors";
+        } else {
+          btn.className = "px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors";
+        }
+      });
+    }
+
+    function filterCards(filterFn, label) {
+      let visible = 0;
+      cards.forEach(card => {
+        const group = card.getAttribute('data-group') || '';
+        const num = parseInt(card.getAttribute('data-num') || '0', 10);
+        if (filterFn(group, num)) {
+          card.classList.remove('hidden');
+          visible++;
+        } else {
+          card.classList.add('hidden');
+        }
+      });
+      if (counter) counter.textContent = `Showing ${visible} amendments (${label})`;
+    }
+
+    btnAll?.addEventListener('click', () => {
+      setActiveBtn(btnAll);
+      filterCards(() => true, 'All');
+    });
+
+    btnBor?.addEventListener('click', () => {
+      setActiveBtn(btnBor);
+      filterCards((group) => group === 'Bill of Rights', 'Bill of Rights');
+    });
+
+    btnRecon?.addEventListener('click', () => {
+      setActiveBtn(btnRecon);
+      filterCards((group) => group === 'Reconstruction', 'Reconstruction');
+    });
+
+    btnModern?.addEventListener('click', () => {
+      setActiveBtn(btnModern);
+      filterCards((group) => group !== 'Bill of Rights' && group !== 'Reconstruction', '20th Century & Modern');
+    });
+  </script>
+</Layout>

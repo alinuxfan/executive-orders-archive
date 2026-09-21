@@ -52,31 +52,34 @@ const enrichedPresidents = presidentsData.map(p => {
   };
 });
 
-// Sort presidents: those with orders first, then chronologically
-const sortedPresidents = [...enrichedPresidents].sort((a, b) => {
-  if (b.orderCount !== a.orderCount) return b.orderCount - a.orderCount;
-  return a.number - b.number;
-});
+// Sort presidents by number ascending (George Washington #1 to Donald Trump #47)
+const sortedPresidents = [...enrichedPresidents].sort((a, b) => a.number - b.number);
 
-// Presidents for length chart
+// Filter out presidents with zero orders for the length chart
 const lengthChartPresidents = sortedPresidents
   .filter(p => p.orderCount > 0)
   .map(p => ({
     name: p.name,
-    avgWordCount: p.avgWordCount,
+    party: p.party,
     orderCount: p.orderCount,
-    party: p.party
+    avgWordCount: p.avgWordCount,
+    avgSentiment: p.avgSentiment !== undefined ? Number(p.avgSentiment.toFixed(2)) : 0,
+    avgGrade: Number(avgGrade)
   }));
 
-// Recent orders
-const recentOrders = rawOrders.slice(0, 8);
+// Most recent orders for the homepage feed
+const recentOrders = rawOrders.slice(0, 6);
 ---
 
-<Layout title="Executive Orders Archive | Every President Analyzed">
-  
+<Layout 
+  title="Executive Orders Archive | Every President Analyzed"
+  description="Explore all US Presidential Executive Orders with sentiment analysis, reading time, length, and plain-English summaries."
+>
   <!-- Hero Section -->
-  <section class="relative bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 text-white py-16 sm:py-24 border-b border-slate-800 overflow-hidden">
-    <!-- Subtle flag background watermark -->
+  <section class="relative bg-gradient-to-b from-flag-blue via-slate-900 to-slate-950 text-white py-16 sm:py-24 overflow-hidden border-b border-blue-900/50">
+    <div class="absolute inset-0 opacity-10 bg-[radial-gradient(#ffffff_1px,transparent_1px)] [background-size:16px_16px]"></div>
+    
+    <!-- Decorative Watermark Seal -->
     <div class="absolute inset-0 opacity-5 pointer-events-none flex items-center justify-center">
       <span class="text-[360px] font-serif font-black select-none">★</span>
     </div>
@@ -170,6 +173,48 @@ const recentOrders = rawOrders.slice(0, 8);
     </div>
   </section>
 
+  <!-- Founding Charters Teaser Section -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10">
+    <div class="bg-gradient-to-r from-amber-50 via-white to-amber-50 dark:from-slate-900 dark:via-slate-850 dark:to-slate-900 border-2 border-amber-300/80 dark:border-amber-700/60 rounded-3xl p-6 sm:p-8 shadow-sm">
+      <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+        <div class="space-y-2 max-w-2xl">
+          <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-400 font-sans">
+            <span>📜 Constitutional Library</span>
+            <span>•</span>
+            <span>The Organic Law</span>
+          </div>
+          <h2 class="font-serif font-extrabold text-2xl sm:text-3xl text-slate-900 dark:text-white">
+            The Founding Charters of the Republic
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-300 leading-relaxed">
+            Read the authentic, unabridged texts: the <strong>Declaration of Independence (1776)</strong>, <strong>Articles of Confederation (1777)</strong>, the <strong>United States Constitution (1787)</strong>, all <strong>27 Amendments</strong>, and the <strong>State Ratifying Convention Debates</strong>.
+          </p>
+        </div>
+
+        <div class="flex flex-wrap items-center gap-2.5">
+          <a 
+            href="/founding/constitution" 
+            class="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs shadow transition-all font-sans"
+          >
+            Constitution (Art. II)
+          </a>
+          <a 
+            href="/founding/amendments" 
+            class="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs shadow transition-all font-sans"
+          >
+            All 27 Amendments
+          </a>
+          <a 
+            href="/founding" 
+            class="px-4 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-medium text-xs shadow transition-all font-sans"
+          >
+            Explore Library &rarr;
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- Interactive Charts & Trends Grid -->
   <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -231,11 +276,10 @@ const recentOrders = rawOrders.slice(0, 8);
       </a>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
       {recentOrders.map(order => (
         <OrderCard order={order} />
       ))}
     </div>
   </section>
-
 </Layout>

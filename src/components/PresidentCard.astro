@@ -1,7 +1,9 @@
 ---
+import { formatPresidentNumbersCompact } from '../lib/presidentNumbers';
+
 interface Props {
   president: {
-    number: number;
+    numbers: number[];
     name: string;
     slug: string;
     party: string;
@@ -60,7 +62,7 @@ if (president.avgSentiment !== undefined) {
       />
       <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/60 to-transparent h-6"></div>
       <span class="absolute bottom-1 left-1.5 text-[10px] font-bold text-white font-mono">
-        #{president.number}
+        {formatPresidentNumbersCompact(president.numbers)}
       </span>
     </div>
 

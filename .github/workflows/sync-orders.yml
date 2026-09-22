@@ -31,22 +31,41 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run sync script
+      - name: Fetch latest executive orders from Federal Register
         run: |
           PYTHONPATH=scripts python scripts/sync_orders.py
+
+      - name: Run constitutional analysis on newly ingested orders
+        run: |
+          PYTHONPATH=scripts python scripts/batch_constitutional_worker.py
+
+      - name: Export static site data (site_orders.json, summary, stats)
+        run: |
+          PYTHONPATH=scripts python scripts/export_site_data.py
+
+      - name: Rebuild client search index
+        run: |
+          PYTHONPATH=scripts python scripts/build_search_index.py
 
       - name: Commit and push changes
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
-          # Stage updated database, stats JSON, and sync status
-          git add data/orders.sqlite data/stats.json data/sync_status.json
-          
-          if git diff --staged --quiet; then
-            echo "No new executive orders found. Database is up to date."
+
+          # Stage the DB plus every generated artifact the live site actually reads.
+          git add data/orders.sqlite data/stats.json data/sync_status.json \
+                  data/site_orders.json data/site_orders_summary.json \
+                  public/search_index.json
+
+          # stats.json/sync_status.json carry a fresh timestamp on every run even when
+          # no orders changed, so check the actual content files to decide whether this
+          # run needs to trigger a Cloudflare Pages rebuild.
+          if git diff --staged --quiet -- data/orders.sqlite data/site_orders.json data/site_orders_summary.json public/search_index.json; then
+            echo "No new executive orders found. Committing routine timestamp update only (no deploy)."
+            git commit -m "chore(data): sync check, no new orders [skip ci]"
+            git push
           else
             echo "New executive orders detected! Committing changes..."
-            git commit -m "chore(data): auto-sync latest executive orders [skip ci]"
+            git commit -m "chore(data): auto-sync latest executive orders"
             git push
           fi

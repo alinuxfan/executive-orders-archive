@@ -69,7 +69,7 @@ def init_db():
 def upsert_order(order_dict):
     conn = get_connection()
     cursor = conn.cursor()
-    
+
     fields = [
         "id", "eo_number", "title", "president_name", "president_slug",
         "signing_date", "publication_date", "source", "source_url", "pdf_url",
@@ -79,13 +79,38 @@ def upsert_order(order_dict):
         "summary_plain_english", "key_directives_json", "who_it_affects_json",
         "tone_tag", "raw_metadata_json"
     ]
-    
+
+    # These fields are populated by the constitutional batch worker, not by the
+    # routine sync fetch. sync_orders.py always sends NULL/plain-VADER values for
+    # them, so a plain overwrite here would silently erase prior enrichment every
+    # time a resync re-touches an order still inside its lookback window.
+    # tone_tag is only ever set by the batch worker, so "tone_tag already set"
+    # is used as the signal that this order has already been constitutionally
+    # evaluated and its sentiment/summary fields should be left alone.
+    protected_null_coalesce_fields = [
+        "summary_plain_english", "key_directives_json", "who_it_affects_json", "tone_tag"
+    ]
+    protected_if_evaluated_fields = [
+        "sentiment_compound", "sentiment_pos", "sentiment_neg", "sentiment_neu", "sentiment_valence"
+    ]
+
     placeholders = ", ".join([f":{f}" for f in fields])
-    update_clause = ", ".join([f"{f} = excluded.{f}" for f in fields if f != "id"])
-    
+
+    update_parts = []
+    for f in fields:
+        if f == "id":
+            continue
+        if f in protected_null_coalesce_fields:
+            update_parts.append(f"{f} = COALESCE(excluded.{f}, {f})")
+        elif f in protected_if_evaluated_fields:
+            update_parts.append(f"{f} = CASE WHEN tone_tag IS NOT NULL THEN {f} ELSE excluded.{f} END")
+        else:
+            update_parts.append(f"{f} = excluded.{f}")
+    update_clause = ", ".join(update_parts)
+
     # Ensure all fields are present in dict
     record = {f: order_dict.get(f) for f in fields}
-    
+
     sql = f"""
     INSERT INTO orders ({", ".join(fields)}, updated_at)
     VALUES ({placeholders}, CURRENT_TIMESTAMP)
@@ -93,7 +118,7 @@ def upsert_order(order_dict):
         {update_clause},
         updated_at = CURRENT_TIMESTAMP
     """
-    
+
     cursor.execute(sql, record)
     conn.commit()
     conn.close()

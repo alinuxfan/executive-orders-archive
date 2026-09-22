@@ -1,13 +1,18 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import PresidentCard from '../../components/PresidentCard.astro';
+import { resolvePortraitSlug } from '../../lib/portraits';
 import presidents from '../../../data/presidents.json';
 import orders from '../../../data/site_orders_summary.json';
 
-// Group orders by president slug
+// Group orders by president slug. Some harvest sources report a president
+// identifier that doesn't match the canonical presidents.json slug (e.g. Clinton,
+// Ford, Biden, G.H.W. Bush, and both Trump terms) — normalize through
+// resolvePortraitSlug so those orders aren't silently dropped from their
+// president's stats.
 const presidentStats = new Map<string, { count: number; totalWords: number; totalSentiment: number }>();
 for (const o of orders) {
-  const slug = o.president_slug || "";
+  const slug = resolvePortraitSlug(o.president_slug);
   const cur = presidentStats.get(slug) || { count: 0, totalWords: 0, totalSentiment: 0 };
   cur.count += 1;
   cur.totalWords += (o.word_count || 0);
@@ -16,12 +21,7 @@ for (const o of orders) {
 }
 
 const enrichedPresidents = presidents.map(p => {
-  let stats = presidentStats.get(p.slug);
-  if (!stats && p.slug === "donald-trump") {
-    const term2 = presidentStats.get("donald-j-trump-2nd-term");
-    if (term2) stats = term2;
-  }
-
+  const stats = presidentStats.get(p.slug);
   const count = stats?.count || 0;
   const avgWordCount = count > 0 ? Math.round(stats!.totalWords / count) : 0;
   const avgSentiment = count > 0 ? stats!.totalSentiment / count : undefined;
@@ -52,6 +52,13 @@ const enrichedPresidents = presidents.map(p => {
       <p class="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-3">
         Explore executive decrees, average document length, and sentiment distribution across every administration from 1789 to today.
       </p>
+      <a
+        href="/presidents/compare"
+        class="inline-flex items-center gap-1.5 mt-4 px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs shadow transition-all"
+      >
+        <span>⚖️</span>
+        <span>Compare Two Presidents</span>
+      </a>
     </div>
 
     <!-- 45 Presidents Grid -->

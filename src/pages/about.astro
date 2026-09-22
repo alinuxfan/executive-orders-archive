@@ -1,0 +1,138 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const breadcrumbJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": new URL("/", Astro.site).toString() },
+    { "@type": "ListItem", "position": 2, "name": "About & Methodology", "item": new URL("/about", Astro.site).toString() }
+  ]
+};
+---
+
+<Layout
+  title="About & Methodology"
+  description="How the Executive Orders Archive sources its data and computes reading time, readability grade, and constitutional sentiment scoring."
+  structuredData={breadcrumbJsonLd}
+>
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+    <nav class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-6 font-mono">
+      <a href="/" class="hover:underline">Home</a>
+      <span>/</span>
+      <span class="text-slate-800 dark:text-slate-200">About & Methodology</span>
+    </nav>
+
+    <h1 class="font-serif font-extrabold text-3xl sm:text-4xl text-slate-900 dark:text-white mb-4">
+      About & Methodology
+    </h1>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mb-10 leading-relaxed">
+      This page explains what this project is, where the data comes from, and — most importantly —
+      exactly how the "constitutional sentiment" scoring works, so you can judge for yourself how
+      much weight to put on it.
+    </p>
+
+    <section class="mb-10">
+      <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white mb-3">What this is</h2>
+      <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed mb-3">
+        The Executive Orders Archive is an independent, open-source research portal indexing every
+        available U.S. Presidential Executive Order, from George Washington to the present day. It is
+        <strong>not affiliated with the United States government</strong>, the Federal Register, or any
+        political party. Nothing on this site is legal advice.
+      </p>
+      <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+        Every metric you see — reading time, readability grade, sentiment score, plain-English
+        summary — is generated automatically by software, not reviewed by a human editor or a
+        constitutional scholar. Treat it as a starting point for research, not a final verdict.
+      </p>
+    </section>
+
+    <section class="mb-10">
+      <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white mb-3">Data sources</h2>
+      <ul class="space-y-2 text-sm text-slate-700 dark:text-slate-300 list-disc pl-5">
+        <li><a href="https://www.federalregister.gov" target="_blank" rel="noopener" class="text-blue-600 dark:text-blue-400 hover:underline">Federal Register API</a> — official presidential documents from 1994 to present.</li>
+        <li><a href="https://www.presidency.ucsb.edu" target="_blank" rel="noopener" class="text-blue-600 dark:text-blue-400 hover:underline">The American Presidency Project (UCSB)</a> — historical executive orders from 1789–1993.</li>
+        <li><a href="https://www.archives.gov" target="_blank" rel="noopener" class="text-blue-600 dark:text-blue-400 hover:underline">National Archives (NARA)</a> — supplementary historical records.</li>
+        <li><a href="https://commons.wikimedia.org" target="_blank" rel="noopener" class="text-blue-600 dark:text-blue-400 hover:underline">Wikimedia Commons</a> — public-domain presidential portraits.</li>
+      </ul>
+    </section>
+
+    <section class="mb-10">
+      <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white mb-3">Reading time & readability grade</h2>
+      <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed mb-3">
+        <strong>Reading time</strong> is a simple word-count estimate at 200 words per minute — the
+        same rough heuristic used by most blogging platforms.
+      </p>
+      <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+        <strong>Flesch-Kincaid grade level</strong> is computed with the open-source
+        <code class="text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded font-mono">textstat</code>
+        library over the first 10,000 characters of each order's text. It's a sentence-length and
+        syllable-count formula, not a legal complexity assessment — dense legal text scores "hard to
+        read" even when it's actually boilerplate.
+      </p>
+    </section>
+
+    <section class="mb-10">
+      <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white mb-3">
+        The "constitutional sentiment" score
+      </h2>
+      <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed mb-3">
+        This is the site's most opinionated feature, so it deserves the most explanation. Each order
+        is scanned for two sets of phrases:
+      </p>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
+        <div class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-900">
+          <div class="text-xs font-bold uppercase tracking-wider text-emerald-700 dark:text-emerald-400 mb-2">
+            Statutory Fidelity signals
+          </div>
+          <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+            Phrases like "faithfully execute," "pursuant to statute," "authorized by Congress," or
+            "protecting civil liberties" — language that ties the order to existing law.
+          </p>
+        </div>
+        <div class="p-4 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900">
+          <div class="text-xs font-bold uppercase tracking-wider text-rose-700 dark:text-rose-400 mb-2">
+            Executive Overreach signals
+          </div>
+          <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+            Phrases like "notwithstanding any other provision of law," "without a warrant,"
+            "commandeering state officials," or "suspend enforcement of" — language associated with
+            bypassing Congress, the courts, or the states.
+          </p>
+        </div>
+      </div>
+      <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed mb-3">
+        Each matched phrase carries a hand-assigned weight. The weighted totals are combined into a
+        single <strong>compound score from -1.0 to +1.0</strong>, which is then bucketed into
+        <em>Constitutional Fidelity</em> (≥ 0.08), <em>Constitutional Friction / Overreach</em>
+        (≤ -0.08), or <em>Constitutional Neutral</em> (in between — the vast majority of routine
+        administrative orders land here).
+      </p>
+      <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed mb-3">
+        This is a <strong>keyword and pattern-matching heuristic</strong>, not a legal analysis, an AI
+        model's judgment, or a claim about any president's motives. It cannot understand context,
+        sarcasm, or an order that recites "protects civil liberties" while doing the opposite. Two
+        orders with near-identical substance can score differently if one happens to use more of the
+        matched phrases. Please read the actual order text — linked and quoted in full on every order
+        page — rather than relying on the label alone.
+      </p>
+      <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+        The "Framers' Constitutional Analysis" callouts and plain-English summaries on each order page
+        are generated the same way: template-based text assembled from the same pattern matches, not
+        original scholarly commentary.
+      </p>
+    </section>
+
+    <section class="mb-10">
+      <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white mb-3">Corrections</h2>
+      <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+        This is an automated pipeline running against large public datasets, so errors — wrong dates,
+        misattributed presidents, garbled OCR text from older documents — are expected. If you spot
+        one, the underlying source is always linked from the "Original Source" button on each order
+        page.
+      </p>
+    </section>
+
+  </div>
+</Layout>

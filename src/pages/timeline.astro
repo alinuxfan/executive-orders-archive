@@ -1,0 +1,269 @@
+---
+import Layout from '../layouts/Layout.astro';
+import TimelineChart from '../components/TimelineChart.astro';
+import { getYearlyOrderCounts } from '../lib/yearly';
+import orders from '../../data/site_orders_summary.json';
+
+const yearlyData = getYearlyOrderCounts(orders);
+const firstYear = yearlyData[0]?.year;
+const lastYear = yearlyData[yearlyData.length - 1]?.year;
+
+const decades: number[] = [];
+for (let d = Math.floor(firstYear / 10) * 10; d <= lastYear; d += 10) {
+  decades.push(d);
+}
+
+const defaultYear = lastYear;
+
+const breadcrumbJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": new URL("/", Astro.site).toString() },
+    { "@type": "ListItem", "position": 2, "name": "Timeline", "item": new URL("/timeline", Astro.site).toString() }
+  ]
+};
+---
+
+<Layout
+  title="Historical Timeline of Executive Orders"
+  description={`An interactive year-by-year timeline of every US Presidential Executive Order from ${firstYear} to ${lastYear}.`}
+  structuredData={breadcrumbJsonLd}
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+    <nav class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-6 font-mono">
+      <a href="/" class="hover:underline">Home</a>
+      <span>/</span>
+      <span class="text-slate-800 dark:text-slate-200">Timeline</span>
+    </nav>
+
+    <div class="mb-8 text-center max-w-2xl mx-auto">
+      <h1 class="font-serif font-extrabold text-3xl sm:text-5xl text-slate-900 dark:text-white leading-tight">
+        The Full Timeline
+      </h1>
+      <p class="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-3">
+        {yearlyData.length} years of executive power, {firstYear} to {lastYear}. Click any bar to see what was signed that year.
+      </p>
+    </div>
+
+    <!-- Decade Quick Jump -->
+    <div class="flex flex-wrap items-center justify-center gap-2 mb-6" id="decade-buttons">
+      {decades.map(d => (
+        <button
+          type="button"
+          data-decade={d}
+          class="px-3 py-1.5 rounded-lg text-xs font-semibold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-300 hover:bg-blue-50 dark:hover:bg-blue-950/40 hover:border-blue-300 dark:hover:border-blue-800 transition-colors"
+        >
+          {d}s
+        </button>
+      ))}
+    </div>
+
+    <!-- Chart -->
+    <TimelineChart yearlyData={yearlyData} interactive={true} activeYear={defaultYear} />
+
+    <!-- Results Section -->
+    <div id="timeline-results" class="mt-10">
+      <div class="flex flex-wrap items-center justify-between gap-2 mb-1">
+        <h2 id="timeline-heading" class="font-serif font-bold text-2xl text-slate-900 dark:text-white">
+          Orders Signed in {defaultYear}
+        </h2>
+        <span id="timeline-count" class="text-xs font-mono px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold">
+          &hellip;
+        </span>
+      </div>
+      <p id="timeline-more-notice" class="hidden text-xs text-amber-600 dark:text-amber-400 mb-4"></p>
+
+      <div id="timeline-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4"></div>
+
+      <div id="timeline-empty" class="hidden text-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 mt-4">
+        <p class="text-slate-500 dark:text-slate-400 text-sm">No executive orders were recorded for this period.</p>
+      </div>
+    </div>
+
+  </div>
+
+  <script define:vars={{ defaultYear }}>
+    const bars = document.querySelectorAll('[data-timeline-year]');
+    const decadeButtons = document.querySelectorAll('[data-decade]');
+    const heading = document.getElementById('timeline-heading');
+    const countLabel = document.getElementById('timeline-count');
+    const moreNotice = document.getElementById('timeline-more-notice');
+    const grid = document.getElementById('timeline-grid');
+    const emptyState = document.getElementById('timeline-empty');
+    const resultsSection = document.getElementById('timeline-results');
+
+    const RENDER_CAP = 60;
+    let dataset = null;
+
+    async function loadData() {
+      if (dataset) return dataset;
+      try {
+        const res = await fetch('/search_index.json');
+        dataset = await res.json();
+      } catch (e) {
+        console.error('Failed to load timeline dataset:', e);
+        dataset = [];
+      }
+      return dataset;
+    }
+
+    function renderCard(order) {
+      let sentimentBadge = {
+        label: "Constitutional Neutral",
+        bg: "bg-slate-100 dark:bg-slate-800",
+        text: "text-slate-700 dark:text-slate-300",
+        border: "border-slate-200 dark:border-slate-700"
+      };
+      const val = order.val || order.sentiment_valence;
+      const comp = order.comp !== undefined ? order.comp : (order.sentiment_compound || 0);
+      if (val === "Constitutional Fidelity" || val === "Positive") {
+        sentimentBadge = { label: `Fidelity (${comp >= 0 ? '+' : ''}${comp.toFixed(2)})`, bg: "bg-emerald-50 dark:bg-emerald-950/40", text: "text-emerald-700 dark:text-emerald-300", border: "border-emerald-200 dark:border-emerald-800" };
+      } else if (val === "Constitutional Friction / Overreach" || val === "Urgent/Negative") {
+        sentimentBadge = { label: `Friction (${comp.toFixed(2)})`, bg: "bg-rose-50 dark:bg-rose-950/40", text: "text-rose-700 dark:text-rose-300", border: "border-rose-200 dark:border-rose-800" };
+      }
+
+      const rawDate = order.date || order.signing_date;
+      const formattedDate = rawDate ? new Date(rawDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Undated";
+      const num = order.num !== undefined ? order.num : order.eo_number;
+      const eoBadge = num ?
+        `<span class="font-mono text-xs font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-900">EO ${num}</span>` :
+        `<span class="font-mono text-[11px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">Order</span>`;
+
+      const presName = order.pres || order.president_name;
+      const slug = window.resolvePortraitSlug(order.slug || order.president_slug);
+      const readTime = order.time || order.reading_time_minutes || 1;
+      const wordCount = (order.words || order.word_count || 0).toLocaleString();
+      const snippet = order.snip || order.snippet;
+
+      return `
+        <article class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-200 flex flex-col justify-between">
+          <div>
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
+              <div class="flex items-center gap-2">
+                ${eoBadge}
+                <span class="text-xs font-mono text-slate-500 dark:text-slate-400">${formattedDate}</span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[11px] font-medium px-2 py-0.5 rounded-full border ${sentimentBadge.bg} ${sentimentBadge.text} ${sentimentBadge.border}">
+                  ${sentimentBadge.label}
+                </span>
+                <button type="button" data-bookmark-btn="${order.id}" aria-label="Save this order" aria-pressed="false" class="p-1 rounded-md text-slate-400 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path></svg>
+                </button>
+              </div>
+            </div>
+            <h3 class="font-serif font-bold text-slate-900 dark:text-white text-base sm:text-lg mb-2 line-clamp-2 hover:text-blue-600 dark:hover:text-blue-400">
+              <a href="/orders/${order.id}">${order.title}</a>
+            </h3>
+            ${snippet ? `<p class="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed mb-4">${snippet}</p>` : ''}
+          </div>
+          <div class="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+            <div class="flex items-center gap-1.5 font-medium">
+              <img src="/portraits/${slug}.jpg" alt="" class="w-5 h-5 rounded-full object-cover border border-slate-300 dark:border-slate-600" onerror="this.style.display='none'" />
+              <span class="text-slate-700 dark:text-slate-300 truncate max-w-[140px] sm:max-w-none">${presName}</span>
+            </div>
+            <div class="flex items-center gap-2 font-mono text-[11px]">
+              <span title="Estimated Reading Time">⏱ ${readTime}m</span>
+              <span class="opacity-40">•</span>
+              <span title="Word Count">${wordCount} words</span>
+            </div>
+          </div>
+        </article>
+      `;
+    }
+
+    function paintBarHighlight(predicate) {
+      bars.forEach((b) => {
+        const y = parseInt(b.getAttribute('data-timeline-year'), 10);
+        const active = predicate(y);
+        b.classList.toggle('bg-amber-500', active);
+        const isDecadeMark = y % 10 === 0;
+        b.classList.toggle('bg-blue-400', !active && isDecadeMark);
+        b.classList.toggle('dark:bg-blue-600', !active && isDecadeMark);
+        b.classList.toggle('bg-blue-200', !active && !isDecadeMark);
+        b.classList.toggle('dark:bg-blue-900/60', !active && !isDecadeMark);
+      });
+    }
+
+    function renderResults(matches, title) {
+      heading.textContent = title;
+      countLabel.textContent = `${matches.length.toLocaleString()} order${matches.length === 1 ? '' : 's'}`;
+
+      if (matches.length === 0) {
+        grid.innerHTML = '';
+        moreNotice.classList.add('hidden');
+        emptyState.classList.remove('hidden');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      const sorted = [...matches].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+      const capped = sorted.slice(0, RENDER_CAP);
+      grid.innerHTML = capped.map(renderCard).join('');
+
+      if (sorted.length > capped.length) {
+        moreNotice.textContent = `Showing the ${capped.length} most recent of ${sorted.length.toLocaleString()} — narrow to a single year for the full list.`;
+        moreNotice.classList.remove('hidden');
+      } else {
+        moreNotice.classList.add('hidden');
+      }
+
+      window.EOBookmarks?.refreshAllButtons();
+    }
+
+    async function showYear(year, updateHistory = true) {
+      const data = await loadData();
+      const matches = data.filter((o) => (o.date || '').slice(0, 4) === String(year));
+      renderResults(matches, `Orders Signed in ${year}`);
+      paintBarHighlight((y) => y === year);
+      if (updateHistory) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('year', String(year));
+        url.searchParams.delete('decade');
+        window.history.replaceState({}, '', url);
+      }
+    }
+
+    async function showDecade(decadeStart, updateHistory = true) {
+      const data = await loadData();
+      const matches = data.filter((o) => {
+        const y = parseInt((o.date || '0').slice(0, 4), 10);
+        return y >= decadeStart && y < decadeStart + 10;
+      });
+      renderResults(matches, `Orders Signed in the ${decadeStart}s`);
+      paintBarHighlight((y) => y >= decadeStart && y < decadeStart + 10);
+      if (updateHistory) {
+        const url = new URL(window.location.href);
+        url.searchParams.set('decade', String(decadeStart));
+        url.searchParams.delete('year');
+        window.history.replaceState({}, '', url);
+      }
+    }
+
+    bars.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        showYear(parseInt(btn.getAttribute('data-timeline-year'), 10));
+      });
+    });
+
+    decadeButtons.forEach((btn) => {
+      btn.addEventListener('click', () => {
+        showDecade(parseInt(btn.getAttribute('data-decade'), 10));
+      });
+    });
+
+    const params = new URLSearchParams(window.location.search);
+    const initialDecade = params.get('decade');
+    const initialYear = params.get('year');
+
+    if (initialDecade) {
+      showDecade(parseInt(initialDecade, 10), false);
+    } else if (initialYear) {
+      showYear(parseInt(initialYear, 10), false);
+    } else {
+      showYear(defaultYear, false);
+    }
+  </script>
+</Layout>

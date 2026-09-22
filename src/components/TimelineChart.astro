@@ -1,0 +1,58 @@
+---
+interface Props {
+  yearlyData: { year: number; count: number }[];
+  interactive?: boolean;
+  activeYear?: number | null;
+}
+
+const { yearlyData, interactive = false, activeYear = null } = Astro.props;
+
+const maxCount = Math.max(...yearlyData.map(d => d.count), 1);
+const firstYear = yearlyData[0]?.year;
+const lastYear = yearlyData[yearlyData.length - 1]?.year;
+const midYear = Math.round((firstYear + lastYear) / 2);
+---
+
+<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
+  <div class="flex items-center justify-between mb-4">
+    <div>
+      <h3 class="font-serif font-bold text-slate-900 dark:text-white text-lg">
+        Executive Orders by Year
+      </h3>
+      <p class="text-xs text-slate-500 dark:text-slate-400">
+        {firstYear}&ndash;{lastYear} &bull; orders signed per calendar year
+      </p>
+    </div>
+    <span class="text-xs text-slate-400 font-mono hidden sm:inline">
+      {interactive ? 'Click a bar to explore that year' : `Peak: ${maxCount} in one year`}
+    </span>
+  </div>
+
+  <div class="overflow-x-auto pb-2 -mx-2 px-2">
+    <div class="flex items-end gap-px h-36" style={`min-width: ${yearlyData.length * 5}px`} id="timeline-bars">
+      {yearlyData.map(d => {
+        const heightPct = Math.max(3, Math.round((d.count / maxCount) * 100));
+        const isDecade = d.year % 10 === 0;
+        const isActive = activeYear === d.year;
+        return (
+          <button
+            type="button"
+            data-timeline-year={d.year}
+            data-timeline-count={d.count}
+            tabindex={interactive ? 0 : -1}
+            title={`${d.year}: ${d.count} order${d.count === 1 ? '' : 's'}`}
+            class={`group relative flex-1 min-w-[3px] rounded-t-sm transition-colors ${
+              isActive ? 'bg-amber-500' : isDecade ? 'bg-blue-400 dark:bg-blue-600' : 'bg-blue-200 dark:bg-blue-900/60'
+            } ${interactive ? 'cursor-pointer hover:bg-amber-400' : 'cursor-default'}`}
+            style={`height: ${heightPct}%`}
+          ></button>
+        );
+      })}
+    </div>
+    <div class="flex justify-between text-[10px] text-slate-400 font-mono mt-2">
+      <span>{firstYear}</span>
+      <span>{midYear}</span>
+      <span>{lastYear}</span>
+    </div>
+  </div>
+</div>

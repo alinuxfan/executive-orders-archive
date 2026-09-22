@@ -1,0 +1,190 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { resolvePortraitSlug } from '../../lib/portraits';
+import { formatPresidentNumbersHash } from '../../lib/presidentNumbers';
+import presidents from '../../../data/presidents.json';
+import orders from '../../../data/site_orders_summary.json';
+
+// Group orders by president slug to compute comparable per-president stats. Some
+// harvest sources report a president identifier that doesn't match the canonical
+// presidents.json slug (e.g. Clinton, Ford, Biden, G.H.W. Bush, and both Trump
+// terms) — normalize through resolvePortraitSlug so those orders aren't silently
+// dropped from their president's stats.
+const presidentStats = new Map<string, { count: number; totalWords: number; totalSentiment: number; totalGrade: number; totalReadTime: number }>();
+for (const o of orders) {
+  const slug = resolvePortraitSlug(o.president_slug);
+  const cur = presidentStats.get(slug) || { count: 0, totalWords: 0, totalSentiment: 0, totalGrade: 0, totalReadTime: 0 };
+  cur.count += 1;
+  cur.totalWords += o.word_count || 0;
+  cur.totalSentiment += o.sentiment_compound || 0;
+  cur.totalGrade += o.flesch_kincaid_grade || 0;
+  cur.totalReadTime += o.reading_time_minutes || 0;
+  presidentStats.set(slug, cur);
+}
+
+const comparablePresidents = presidents.map(p => {
+  const stats = presidentStats.get(p.slug);
+  const count = stats?.count || 0;
+  return {
+    numbers: p.numbers,
+    name: p.name,
+    slug: p.slug,
+    party: p.party,
+    terms: p.terms,
+    orderCount: count,
+    avgWordCount: count > 0 ? Math.round(stats!.totalWords / count) : 0,
+    avgReadingTime: count > 0 ? Math.round(stats!.totalReadTime / count) : 0,
+    avgSentiment: count > 0 ? Number((stats!.totalSentiment / count).toFixed(2)) : 0,
+    avgGrade: count > 0 ? Number((stats!.totalGrade / count).toFixed(1)) : 0
+  };
+}).filter(p => p.orderCount > 0);
+
+const compareJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": new URL("/", Astro.site).toString() },
+    { "@type": "ListItem", "position": 2, "name": "Presidents", "item": new URL("/presidents", Astro.site).toString() },
+    { "@type": "ListItem", "position": 3, "name": "Compare Presidents", "item": new URL("/presidents/compare", Astro.site).toString() }
+  ]
+};
+---
+
+<Layout
+  title="Compare Presidents | Executive Orders Archive"
+  description="Compare executive order output, average length, reading time, and constitutional sentiment between any two US Presidents."
+  structuredData={compareJsonLd}
+>
+  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+    <!-- Breadcrumb -->
+    <nav class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-6 font-mono">
+      <a href="/" class="hover:underline">Home</a>
+      <span>/</span>
+      <a href="/presidents" class="hover:underline">Presidents</a>
+      <span>/</span>
+      <span class="text-slate-800 dark:text-slate-200">Compare</span>
+    </nav>
+
+    <!-- Header -->
+    <div class="mb-8 text-center max-w-2xl mx-auto">
+      <h1 class="font-serif font-extrabold text-3xl sm:text-4xl text-slate-900 dark:text-white">
+        Compare Presidents
+      </h1>
+      <p class="text-sm text-slate-500 dark:text-slate-400 mt-2">
+        Pick any two presidents to compare their executive order output side by side.
+      </p>
+    </div>
+
+    <!-- Selector Bar -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-10 max-w-2xl mx-auto">
+      <div>
+        <label for="president-a-select" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+          President A
+        </label>
+        <select
+          id="president-a-select"
+          class="w-full px-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+        >
+          {comparablePresidents.map(p => (
+            <option value={p.slug}>{p.name} ({formatPresidentNumbersHash(p.numbers)})</option>
+          ))}
+        </select>
+      </div>
+      <div>
+        <label for="president-b-select" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+          President B
+        </label>
+        <select
+          id="president-b-select"
+          class="w-full px-3.5 py-2.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+        >
+          {comparablePresidents.map(p => (
+            <option value={p.slug}>{p.name} ({formatPresidentNumbersHash(p.numbers)})</option>
+          ))}
+        </select>
+      </div>
+    </div>
+
+    <!-- Comparison Panel -->
+    <div id="compare-panel"></div>
+
+  </div>
+
+  <script define:vars={{ comparablePresidents }}>
+    const dataset = comparablePresidents;
+    const selectA = document.getElementById('president-a-select');
+    const selectB = document.getElementById('president-b-select');
+    const panel = document.getElementById('compare-panel');
+
+    function findPresident(slug) {
+      return dataset.find(p => p.slug === slug);
+    }
+
+    function metricRow(label, a, b, format = (v) => v, higherIsHighlighted = true) {
+      const aWins = higherIsHighlighted && a > b;
+      const bWins = higherIsHighlighted && b > a;
+      return `
+        <div class="grid grid-cols-3 items-center py-3 border-b border-slate-100 dark:border-slate-800 text-sm">
+          <div class="text-right pr-4 font-mono font-bold ${aWins ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'}">${format(a)}</div>
+          <div class="text-center text-[11px] uppercase tracking-wider text-slate-400 font-semibold">${label}</div>
+          <div class="text-left pl-4 font-mono font-bold ${bWins ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'}">${format(b)}</div>
+        </div>
+      `;
+    }
+
+    function presidentHeader(p) {
+      return `
+        <div class="flex flex-col items-center text-center gap-2">
+          <img src="/portraits/${p.slug}.jpg" alt="${p.name}" class="w-20 h-24 sm:w-24 sm:h-28 rounded-xl object-cover object-top border-2 border-amber-400 shadow-md" onerror="this.src='/portraits/default.svg'; this.onerror=null;" />
+          <div>
+            <div class="font-serif font-bold text-slate-900 dark:text-white text-base sm:text-lg">${p.name}</div>
+            <div class="text-xs text-slate-500 dark:text-slate-400">${p.party} &bull; ${p.terms.join(', ')}</div>
+          </div>
+          <a href="/presidents/${p.slug}" class="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">View all orders &rarr;</a>
+        </div>
+      `;
+    }
+
+    function render() {
+      const a = findPresident(selectA.value);
+      const b = findPresident(selectB.value);
+      if (!a || !b) return;
+
+      panel.innerHTML = `
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-sm">
+          <div class="grid grid-cols-3 items-start mb-6">
+            <div>${presidentHeader(a)}</div>
+            <div class="flex items-center justify-center h-full text-slate-300 dark:text-slate-700 font-serif font-black text-2xl">vs</div>
+            <div>${presidentHeader(b)}</div>
+          </div>
+          <div class="mt-4">
+            ${metricRow('Orders Tracked', a.orderCount, b.orderCount, (v) => v.toLocaleString())}
+            ${metricRow('Avg Words / Order', a.avgWordCount, b.avgWordCount, (v) => v.toLocaleString())}
+            ${metricRow('Avg Read Time', a.avgReadingTime, b.avgReadingTime, (v) => `${v} min`)}
+            ${metricRow('Avg Flesch-Kincaid Grade', a.avgGrade, b.avgGrade, (v) => v.toFixed(1))}
+            ${metricRow('Avg Constitutional Polarity', a.avgSentiment, b.avgSentiment, (v) => `${v >= 0 ? '+' : ''}${v.toFixed(2)}`)}
+          </div>
+        </div>
+      `;
+
+      const url = new URL(window.location.href);
+      url.searchParams.set('a', a.slug);
+      url.searchParams.set('b', b.slug);
+      window.history.replaceState({}, '', url);
+    }
+
+    // Initialize from URL params, falling back to two illustrative defaults
+    const params = new URLSearchParams(window.location.search);
+    const defaultA = params.get('a') && findPresident(params.get('a')) ? params.get('a') : (dataset.find(p => p.slug === 'abraham-lincoln')?.slug || dataset[0]?.slug);
+    const defaultB = params.get('b') && findPresident(params.get('b')) ? params.get('b') : (dataset.find(p => p.slug === 'donald-trump')?.slug || dataset[1]?.slug);
+
+    if (defaultA) selectA.value = defaultA;
+    if (defaultB) selectB.value = defaultB;
+
+    selectA.addEventListener('change', render);
+    selectB.addEventListener('change', render);
+
+    render();
+  </script>
+</Layout>

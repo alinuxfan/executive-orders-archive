@@ -5,6 +5,8 @@ import OrderCard from '../components/OrderCard.astro';
 import ToneChart from '../components/ToneChart.astro';
 import LengthChart from '../components/LengthChart.astro';
 import ThisDayInHistory from '../components/ThisDayInHistory.astro';
+import { resolvePortraitSlug } from '../lib/portraits';
+import { primaryNumber } from '../lib/presidentNumbers';
 
 import rawOrders from '../../data/site_orders_summary.json';
 import presidentsData from '../../data/presidents.json';
@@ -20,10 +22,13 @@ const positiveCount = rawOrders.filter(o => o.sentiment_valence === "Constitutio
 const neutralCount = rawOrders.filter(o => o.sentiment_valence === "Constitutional Neutral" || o.sentiment_valence === "Neutral").length;
 const urgentCount = rawOrders.filter(o => o.sentiment_valence === "Constitutional Friction / Overreach" || o.sentiment_valence === "Urgent/Negative").length;
 
-// Map presidents with counts
+// Map presidents with counts. Some harvest sources report a president identifier
+// that doesn't match the canonical presidents.json slug (e.g. Clinton, Ford, Biden,
+// G.H.W. Bush, and both Trump terms) — normalize through resolvePortraitSlug so
+// those orders aren't silently dropped from their president's stats.
 const presidentMap = new Map<string, { count: number; totalWords: number; totalSentiment: number }>();
 for (const o of rawOrders) {
-  const slug = o.president_slug || "";
+  const slug = resolvePortraitSlug(o.president_slug);
   const existing = presidentMap.get(slug) || { count: 0, totalWords: 0, totalSentiment: 0 };
   existing.count += 1;
   existing.totalWords += o.word_count || 0;
@@ -33,14 +38,7 @@ for (const o of rawOrders) {
 
 // Enhance presidents list with order statistics
 const enrichedPresidents = presidentsData.map(p => {
-  let stats = presidentMap.get(p.slug);
-  if (!stats && p.slug === "donald-trump") {
-    const term2 = presidentMap.get("donald-j-trump-2nd-term");
-    if (term2) {
-      stats = term2;
-    }
-  }
-
+  const stats = presidentMap.get(p.slug);
   const count = stats?.count || 0;
   const avgWordCount = count > 0 ? Math.round(stats!.totalWords / count) : 0;
   const avgSentiment = count > 0 ? stats!.totalSentiment / count : undefined;
@@ -54,7 +52,7 @@ const enrichedPresidents = presidentsData.map(p => {
 });
 
 // Sort presidents by number ascending (George Washington #1 to Donald Trump #47)
-const sortedPresidents = [...enrichedPresidents].sort((a, b) => a.number - b.number);
+const sortedPresidents = [...enrichedPresidents].sort((a, b) => primaryNumber(a.numbers) - primaryNumber(b.numbers));
 
 // Filter out presidents with zero orders for the length chart
 const lengthChartPresidents = sortedPresidents
@@ -70,11 +68,36 @@ const lengthChartPresidents = sortedPresidents
 
 // Most recent orders for the homepage feed
 const recentOrders = rawOrders.slice(0, 6);
+
+const websiteJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  "name": "Executive Orders Archive",
+  "url": new URL("/", Astro.site).toString(),
+  "description": "A comprehensive historical archive of United States Presidential Executive Orders from 1789 to present.",
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": {
+      "@type": "EntryPoint",
+      "urlTemplate": new URL("/search?q={search_term_string}", Astro.site).toString()
+    },
+    "query-input": "required name=search_term_string"
+  }
+};
+
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Organization",
+  "name": "Executive Orders Archive",
+  "url": new URL("/", Astro.site).toString(),
+  "logo": new URL("/favicon.svg", Astro.site).toString()
+};
 ---
 
-<Layout 
+<Layout
   title="Executive Orders Archive | Every President Analyzed"
   description="Explore all US Presidential Executive Orders with sentiment analysis, reading time, length, and plain-English summaries."
+  structuredData={[websiteJsonLd, organizationJsonLd]}
 >
   <!-- Hero Section -->
   <section class="relative bg-gradient-to-b from-flag-blue via-slate-900 to-slate-950 text-white py-16 sm:py-24 overflow-hidden border-b border-blue-900/50">

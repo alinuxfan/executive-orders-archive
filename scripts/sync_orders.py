@@ -97,8 +97,12 @@ def export_stats_json():
 
     conn.close()
 
+    generated_at = datetime.datetime.now(datetime.timezone.utc).isoformat()
     stats_payload = {
-        "generated_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "generated_at": generated_at,
+        # Alias read by the site header banner (Layout.astro), which historically
+        # expected this field on stats.json rather than sync_status.json.
+        "last_sync_timestamp": generated_at,
         "total_orders": total_orders,
         "sentiment_breakdown": sentiment_breakdown,
         "presidents": president_stats,

@@ -1,7 +1,11 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import CitationBox from '../../components/CitationBox.astro';
+import ShareButtons from '../../components/ShareButtons.astro';
+import OrderCard from '../../components/OrderCard.astro';
 import { generateOrderSummary } from '../../lib/summary';
+import { getRelatedOrders } from '../../lib/relatedOrders';
+import { resolvePortraitSlug } from '../../lib/portraits';
 import rawOrders from '../../../data/site_orders.json';
 
 export async function getStaticPaths() {
@@ -75,22 +79,75 @@ if (order.sentiment_valence === "Constitutional Fidelity" || order.sentiment_val
     border: "border-rose-300 dark:border-rose-800"
   };
 }
+
+const orderCanonicalUrl = new URL(`/orders/${order.id}`, Astro.site).toString();
+const portraitSlug = resolvePortraitSlug(order.president_slug);
+
+const legislationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Legislation",
+  "name": order.title,
+  "legislationIdentifier": order.eo_number ? `EO ${order.eo_number}` : order.id,
+  "legislationType": order.eo_number ? "Executive Order" : "Presidential Order",
+  "legislationDate": order.signing_date || undefined,
+  "datePublished": order.signing_date || undefined,
+  "legislationJurisdiction": "United States",
+  "author": {
+    "@type": "Person",
+    "name": order.president_name
+  },
+  "description": summaryParagraphs[0] || order.title,
+  "url": orderCanonicalUrl,
+  "inLanguage": "en-US"
+};
+
+// Related Orders: cross-referenced EO numbers mentioned in the text, plus same-president orders
+// signed closest in time, as a fallback / supplement.
+const { related: relatedOrders, referencedCount } = getRelatedOrders(order);
+
+const breadcrumbJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": new URL("/", Astro.site).toString() },
+    { "@type": "ListItem", "position": 2, "name": "Orders", "item": new URL("/orders", Astro.site).toString() },
+    { "@type": "ListItem", "position": 3, "name": order.title, "item": orderCanonicalUrl }
+  ]
+};
 ---
 
-<Layout 
-  title={`${order.title} | Executive Order`}
+<Layout
+  title={order.title}
   description={summaryParagraphs[0] || order.title}
+  image={order.president_slug ? `/portraits/${portraitSlug}.jpg` : '/og-default.png'}
+  type="article"
+  structuredData={[legislationJsonLd, breadcrumbJsonLd]}
 >
   <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
     
     <!-- Breadcrumb -->
-    <nav class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-6 font-mono">
-      <a href="/" class="hover:underline">Home</a>
-      <span>/</span>
-      <a href="/orders" class="hover:underline">Orders</a>
-      <span>/</span>
-      <span class="text-slate-800 dark:text-slate-200 truncate max-w-xs">{order.id}</span>
-    </nav>
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+      <nav class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-mono">
+        <a href="/" class="hover:underline">Home</a>
+        <span>/</span>
+        <a href="/orders" class="hover:underline">Orders</a>
+        <span>/</span>
+        <span class="text-slate-800 dark:text-slate-200 truncate max-w-xs">{order.id}</span>
+      </nav>
+      <div class="flex items-center gap-3">
+        <button
+          type="button"
+          data-bookmark-btn={order.id}
+          aria-label="Save this order"
+          aria-pressed="false"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold transition-colors"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path></svg>
+          <span data-bookmark-label>Save</span>
+        </button>
+        <ShareButtons url={`/orders/${order.id}`} title={order.title} />
+      </div>
+    </div>
 
     <!-- Document Header -->
     <header class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 mb-8 shadow-sm">
@@ -115,13 +172,13 @@ if (order.sentiment_valence === "Constitutional Fidelity" || order.sentiment_val
 
       <div class="flex flex-wrap items-center gap-4 text-xs sm:text-sm text-slate-500 dark:text-slate-400 pt-4 border-t border-slate-100 dark:border-slate-800">
         <div class="flex items-center gap-2 font-medium text-slate-800 dark:text-slate-200">
-          <img 
-            src={`/portraits/${order.president_slug || 'default'}.jpg`} 
+          <img
+            src={`/portraits/${portraitSlug}.jpg`}
             alt={order.president_name}
             class="w-6 h-6 rounded-full object-cover border border-slate-300 dark:border-slate-600"
             onerror="this.style.display='none'"
           />
-          <a href={`/presidents/${order.president_slug}`} class="hover:underline">
+          <a href={`/presidents/${portraitSlug}`} class="hover:underline">
             {order.president_name}
           </a>
         </div>
@@ -169,12 +226,24 @@ if (order.sentiment_valence === "Constitutional Fidelity" || order.sentiment_val
           Key Directives & Operative Actions
         </h3>
         <div class="grid grid-cols-1 gap-2.5">
-          {directives.map(d => (
-            <div class="p-3.5 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-sm text-slate-700 dark:text-slate-300 flex items-start gap-3">
-              <span class="text-amber-500 font-bold mt-0.5">▪</span>
-              <span>{d.description}</span>
-            </div>
-          ))}
+          {directives.map((d, idx) => {
+            const anchorId = `directive-${idx + 1}`;
+            return (
+              <div id={anchorId} class="scroll-mt-24 group relative p-3.5 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-sm text-slate-700 dark:text-slate-300 flex items-start gap-3 target:ring-2 target:ring-amber-400">
+                <span class="text-amber-500 font-bold mt-0.5">▪</span>
+                <span class="flex-1">{d.description}</span>
+                <button
+                  type="button"
+                  data-copy-anchor={anchorId}
+                  aria-label="Copy link to this directive"
+                  title="Copy link to this directive"
+                  class="flex-shrink-0 opacity-0 group-hover:opacity-100 focus:opacity-100 transition-opacity text-slate-400 hover:text-amber-500"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 010 5.656l-3 3a4 4 0 01-5.656-5.656l1.5-1.5M10.172 13.828a4 4 0 010-5.656l3-3a4 4 0 015.656 5.656l-1.5 1.5"></path></svg>
+                </button>
+              </div>
+            );
+          })}
         </div>
       </div>
 
@@ -265,5 +334,47 @@ if (order.sentiment_valence === "Constitutional Fidelity" || order.sentiment_val
       </div>
     </article>
 
+    <!-- Related Orders -->
+    {relatedOrders.length > 0 && (
+      <section class="mt-8">
+        <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white mb-1">
+          Related Executive Orders
+        </h2>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+          {referencedCount > 0
+            ? "Orders cross-referenced in this document's text, plus other orders from the same administration."
+            : `Other executive orders signed by ${order.president_name}.`}
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {relatedOrders.map(o => (
+            <OrderCard order={o} />
+          ))}
+        </div>
+      </section>
+    )}
+
   </div>
+
+  <script>
+    document.querySelectorAll('[data-copy-anchor]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const anchorId = btn.getAttribute('data-copy-anchor');
+        const url = `${window.location.origin}${window.location.pathname}#${anchorId}`;
+        try {
+          await navigator.clipboard.writeText(url);
+          const svg = btn.querySelector('svg');
+          if (svg) {
+            const original = svg.outerHTML;
+            svg.outerHTML = '<svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+            setTimeout(() => {
+              const currentSvg = btn.querySelector('svg');
+              if (currentSvg) currentSvg.outerHTML = original;
+            }, 1500);
+          }
+        } catch (e) {
+          console.error('Failed to copy directive link:', e);
+        }
+      });
+    });
+  </script>
 </Layout>

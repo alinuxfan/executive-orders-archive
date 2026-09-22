@@ -132,7 +132,7 @@ const initialOrders = orders.slice(0, 24);
         `<span class="font-mono text-[11px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">Order</span>`;
 
       const presName = order.pres || order.president_name;
-      const slug = order.slug || order.president_slug || 'default';
+      const slug = window.resolvePortraitSlug(order.slug || order.president_slug);
       const readTime = order.time || order.reading_time_minutes || 1;
       const wordCount = (order.words || order.word_count || 0).toLocaleString();
       const toneTag = order.tag || order.tone_tag;
@@ -146,9 +146,14 @@ const initialOrders = orders.slice(0, 24);
                 ${eoBadge}
                 <span class="text-xs font-mono text-slate-500 dark:text-slate-400">${formattedDate}</span>
               </div>
-              <span class="text-[11px] font-medium px-2 py-0.5 rounded-full border ${sentimentBadge.bg} ${sentimentBadge.text} ${sentimentBadge.border}">
-                ${sentimentBadge.label}
-              </span>
+              <div class="flex items-center gap-1.5">
+                <span class="text-[11px] font-medium px-2 py-0.5 rounded-full border ${sentimentBadge.bg} ${sentimentBadge.text} ${sentimentBadge.border}">
+                  ${sentimentBadge.label}
+                </span>
+                <button type="button" data-bookmark-btn="${order.id}" aria-label="Save this order" aria-pressed="false" class="p-1 rounded-md text-slate-400 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path></svg>
+                </button>
+              </div>
             </div>
             <h3 class="font-serif font-bold text-slate-900 dark:text-white text-base sm:text-lg mb-2 line-clamp-2 hover:text-blue-600 dark:hover:text-blue-400">
               <a href="/orders/${order.id}">${order.title}</a>
@@ -187,6 +192,7 @@ const initialOrders = orders.slice(0, 24);
       if (nextBatch.length > 0) {
         resultsGrid.innerHTML += nextBatch.map(renderCard).join('');
         displayedCount += nextBatch.length;
+        window.EOBookmarks?.refreshAllButtons();
       }
 
       if (displayedCount < currentMatches.length) {

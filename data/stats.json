@@ -1,11 +1,11 @@
 {
-  "generated_at": "2026-09-22T20:42:34.779200+00:00",
+  "generated_at": "2026-09-22T18:54:54.797160+00:00",
+  "last_sync_timestamp": "2026-09-22T18:54:54.797160+00:00",
   "total_orders": 11047,
   "sentiment_breakdown": {
-    "Constitutional Fidelity": 2353,
+    "Constitutional Fidelity": 2363,
     "Constitutional Friction / Overreach": 233,
-    "Constitutional Neutral": 8451,
-    "Positive": 10
+    "Constitutional Neutral": 8451
   },
   "presidents": [
     {
@@ -96,7 +96,7 @@
       "president": "Donald Trump",
       "total_orders": 202,
       "avg_word_count": 1274.0,
-      "avg_sentiment": 0.614
+      "avg_sentiment": 0.596
     },
     {
       "president": "Grover Cleveland",
@@ -281,8 +281,8 @@
       "signing_date": "2026-09-17",
       "word_count": 2106,
       "reading_time_minutes": 11,
-      "sentiment_valence": "Positive",
-      "sentiment_compound": 0.9972
+      "sentiment_valence": "Constitutional Fidelity",
+      "sentiment_compound": 0.86
     },
     {
       "id": "fr-2026-19416",
@@ -292,8 +292,8 @@
       "signing_date": "2026-09-17",
       "word_count": 1209,
       "reading_time_minutes": 6,
-      "sentiment_valence": "Positive",
-      "sentiment_compound": 0.9991
+      "sentiment_valence": "Constitutional Fidelity",
+      "sentiment_compound": 0.66
     },
     {
       "id": "app-executive-order-restoring-american-saltwater-angling-and-recreation",
@@ -325,8 +325,8 @@
       "signing_date": "2026-09-16",
       "word_count": 984,
       "reading_time_minutes": 5,
-      "sentiment_valence": "Positive",
-      "sentiment_compound": 0.9951
+      "sentiment_valence": "Constitutional Fidelity",
+      "sentiment_compound": 0.52
     },
     {
       "id": "app-executive-order-14428-providing-meaningful-water-quality-improvements-through",
@@ -347,8 +347,8 @@
       "signing_date": "2026-09-08",
       "word_count": 583,
       "reading_time_minutes": 3,
-      "sentiment_valence": "Positive",
-      "sentiment_compound": 0.9944
+      "sentiment_valence": "Constitutional Fidelity",
+      "sentiment_compound": 0.52
     },
     {
       "id": "fr-2026-18738",
@@ -358,8 +358,8 @@
       "signing_date": "2026-09-08",
       "word_count": 908,
       "reading_time_minutes": 5,
-      "sentiment_valence": "Positive",
-      "sentiment_compound": 0.9954
+      "sentiment_valence": "Constitutional Fidelity",
+      "sentiment_compound": 0.6
     },
     {
       "id": "app-executive-order-14427-adjusting-certain-delegations-under-the-defense-production-act",

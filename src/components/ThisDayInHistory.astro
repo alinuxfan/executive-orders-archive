@@ -1,8 +1,10 @@
 ---
 import rawOrders from '../../data/site_orders_summary.json';
+import { resolvePortraitSlug } from '../lib/portraits';
 
 // Get current date in US Eastern / UTC
 const now = new Date();
+const currentYear = now.getUTCFullYear();
 const currentMonth = String(now.getUTCMonth() + 1).padStart(2, '0');
 const currentDay = String(now.getUTCDate()).padStart(2, '0');
 const currentMonthDay = `${currentMonth}-${currentDay}`;
@@ -55,7 +57,7 @@ const todayOrders = rawOrders
         <input 
           type="date" 
           id="history-date-picker" 
-          value={`2026-${currentMonth}-${currentDay}`}
+          value={`${currentYear}-${currentMonth}-${currentDay}`}
           class="bg-slate-900 text-xs sm:text-sm text-white px-3 py-1.5 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400"
         />
         <button 
@@ -77,6 +79,7 @@ const todayOrders = rawOrders
       <div id="history-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {todayOrders.map(order => {
           const year = order.signing_date ? order.signing_date.slice(0, 4) : 'Undated';
+          const portraitSlug = resolvePortraitSlug(order.president_slug);
           let sentimentColor = "bg-slate-800 text-slate-300 border-slate-700";
           if (order.sentiment_valence === "Constitutional Fidelity" || order.sentiment_valence === "Positive") {
             sentimentColor = "bg-emerald-950/60 text-emerald-300 border-emerald-800";
@@ -98,9 +101,20 @@ const todayOrders = rawOrders
                       </span>
                     ) : null}
                   </div>
-                  <span class={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${sentimentColor}`}>
-                    {order.sentiment_valence || 'Order'}
-                  </span>
+                  <div class="flex items-center gap-1.5">
+                    <span class={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${sentimentColor}`}>
+                      {order.sentiment_valence || 'Order'}
+                    </span>
+                    <button
+                      type="button"
+                      data-bookmark-btn={order.id}
+                      aria-label="Save this order"
+                      aria-pressed="false"
+                      class="p-1 rounded-md text-slate-500 hover:text-amber-400 hover:bg-slate-800 transition-colors"
+                    >
+                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path></svg>
+                    </button>
+                  </div>
                 </div>
 
                 <h3 class="font-serif font-bold text-sm sm:text-base text-slate-100 group-hover:text-amber-300 line-clamp-2 transition-colors mb-2">
@@ -118,8 +132,8 @@ const todayOrders = rawOrders
 
               <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
                 <div class="flex items-center gap-2">
-                  <img 
-                    src={`/portraits/${order.president_slug || 'default'}.jpg`} 
+                  <img
+                    src={`/portraits/${portraitSlug}.jpg`}
                     alt=""
                     class="w-5 h-5 rounded-full object-cover border border-slate-700"
                     onerror="this.style.display='none'"
@@ -144,7 +158,7 @@ const todayOrders = rawOrders
   </div>
 </section>
 
-<script is:inline define:vars={{ currentMonth, currentDay, currentMonthName, dayNumber }}>
+<script is:inline define:vars={{ currentYear, currentMonth, currentDay, currentMonthName, dayNumber }}>
   const picker = document.getElementById('history-date-picker');
   const resetBtn = document.getElementById('reset-today-btn');
   const headingDate = document.getElementById('heading-date');
@@ -187,7 +201,7 @@ const todayOrders = rawOrders
     const eoBadge = num ? 
       `<span class="px-1.5 py-0.5 rounded font-mono text-[11px] bg-blue-900/40 text-blue-200 border border-blue-800/40">EO ${num}</span>` : '';
 
-    const slug = order.slug || order.president_slug || 'default';
+    const slug = window.resolvePortraitSlug(order.slug || order.president_slug);
     const presName = order.pres || order.president_name;
     const snippet = order.snip || order.snippet || '';
 
@@ -199,9 +213,14 @@ const todayOrders = rawOrders
               <span class="px-2 py-0.5 rounded font-mono text-xs font-bold bg-amber-400/10 text-amber-300 border border-amber-400/20">${year}</span>
               ${eoBadge}
             </div>
-            <span class="text-[10px] font-medium px-2 py-0.5 rounded-full border ${sentimentColor}">
-              ${val || 'Order'}
-            </span>
+            <div class="flex items-center gap-1.5">
+              <span class="text-[10px] font-medium px-2 py-0.5 rounded-full border ${sentimentColor}">
+                ${val || 'Order'}
+              </span>
+              <button type="button" data-bookmark-btn="${order.id}" aria-label="Save this order" aria-pressed="false" class="p-1 rounded-md text-slate-500 hover:text-amber-400 hover:bg-slate-800 transition-colors">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path></svg>
+              </button>
+            </div>
           </div>
 
           <h3 class="font-serif font-bold text-sm sm:text-base text-slate-100 group-hover:text-amber-300 line-clamp-2 transition-colors mb-2">
@@ -254,6 +273,7 @@ const todayOrders = rawOrders
     if (matches.length > 0) {
       container.innerHTML = matches.map(renderHistoryCard).join('');
       emptyView.classList.add('hidden');
+      window.EOBookmarks?.refreshAllButtons();
     } else {
       container.innerHTML = '';
       emptyView.classList.remove('hidden');
@@ -265,7 +285,7 @@ const todayOrders = rawOrders
   });
 
   resetBtn?.addEventListener('click', () => {
-    const todayStr = `2026-${currentMonth}-${currentDay}`;
+    const todayStr = `${currentYear}-${currentMonth}-${currentDay}`;
     if (picker) picker.value = todayStr;
     updateForDate(todayStr);
   });

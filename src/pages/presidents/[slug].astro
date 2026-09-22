@@ -1,7 +1,10 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import OrderCard from '../../components/OrderCard.astro';
+import ShareButtons from '../../components/ShareButtons.astro';
 import ToneChart from '../../components/ToneChart.astro';
+import { resolvePortraitSlug } from '../../lib/portraits';
+import { formatPresidentNumbers } from '../../lib/presidentNumbers';
 import presidents from '../../../data/presidents.json';
 import allOrders from '../../../data/site_orders_summary.json';
 
@@ -14,13 +17,11 @@ export async function getStaticPaths() {
 
 const { president } = Astro.props;
 
-// Filter orders for this president
-const presOrders = allOrders.filter(o => {
-  if (o.president_slug === president.slug) return true;
-  if (president.slug === "donald-trump" && o.president_slug === "donald-j-trump-2nd-term") return true;
-  if (o.president_name && o.president_name.toLowerCase().includes(president.name.toLowerCase())) return true;
-  return false;
-});
+// Filter orders for this president. Some harvest sources report a president
+// identifier that doesn't match the canonical presidents.json slug (e.g. Clinton,
+// Ford, Biden, G.H.W. Bush, and both Trump terms) — resolvePortraitSlug maps those
+// known aliases back to the canonical slug before comparing.
+const presOrders = allOrders.filter(o => resolvePortraitSlug(o.president_slug) === president.slug);
 
 const totalOrders = presOrders.length;
 const totalWords = presOrders.reduce((sum, o) => sum + (o.word_count || 0), 0);
@@ -28,9 +29,9 @@ const avgWords = totalOrders > 0 ? Math.round(totalWords / totalOrders) : 0;
 const avgReadingTime = totalOrders > 0 ? Math.round(presOrders.reduce((sum, o) => sum + (o.reading_time_minutes || 0), 0) / totalOrders) : 0;
 const avgSentiment = totalOrders > 0 ? (presOrders.reduce((sum, o) => sum + (o.sentiment_compound || 0), 0) / totalOrders).toFixed(2) : "0.00";
 
-const positiveCount = presOrders.filter(o => o.sentiment_valence === "Positive").length;
-const neutralCount = presOrders.filter(o => o.sentiment_valence === "Neutral").length;
-const urgentCount = presOrders.filter(o => o.sentiment_valence === "Urgent/Negative").length;
+const positiveCount = presOrders.filter(o => o.sentiment_valence === "Constitutional Fidelity" || o.sentiment_valence === "Positive").length;
+const neutralCount = presOrders.filter(o => o.sentiment_valence === "Constitutional Neutral" || o.sentiment_valence === "Neutral").length;
+const urgentCount = presOrders.filter(o => o.sentiment_valence === "Constitutional Friction / Overreach" || o.sentiment_valence === "Urgent/Negative").length;
 
 // Party styling
 const partyColors: Record<string, { bg: string; text: string; border: string }> = {
@@ -42,22 +43,49 @@ const partyColors: Record<string, { bg: string; text: string; border: string }> 
   "Unaffiliated": { bg: "bg-slate-50 dark:bg-slate-900", text: "text-slate-700 dark:text-slate-400", border: "border-slate-200 dark:border-slate-800" },
 };
 const partyStyle = partyColors[president.party] || partyColors["Unaffiliated"];
+
+const presidentCanonicalUrl = new URL(`/presidents/${president.slug}`, Astro.site).toString();
+
+const personJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "Person",
+  "name": president.name,
+  "jobTitle": "President of the United States",
+  "image": new URL(`/portraits/${president.slug}.jpg`, Astro.site).toString(),
+  "url": presidentCanonicalUrl,
+  "affiliation": president.party
+};
+
+const breadcrumbJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": new URL("/", Astro.site).toString() },
+    { "@type": "ListItem", "position": 2, "name": "Presidents", "item": new URL("/presidents", Astro.site).toString() },
+    { "@type": "ListItem", "position": 3, "name": president.name, "item": presidentCanonicalUrl }
+  ]
+};
 ---
 
-<Layout 
-  title={`${president.name} - Executive Orders | Presidential Archive`}
+<Layout
+  title={`${president.name} - Executive Orders`}
   description={`Analysis, reading times, and sentiment scoring for all Executive Orders issued by President ${president.name}.`}
+  image={`/portraits/${president.slug}.jpg`}
+  structuredData={[personJsonLd, breadcrumbJsonLd]}
 >
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
     
     <!-- Breadcrumb -->
-    <nav class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-6 font-mono">
-      <a href="/" class="hover:underline">Home</a>
-      <span>/</span>
-      <a href="/presidents" class="hover:underline">Presidents</a>
-      <span>/</span>
-      <span class="text-slate-800 dark:text-slate-200">{president.name}</span>
-    </nav>
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+      <nav class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-mono">
+        <a href="/" class="hover:underline">Home</a>
+        <span>/</span>
+        <a href="/presidents" class="hover:underline">Presidents</a>
+        <span>/</span>
+        <span class="text-slate-800 dark:text-slate-200">{president.name}</span>
+      </nav>
+      <ShareButtons url={`/presidents/${president.slug}`} title={`${president.name} - Executive Orders`} />
+    </div>
 
     <!-- President Profile Header Banner -->
     <header class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 mb-8 shadow-sm">
@@ -73,7 +101,7 @@ const partyStyle = partyColors[president.party] || partyColors["Unaffiliated"];
           />
           <div class="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent p-2 text-center">
             <span class="text-xs font-bold text-amber-300 font-mono tracking-wider">
-              {president.number}{president.number === 1 ? 'st' : president.number === 2 ? 'nd' : president.number === 3 ? 'rd' : 'th'} President
+              {formatPresidentNumbers(president.numbers)} President
             </span>
           </div>
         </div>

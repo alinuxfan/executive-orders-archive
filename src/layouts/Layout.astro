@@ -4,14 +4,31 @@ import syncStatus from '../../data/stats.json';
 interface Props {
   title: string;
   description?: string;
+  image?: string;
+  type?: string;
+  structuredData?: Record<string, any> | Record<string, any>[];
 }
 
-const { 
-  title, 
-  description = "A comprehensive historical archive of United States Presidential Executive Orders from 1789 to present, featuring sentiment analysis, length metrics, and plain English summaries." 
+const {
+  title,
+  description = "A comprehensive historical archive of United States Presidential Executive Orders from 1789 to present, featuring sentiment analysis, length metrics, and plain English summaries.",
+  image = "/og-default.png",
+  type = "website",
+  structuredData
 } = Astro.props;
 
+const structuredDataList = structuredData
+  ? (Array.isArray(structuredData) ? structuredData : [structuredData])
+  : [];
+
 const lastSyncDate = syncStatus?.last_sync_timestamp ? new Date(syncStatus.last_sync_timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Recent";
+
+const pageTitle = `${title} | US Executive Orders Archive`;
+const canonicalUrl = new URL(Astro.url.pathname, Astro.site).toString();
+const absoluteImageUrl = new URL(image, Astro.site).toString();
+// Only the generated default banner is guaranteed to be 1200x630 — portrait
+// images vary in size, so don't assert incorrect dimensions for those.
+const isDefaultImage = image === "/og-default.png";
 ---
 
 <!doctype html>
@@ -21,11 +38,37 @@ const lastSyncDate = syncStatus?.last_sync_timestamp ? new Date(syncStatus.last_
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="generator" content={Astro.generator} />
-    <title>{title} | US Executive Orders Archive</title>
+    <title>{pageTitle}</title>
     <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalUrl} />
     <link rel="alternate" type="application/rss+xml" title="Executive Orders Archive RSS Feed" href="/feed.xml" />
     <link rel="sitemap" href="/sitemap-index.xml" />
-    
+
+    <!-- Open Graph -->
+    <meta property="og:type" content={type} />
+    <meta property="og:site_name" content="Executive Orders Archive" />
+    <meta property="og:title" content={pageTitle} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonicalUrl} />
+    <meta property="og:image" content={absoluteImageUrl} />
+    {isDefaultImage && (
+      <>
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+      </>
+    )}
+
+    <!-- Twitter Card -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={pageTitle} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={absoluteImageUrl} />
+
+    <!-- Structured Data -->
+    {structuredDataList.map(sd => (
+      <script type="application/ld+json" set:html={JSON.stringify(sd)} />
+    ))}
+
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -41,6 +84,10 @@ const lastSyncDate = syncStatus?.last_sync_timestamp ? new Date(syncStatus.last_
     </script>
   </head>
   <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col min-h-screen">
+    <!-- Loaded first so window.EOBookmarks / window.resolvePortraitSlug exist before
+         any page-level inline script (e.g. search/orders client renderers) runs. -->
+    <script src="/bookmarks.js" is:inline></script>
+
     <!-- Top Sync Banner -->
     <div class="bg-flag-blue text-slate-200 text-xs py-1.5 px-4 text-center border-b border-blue-900 flex justify-center items-center gap-2">
       <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -51,47 +98,54 @@ const lastSyncDate = syncStatus?.last_sync_timestamp ? new Date(syncStatus.last_
 
     <!-- Main Navigation Header -->
     <header class="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-        
+      <div class="max-w-7xl mx-auto px-4 lg:px-8 h-16 flex items-center justify-between gap-2">
+
         <!-- Brand Logo -->
-        <a href="/" class="flex items-center gap-3 group">
+        <a href="/" class="flex items-center gap-2 sm:gap-3 group flex-shrink-0">
           <div class="w-10 h-10 rounded-full bg-flag-blue text-amber-400 flex items-center justify-center font-bold text-xl shadow-md border-2 border-amber-400 group-hover:scale-105 transition-transform font-serif">
             ★
           </div>
           <div>
             <div class="font-bold tracking-tight text-slate-900 dark:text-white text-lg font-serif flex items-center gap-1.5">
               <span>Executive Orders</span>
-              <span class="text-xs font-sans uppercase tracking-widest px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50">Archive</span>
+              <span class="hidden lg:inline text-xs font-sans uppercase tracking-widest px-1.5 py-0.5 rounded bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/50">Archive</span>
             </div>
             <p class="text-[11px] text-slate-500 dark:text-slate-400 leading-none">Every President • 1789 to Present</p>
           </div>
         </a>
 
         <!-- Desktop Navigation Links -->
-        <nav class="hidden md:flex items-center gap-1 text-sm font-medium">
-          <a href="/orders" class="px-3 py-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+        <nav class="hidden md:flex items-center gap-0.5 lg:gap-1 text-sm font-medium">
+          <a href="/orders" class="px-2 lg:px-3 py-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors whitespace-nowrap">
             All Orders
           </a>
-          <a href="/presidents" class="px-3 py-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+          <a href="/presidents" class="px-2 lg:px-3 py-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors whitespace-nowrap">
             Presidents
           </a>
-          <a href="/analytics" class="px-3 py-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1">
+          <a href="/analytics" class="px-2 lg:px-3 py-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 whitespace-nowrap">
             <span>Analytics</span>
             <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
           </a>
-          <a href="/founding" class="px-3 py-2 rounded-lg text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 border border-amber-200/80 dark:border-amber-900/60 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors flex items-center gap-1.5 font-serif font-bold text-xs uppercase tracking-wider">
+          <a href="/founding" class="px-2 lg:px-3 py-2 rounded-lg text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 border border-amber-200/80 dark:border-amber-900/60 hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors flex items-center gap-1.5 font-serif font-bold text-xs uppercase tracking-wider whitespace-nowrap">
             <span>📜</span>
-            <span>Founding Documents</span>
+            <span class="hidden lg:inline">Founding Documents</span>
+            <span class="lg:hidden">Founding</span>
           </a>
         </nav>
 
         <!-- Right Side Actions: Search & Dark Mode Toggle -->
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-1 lg:gap-2">
           <!-- Search trigger button -->
-          <a href="/search" class="flex items-center gap-2 px-3 py-1.5 text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-700 transition-colors">
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-            <span>Search orders...</span>
+          <a href="/search" class="flex items-center gap-2 px-2.5 lg:px-3 py-1.5 text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-700 transition-colors">
+            <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+            <span class="hidden lg:inline whitespace-nowrap">Search orders...</span>
             <kbd class="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded text-slate-600 dark:text-slate-300">⌘K</kbd>
+          </a>
+
+          <!-- Saved orders -->
+          <a href="/saved" aria-label="Saved orders" title="Saved orders" class="relative p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path></svg>
+            <span data-bookmark-count class="hidden absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-amber-500 text-white text-[10px] font-bold leading-4 text-center">0</span>
           </a>
 
           <!-- Theme toggle -->
@@ -148,8 +202,12 @@ const lastSyncDate = syncStatus?.last_sync_timestamp ? new Date(syncStatus.last_
           <ul class="space-y-2 text-xs text-slate-600 dark:text-slate-400">
             <li><a href="/orders" class="hover:underline">All Executive Orders</a></li>
             <li><a href="/presidents" class="hover:underline">Presidential Directory</a></li>
+            <li><a href="/presidents/compare" class="hover:underline">Compare Presidents</a></li>
+            <li><a href="/timeline" class="hover:underline">Historical Timeline</a></li>
             <li><a href="/analytics" class="hover:underline">Sentiment & Length Graphs</a></li>
             <li><a href="/search" class="hover:underline">Full-Text Search</a></li>
+            <li><a href="/saved" class="hover:underline">Saved Orders</a></li>
+            <li><a href="/about" class="hover:underline">About & Methodology</a></li>
           </ul>
         </div>
 
@@ -191,6 +249,20 @@ const lastSyncDate = syncStatus?.last_sync_timestamp ? new Date(syncStatus.last_
         } else {
           document.documentElement.classList.add('dark');
           localStorage.setItem('color-theme', 'dark');
+        }
+      });
+
+      // Global ⌘K / Ctrl+K search shortcut
+      document.addEventListener('keydown', function(e) {
+        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+          e.preventDefault();
+          const searchInput = document.getElementById('search-input');
+          if (searchInput) {
+            searchInput.focus();
+            searchInput.select?.();
+          } else {
+            window.location.href = '/search';
+          }
         }
       });
     </script>

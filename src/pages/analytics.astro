@@ -2,18 +2,25 @@
 import Layout from '../layouts/Layout.astro';
 import ToneChart from '../components/ToneChart.astro';
 import LengthChart from '../components/LengthChart.astro';
+import TimelineChart from '../components/TimelineChart.astro';
+import { getYearlyOrderCounts } from '../lib/yearly';
+import { resolvePortraitSlug } from '../lib/portraits';
 import orders from '../../data/site_orders_summary.json';
 import presidents from '../../data/presidents.json';
 
 const totalOrders = orders.length;
+const yearlyData = getYearlyOrderCounts(orders);
 const positiveOrders = orders.filter(o => o.sentiment_valence === "Constitutional Fidelity" || o.sentiment_valence === "Positive").length;
 const neutralOrders = orders.filter(o => o.sentiment_valence === "Constitutional Neutral" || o.sentiment_valence === "Neutral").length;
 const urgentOrders = orders.filter(o => o.sentiment_valence === "Constitutional Friction / Overreach" || o.sentiment_valence === "Urgent/Negative").length;
 
-// Map presidents
+// Map presidents. Some harvest sources report a president identifier that doesn't
+// match the canonical presidents.json slug (e.g. Clinton, Ford, Biden, G.H.W. Bush,
+// and both Trump terms) — normalize through resolvePortraitSlug so those orders
+// aren't silently dropped from their president's stats.
 const presStats = new Map<string, { count: number; totalWords: number; totalSentiment: number; totalGrade: number }>();
 for (const o of orders) {
-  const slug = o.president_slug || "";
+  const slug = resolvePortraitSlug(o.president_slug);
   const cur = presStats.get(slug) || { count: 0, totalWords: 0, totalSentiment: 0, totalGrade: 0 };
   cur.count += 1;
   cur.totalWords += o.word_count || 0;
@@ -23,11 +30,7 @@ for (const o of orders) {
 }
 
 const enriched = presidents.map(p => {
-  let s = presStats.get(p.slug);
-  if (!s && p.slug === "donald-trump") {
-    const term2 = presStats.get("donald-j-trump-2nd-term");
-    if (term2) s = term2;
-  }
+  const s = presStats.get(p.slug);
   const count = s?.count || 0;
   return {
     name: p.name,
@@ -113,9 +116,17 @@ const shortestOrder = [...orders].filter(o => o.word_count > 30).sort((a, b) => 
         urgentCount={urgentOrders}
         totalOrders={totalOrders}
       />
-      <LengthChart 
+      <LengthChart
         presidents={enriched}
       />
+    </div>
+
+    <!-- Full Historical Timeline -->
+    <div class="mb-12">
+      <TimelineChart yearlyData={yearlyData} />
+      <p class="text-xs text-slate-400 mt-3 text-center">
+        Want to explore a specific year? Visit the <a href="/timeline" class="text-blue-600 dark:text-blue-400 hover:underline font-semibold">full interactive timeline</a>.
+      </p>
     </div>
 
   </div>

@@ -4,6 +4,7 @@ import PresidentCard from '../components/PresidentCard.astro';
 import OrderCard from '../components/OrderCard.astro';
 import ToneChart from '../components/ToneChart.astro';
 import LengthChart from '../components/LengthChart.astro';
+import ThisDayInHistory from '../components/ThisDayInHistory.astro';
 
 import rawOrders from '../../data/site_orders_summary.json';
 import presidentsData from '../../data/presidents.json';
@@ -173,8 +174,11 @@ const recentOrders = rawOrders.slice(0, 6);
     </div>
   </section>
 
+  <!-- This Day in History Dynamic Feature -->
+  <ThisDayInHistory />
+
   <!-- Founding Charters Teaser Section -->
-  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10">
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
     <div class="bg-gradient-to-r from-amber-50 via-white to-amber-50 dark:from-slate-900 dark:via-slate-850 dark:to-slate-900 border-2 border-amber-300/80 dark:border-amber-700/60 rounded-3xl p-6 sm:p-8 shadow-sm">
       <div class="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
         <div class="space-y-2 max-w-2xl">

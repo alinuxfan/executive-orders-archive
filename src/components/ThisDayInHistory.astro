@@ -1,0 +1,272 @@
+---
+import rawOrders from '../../data/site_orders_summary.json';
+
+// Get current date in US Eastern / UTC
+const now = new Date();
+const currentMonth = String(now.getUTCMonth() + 1).padStart(2, '0');
+const currentDay = String(now.getUTCDate()).padStart(2, '0');
+const currentMonthDay = `${currentMonth}-${currentDay}`;
+
+const monthNames = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+const currentMonthName = monthNames[now.getUTCMonth()];
+const dayNumber = now.getUTCDate();
+
+// Filter orders matching today's month and day across all years
+const todayOrders = rawOrders
+  .filter(o => o.signing_date && o.signing_date.slice(5, 10) === currentMonthDay)
+  .sort((a, b) => {
+    // Sort descending by year
+    const yearA = parseInt(a.signing_date.slice(0, 4), 10);
+    const yearB = parseInt(b.signing_date.slice(0, 4), 10);
+    return yearB - yearA;
+  });
+---
+
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+  <div class="bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 border-2 border-blue-900/60 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+    
+    <!-- Background Watermark -->
+    <div class="absolute -right-10 -bottom-10 opacity-5 pointer-events-none select-none text-9xl font-serif">
+      🏛️
+    </div>
+
+    <!-- Header & Interactive Date Controls -->
+    <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 pb-6 border-b border-blue-800/40 relative z-10">
+      <div>
+        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-400 font-sans mb-1">
+          <span>📅 This Day in Presidential History</span>
+          <span>•</span>
+          <span id="active-date-label">{currentMonthName} {dayNumber}</span>
+        </div>
+        <h2 class="font-serif font-extrabold text-2xl sm:text-3xl text-white">
+          Orders Signed on <span id="heading-date" class="text-amber-300">{currentMonthName} {dayNumber}</span> Through the Ages
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-300 mt-1 max-w-2xl font-light">
+          Discover which landmark decrees, wartime mobilizations, and executive orders were signed on this calendar date across presidential administrations.
+        </p>
+      </div>
+
+      <!-- Quick Date Selector -->
+      <div class="flex items-center gap-2 bg-slate-850/80 p-1.5 rounded-2xl border border-blue-700/50 backdrop-blur-sm self-stretch md:self-auto">
+        <label for="history-date-picker" class="text-xs text-slate-300 font-medium pl-2 hidden sm:inline">Pick Date:</label>
+        <input 
+          type="date" 
+          id="history-date-picker" 
+          value={`2026-${currentMonth}-${currentDay}`}
+          class="bg-slate-900 text-xs sm:text-sm text-white px-3 py-1.5 rounded-xl border border-slate-700 focus:outline-none focus:border-amber-400"
+        />
+        <button 
+          id="reset-today-btn"
+          class="px-2.5 py-1.5 rounded-xl bg-blue-700 hover:bg-blue-600 text-[11px] font-semibold text-white transition-colors"
+        >
+          Today
+        </button>
+      </div>
+    </div>
+
+    <!-- Orders Feed for This Day -->
+    <div class="mt-6 relative z-10">
+      <div class="flex items-center justify-between text-xs text-slate-400 mb-4">
+        <span id="history-count-badge">Found {todayOrders.length} historic order{todayOrders.length === 1 ? '' : 's'}</span>
+        <span class="text-[11px] opacity-75">Spanning {todayOrders.length > 0 ? `${todayOrders[todayOrders.length - 1].signing_date.slice(0, 4)} – ${todayOrders[0].signing_date.slice(0, 4)}` : 'Various Eras'}</span>
+      </div>
+
+      <div id="history-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {todayOrders.map(order => {
+          const year = order.signing_date ? order.signing_date.slice(0, 4) : 'Undated';
+          let sentimentColor = "bg-slate-800 text-slate-300 border-slate-700";
+          if (order.sentiment_valence === "Constitutional Fidelity" || order.sentiment_valence === "Positive") {
+            sentimentColor = "bg-emerald-950/60 text-emerald-300 border-emerald-800";
+          } else if (order.sentiment_valence === "Constitutional Friction / Overreach" || order.sentiment_valence === "Urgent/Negative") {
+            sentimentColor = "bg-rose-950/60 text-rose-300 border-rose-800";
+          }
+
+          return (
+            <div class="history-item bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-blue-700/60 rounded-2xl p-4 transition-all duration-200 flex flex-col justify-between group shadow-md">
+              <div>
+                <div class="flex items-center justify-between gap-2 mb-2">
+                  <div class="flex items-center gap-1.5">
+                    <span class="px-2 py-0.5 rounded font-mono text-xs font-bold bg-amber-400/10 text-amber-300 border border-amber-400/20">
+                      {year}
+                    </span>
+                    {order.eo_number ? (
+                      <span class="px-1.5 py-0.5 rounded font-mono text-[11px] bg-blue-900/40 text-blue-200 border border-blue-800/40">
+                        EO {order.eo_number}
+                      </span>
+                    ) : null}
+                  </div>
+                  <span class={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${sentimentColor}`}>
+                    {order.sentiment_valence || 'Order'}
+                  </span>
+                </div>
+
+                <h3 class="font-serif font-bold text-sm sm:text-base text-slate-100 group-hover:text-amber-300 line-clamp-2 transition-colors mb-2">
+                  <a href={`/orders/${order.id}`}>
+                    {order.title}
+                  </a>
+                </h3>
+
+                {order.snippet ? (
+                  <p class="text-xs text-slate-400 line-clamp-2 leading-relaxed mb-3">
+                    {order.snippet}
+                  </p>
+                ) : null}
+              </div>
+
+              <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+                <div class="flex items-center gap-2">
+                  <img 
+                    src={`/portraits/${order.president_slug || 'default'}.jpg`} 
+                    alt=""
+                    class="w-5 h-5 rounded-full object-cover border border-slate-700"
+                    onerror="this.style.display='none'"
+                  />
+                  <span class="truncate max-w-[130px] font-medium text-slate-300">{order.president_name}</span>
+                </div>
+                <a href={`/orders/${order.id}`} class="text-amber-400 hover:text-amber-300 font-semibold text-[11px]">
+                  Read &rarr;
+                </a>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div id="history-empty" class="hidden text-center py-12 bg-slate-900/60 rounded-2xl border border-slate-800">
+        <p class="text-slate-300 text-sm font-serif">No executive orders found for this calendar date.</p>
+        <p class="text-slate-500 text-xs mt-1">Try another month or day using the date picker above.</p>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<script is:inline define:vars={{ currentMonth, currentDay, currentMonthName, dayNumber }}>
+  const picker = document.getElementById('history-date-picker');
+  const resetBtn = document.getElementById('reset-today-btn');
+  const headingDate = document.getElementById('heading-date');
+  const activeDateLabel = document.getElementById('active-date-label');
+  const countBadge = document.getElementById('history-count-badge');
+  const container = document.getElementById('history-cards-grid');
+  const emptyView = document.getElementById('history-empty');
+
+  const monthNames = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+
+  let dataset = null;
+
+  async function loadData() {
+    if (dataset) return dataset;
+    try {
+      const res = await fetch('/search_index.json');
+      dataset = await res.json();
+    } catch (e) {
+      console.error('Failed to load search index:', e);
+      dataset = [];
+    }
+    return dataset;
+  }
+
+  function renderHistoryCard(order) {
+    const rawDate = order.date || order.signing_date || '';
+    const year = rawDate.slice(0, 4) || 'Undated';
+    const val = order.val || order.sentiment_valence;
+    let sentimentColor = "bg-slate-800 text-slate-300 border-slate-700";
+    if (val === "Constitutional Fidelity" || val === "Positive") {
+      sentimentColor = "bg-emerald-950/60 text-emerald-300 border-emerald-800";
+    } else if (val === "Constitutional Friction / Overreach" || val === "Urgent/Negative") {
+      sentimentColor = "bg-rose-950/60 text-rose-300 border-rose-800";
+    }
+
+    const num = order.num !== undefined ? order.num : order.eo_number;
+    const eoBadge = num ? 
+      `<span class="px-1.5 py-0.5 rounded font-mono text-[11px] bg-blue-900/40 text-blue-200 border border-blue-800/40">EO ${num}</span>` : '';
+
+    const slug = order.slug || order.president_slug || 'default';
+    const presName = order.pres || order.president_name;
+    const snippet = order.snip || order.snippet || '';
+
+    return `
+      <div class="history-item bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-blue-700/60 rounded-2xl p-4 transition-all duration-200 flex flex-col justify-between group shadow-md">
+        <div>
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <div class="flex items-center gap-1.5">
+              <span class="px-2 py-0.5 rounded font-mono text-xs font-bold bg-amber-400/10 text-amber-300 border border-amber-400/20">${year}</span>
+              ${eoBadge}
+            </div>
+            <span class="text-[10px] font-medium px-2 py-0.5 rounded-full border ${sentimentColor}">
+              ${val || 'Order'}
+            </span>
+          </div>
+
+          <h3 class="font-serif font-bold text-sm sm:text-base text-slate-100 group-hover:text-amber-300 line-clamp-2 transition-colors mb-2">
+            <a href="/orders/${order.id}">${order.title}</a>
+          </h3>
+
+          ${snippet ? `<p class="text-xs text-slate-400 line-clamp-2 leading-relaxed mb-3">${snippet}</p>` : ''}
+        </div>
+
+        <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+          <div class="flex items-center gap-2">
+            <img src="/portraits/${slug}.jpg" alt="" class="w-5 h-5 rounded-full object-cover border border-slate-700" onerror="this.style.display='none'" />
+            <span class="truncate max-w-[130px] font-medium text-slate-300">${presName}</span>
+          </div>
+          <a href="/orders/${order.id}" class="text-amber-400 hover:text-amber-300 font-semibold text-[11px]">Read &rarr;</a>
+        </div>
+      </div>
+    `;
+  }
+
+  async function updateForDate(dateStr) {
+    if (!dateStr) return;
+    const parts = dateStr.split('-');
+    if (parts.length < 3) return;
+    const mm = parts[1];
+    const dd = parts[2];
+    const targetMonthDay = `${mm}-${dd}`;
+    const monthName = monthNames[parseInt(mm, 10) - 1];
+    const dayInt = parseInt(dd, 10);
+
+    if (headingDate) headingDate.textContent = `${monthName} ${dayInt}`;
+    if (activeDateLabel) activeDateLabel.textContent = `${monthName} ${dayInt}`;
+
+    const data = await loadData();
+    const matches = data
+      .filter(o => {
+        const d = o.date || o.signing_date;
+        return d && d.slice(5, 10) === targetMonthDay;
+      })
+      .sort((a, b) => {
+        const yA = parseInt((a.date || a.signing_date || '0').slice(0, 4), 10);
+        const yB = parseInt((b.date || b.signing_date || '0').slice(0, 4), 10);
+        return yB - yA;
+      });
+
+    if (countBadge) {
+      countBadge.textContent = `Found ${matches.length} historic order${matches.length === 1 ? '' : 's'}`;
+    }
+
+    if (matches.length > 0) {
+      container.innerHTML = matches.map(renderHistoryCard).join('');
+      emptyView.classList.add('hidden');
+    } else {
+      container.innerHTML = '';
+      emptyView.classList.remove('hidden');
+    }
+  }
+
+  picker?.addEventListener('change', (e) => {
+    updateForDate(e.target.value);
+  });
+
+  resetBtn?.addEventListener('click', () => {
+    const todayStr = `2026-${currentMonth}-${currentDay}`;
+    if (picker) picker.value = todayStr;
+    updateForDate(todayStr);
+  });
+</script>

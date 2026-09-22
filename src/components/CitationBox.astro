@@ -1,0 +1,130 @@
+---
+interface Props {
+  order: {
+    id: string;
+    eo_number?: number | null;
+    title: string;
+    president_name: string;
+    signing_date?: string;
+  };
+}
+
+const { order } = Astro.props;
+
+const dateObj = order.signing_date ? new Date(order.signing_date) : null;
+const year = dateObj ? dateObj.getUTCFullYear() : 'n.d.';
+const monthName = dateObj ? dateObj.toLocaleString('en-US', { month: 'short', timeZone: 'UTC' }) : '';
+const fullMonthName = dateObj ? dateObj.toLocaleString('en-US', { month: 'long', timeZone: 'UTC' }) : '';
+const day = dateObj ? dateObj.getUTCDate() : '';
+
+const canonicalUrl = `https://executiveordersarchive.org/orders/${order.id}`;
+
+// Bluebook Citation (Standard Legal)
+const bluebookCitation = order.eo_number 
+  ? `Exec. Order No. ${order.eo_number}, ${order.president_name} (${monthName} ${day}, ${year}). Available at ${canonicalUrl}.`
+  : `Exec. Order, "${order.title}," ${order.president_name} (${monthName} ${day}, ${year}). Available at ${canonicalUrl}.`;
+
+// APA 7th Edition
+const apaCitation = order.eo_number
+  ? `U.S. President (${order.president_name}). (${year}, ${fullMonthName} ${day}). Executive Order ${order.eo_number}: ${order.title}. Executive Orders Archive. ${canonicalUrl}`
+  : `U.S. President (${order.president_name}). (${year}, ${fullMonthName} ${day}). ${order.title} [Executive Order]. Executive Orders Archive. ${canonicalUrl}`;
+
+// Chicago 17th Edition
+const chicagoCitation = order.eo_number
+  ? `U.S. President. Executive Order ${order.eo_number}, "${order.title}." ${fullMonthName} ${day}, ${year}. Executive Orders Archive. ${canonicalUrl}.`
+  : `U.S. President. "${order.title}." Executive Order signed by ${order.president_name}, ${fullMonthName} ${day}, ${year}. Executive Orders Archive. ${canonicalUrl}.`;
+
+// BibTeX
+const bibtexKey = `eo_${order.id.replace(/[^a-zA-Z0-9_]/g, '_')}`;
+const bibtexCitation = `@misc{${bibtexKey},
+  author       = {{${order.president_name}}},
+  title        = {{${order.eo_number ? `Executive Order ${order.eo_number}: ` : ''}${order.title}}},
+  year         = {${year}},
+  month        = {${monthName.toLowerCase()}},
+  day          = {${day}},
+  howpublished = {\\url{${canonicalUrl}}},
+  note         = {Executive Orders Archive}
+}`;
+---
+
+<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm mb-8">
+  <div class="flex flex-wrap items-center justify-between gap-4 mb-4 pb-3 border-b border-slate-100 dark:border-slate-800">
+    <div class="flex items-center gap-2">
+      <span class="text-lg">📜</span>
+      <h3 class="font-serif font-bold text-base text-slate-900 dark:text-white">
+        Scholarly & Legal Citations
+      </h3>
+    </div>
+    
+    <!-- Format Selector Buttons -->
+    <div class="flex items-center bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-xs font-semibold" id="citation-tabs">
+      <button class="cit-tab active px-3 py-1 rounded-lg bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-300 shadow-xs" data-target="bluebook">Bluebook</button>
+      <button class="cit-tab px-3 py-1 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white" data-target="apa">APA</button>
+      <button class="cit-tab px-3 py-1 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white" data-target="chicago">Chicago</button>
+      <button class="cit-tab px-3 py-1 rounded-lg text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white" data-target="bibtex">BibTeX</button>
+    </div>
+  </div>
+
+  <!-- Citation Text Display -->
+  <div class="relative bg-slate-50 dark:bg-slate-950/60 rounded-xl p-4 border border-slate-200 dark:border-slate-800">
+    <pre id="citation-content" class="text-xs sm:text-sm font-mono text-slate-800 dark:text-slate-200 whitespace-pre-wrap leading-relaxed select-all overflow-x-auto">{bluebookCitation}</pre>
+
+    <!-- Copy Button -->
+    <button 
+      id="copy-citation-btn"
+      class="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow transition-all"
+    >
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+      <span id="copy-btn-label">Copy Citation</span>
+    </button>
+  </div>
+</div>
+
+<script is:inline define:vars={{ bluebookCitation, apaCitation, chicagoCitation, bibtexCitation }}>
+  const citations = {
+    bluebook: bluebookCitation,
+    apa: apaCitation,
+    chicago: chicagoCitation,
+    bibtex: bibtexCitation
+  };
+
+  const tabs = document.querySelectorAll('.cit-tab');
+  const content = document.getElementById('citation-content');
+  const copyBtn = document.getElementById('copy-citation-btn');
+  const btnLabel = document.getElementById('copy-btn-label');
+
+  let activeFormat = 'bluebook';
+
+  tabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      tabs.forEach(t => {
+        t.classList.remove('active', 'bg-white', 'dark:bg-slate-700', 'text-blue-600', 'dark:text-blue-300', 'shadow-xs');
+        t.classList.add('text-slate-600', 'dark:text-slate-400');
+      });
+
+      tab.classList.add('active', 'bg-white', 'dark:bg-slate-700', 'text-blue-600', 'dark:text-blue-300', 'shadow-xs');
+      tab.classList.remove('text-slate-600', 'dark:text-slate-400');
+
+      activeFormat = tab.getAttribute('data-target');
+      if (content) {
+        content.textContent = citations[activeFormat];
+      }
+    });
+  });
+
+  copyBtn?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(citations[activeFormat]);
+      if (btnLabel) btnLabel.textContent = '✓ Copied to Clipboard!';
+      copyBtn.classList.remove('bg-blue-600', 'hover:bg-blue-700');
+      copyBtn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+      setTimeout(() => {
+        if (btnLabel) btnLabel.textContent = 'Copy Citation';
+        copyBtn.classList.remove('bg-emerald-600', 'hover:bg-emerald-700');
+        copyBtn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+      }, 2000);
+    } catch (e) {
+      console.error('Failed to copy citation:', e);
+    }
+  });
+</script>

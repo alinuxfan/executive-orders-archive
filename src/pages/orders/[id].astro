@@ -1,5 +1,6 @@
 ---
 import Layout from '../../layouts/Layout.astro';
+import CitationBox from '../../components/CitationBox.astro';
 import { generateOrderSummary } from '../../lib/summary';
 import rawOrders from '../../../data/site_orders.json';
 
@@ -99,83 +100,60 @@ if (order.sentiment_valence === "Constitutional Fidelity" || order.sentiment_val
             Executive Order {order.eo_number}
           </span>
         ) : (
-          <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-            Executive Decree
+          <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+            Presidential Order
           </span>
         )}
-
         <span class={`text-xs font-semibold px-2.5 py-1 rounded-full border ${sentimentColor.bg} ${sentimentColor.text} ${sentimentColor.border}`}>
           {order.sentiment_valence} ({order.sentiment_compound >= 0 ? '+' : ''}{order.sentiment_compound.toFixed(2)})
         </span>
-
-        {order.tone_tag && (
-          <span class="text-xs font-mono px-2.5 py-1 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-900/60 font-semibold">
-            🏛️ {order.tone_tag}
-          </span>
-        )}
-
-        <span class="text-xs font-mono px-2.5 py-1 rounded bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 font-medium">
-          Grade {order.flesch_kincaid_grade} (Post-Grad)
-        </span>
       </div>
 
-      <h1 class="font-serif font-extrabold text-2xl sm:text-4xl text-slate-900 dark:text-white leading-tight mb-6">
+      <h1 class="font-serif font-extrabold text-2xl sm:text-3xl lg:text-4xl text-slate-900 dark:text-white leading-tight mb-4">
         {order.title}
       </h1>
 
-      <!-- President and Date Info -->
-      <div class="flex flex-wrap items-center justify-between gap-4 pt-6 border-t border-slate-100 dark:border-slate-800/80">
-        <a 
-          href={`/presidents/${order.president_slug}`} 
-          class="flex items-center gap-3 group"
-        >
+      <div class="flex flex-wrap items-center gap-4 text-xs sm:text-sm text-slate-500 dark:text-slate-400 pt-4 border-t border-slate-100 dark:border-slate-800">
+        <div class="flex items-center gap-2 font-medium text-slate-800 dark:text-slate-200">
           <img 
             src={`/portraits/${order.president_slug || 'default'}.jpg`} 
             alt={order.president_name}
-            class="w-11 h-11 rounded-full object-cover border-2 border-amber-400/80 shadow-sm group-hover:scale-105 transition-transform"
-            onerror="this.src='/portraits/default.svg'; this.onerror=null;"
+            class="w-6 h-6 rounded-full object-cover border border-slate-300 dark:border-slate-600"
+            onerror="this.style.display='none'"
           />
-          <div>
-            <div class="text-xs text-slate-400 uppercase tracking-wider font-semibold">Signed by President</div>
-            <div class="font-serif font-bold text-slate-900 dark:text-white text-base group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-              {order.president_name}
-            </div>
-          </div>
-        </a>
-
-        <div class="text-right text-xs">
-          <div class="text-slate-400 uppercase tracking-wider font-semibold">Signing Date</div>
-          <div class="font-mono font-medium text-slate-800 dark:text-slate-200 text-sm">
-            {formattedDate}
-          </div>
+          <a href={`/presidents/${order.president_slug}`} class="hover:underline">
+            {order.president_name}
+          </a>
         </div>
+        <span>•</span>
+        <div class="font-mono">{formattedDate}</div>
+        <span>•</span>
+        <div>{order.reading_time_minutes} min read ({order.word_count.toLocaleString()} words)</div>
       </div>
     </header>
 
-    <!-- "What It Actually Does" & Early Statesman's Constitutional Verdict -->
-    <section class="bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-transparent border-2 border-amber-400/40 dark:border-amber-500/30 rounded-2xl p-6 sm:p-8 mb-8 shadow-sm">
-      <div class="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <div class="flex items-center gap-2.5">
-          <span class="w-7 h-7 rounded-full bg-amber-400 text-slate-950 flex items-center justify-center font-bold text-sm shadow-xs">
-            💡
-          </span>
-          <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white">
-            What It Actually Does (Plain-English Intelligence)
+    <!-- Plain-English Translation & Constitutional Analysis Callout -->
+    <section class="bg-amber-50/50 dark:bg-amber-950/20 border-2 border-amber-200/80 dark:border-amber-900/40 rounded-2xl p-6 sm:p-8 mb-8 shadow-sm">
+      <div class="flex items-center gap-3 mb-4">
+        <div class="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/50 text-amber-900 dark:text-amber-200">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        </div>
+        <div>
+          <h2 class="font-serif font-bold text-lg text-slate-900 dark:text-white">
+            Plain-English Translation & Framers' Constitutional Analysis
           </h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400">
+            Early Statesman synthesis distilling legal jargon into practical meaning, statutory anchors, and structural constitutional impacts.
+          </p>
         </div>
       </div>
 
       <div class="space-y-4 mb-6">
         {summaryParagraphs.map(p => {
-          const isVerdict = p.startsWith("Constitutional Assessment:");
-          return isVerdict ? (
-            <div class="p-4 sm:p-5 rounded-xl bg-amber-100/60 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-800/80 text-amber-950 dark:text-amber-100 text-sm sm:text-base leading-relaxed font-serif shadow-2xs">
-              <div class="text-xs font-mono font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300 mb-1.5 flex items-center gap-1.5">
-                <span>📜</span> Early Statesman's Constitutional Verdict
-              </div>
-              <p class="italic">
-                {p.replace(/^Constitutional Assessment:\s*/, "")}
-              </p>
+          const isCallout = p.startsWith("CONSTITUTIONAL") || p.startsWith("EXECUTIVE POWERS") || p.startsWith("STATUTORY");
+          return isCallout ? (
+            <div class="p-4 rounded-xl bg-amber-100/60 dark:bg-amber-900/30 border border-amber-300/50 dark:border-amber-800/50 text-xs font-mono text-amber-950 dark:text-amber-200 leading-relaxed">
+              {p}
             </div>
           ) : (
             <p class="text-slate-800 dark:text-slate-200 text-base leading-relaxed font-normal">
@@ -251,6 +229,9 @@ if (order.sentiment_valence === "Constitutional Fidelity" || order.sentiment_val
       </div>
 
     </section>
+
+    <!-- Scholarly & Legal Citation Panel -->
+    <CitationBox order={order} />
 
     <!-- Full Official Document Text -->
     <article class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-10 shadow-sm">

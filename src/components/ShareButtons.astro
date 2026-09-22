@@ -15,7 +15,7 @@ const facebookHref = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}
 const linkedinHref = `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`;
 ---
 
-<div class="flex items-center gap-2" data-share-buttons data-share-url={canonicalUrl}>
+<div class="flex items-center gap-2" data-share-buttons data-share-url={canonicalUrl} data-share-title={title}>
   <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mr-1">Share</span>
 
   <a
@@ -40,6 +40,25 @@ const linkedinHref = `https://www.linkedin.com/sharing/share-offsite/?url=${enco
     <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M22 12.06C22 6.505 17.523 2 12 2S2 6.505 2 12.06c0 5.02 3.657 9.184 8.438 9.94v-7.03H7.898v-2.91h2.54V9.845c0-2.507 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562v1.877h2.773l-.443 2.91h-2.33V22c4.78-.756 8.437-4.92 8.437-9.94z"/></svg>
   </a>
 
+  <div class="relative inline-flex">
+    <button
+      type="button"
+      data-share-instagram
+      aria-label="Share on Instagram"
+      title="Share on Instagram"
+      class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
+    >
+      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
+    </button>
+    <div
+      data-ig-tooltip
+      class="hidden absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 text-xs font-medium text-white bg-slate-900 dark:bg-slate-100 dark:text-slate-900 rounded shadow-md pointer-events-none whitespace-nowrap transition-opacity z-30"
+    >
+      Link copied! Opening Instagram...
+      <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900 dark:border-t-slate-100"></div>
+    </div>
+  </div>
+
   <a
     href={linkedinHref}
     target="_blank"
@@ -58,30 +77,71 @@ const linkedinHref = `https://www.linkedin.com/sharing/share-offsite/?url=${enco
     title="Copy link"
     class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
   >
-    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 010 5.656l-3 3a4 4 0 01-5.656-5.656l1.5-1.5M10.172 13.828a4 4 0 010-5.656l3-3a4 4 0 015.656 5.656l-1.5 1.5"></path></svg>
+    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M13.828 10.172a4 4 0 010 5.656l-3 3a4 4 0 01-5.656-5.656l1.5-1.5M10.172 13.828a4 4 0 010-5.656l3-3a4 4 0 015.656 5.656l-1.5 1.5\"></path></svg>
   </button>
 </div>
 
 <script>
   document.querySelectorAll('[data-share-buttons]').forEach((container) => {
-    const btn = container.querySelector('[data-copy-share-link]');
+    const copyBtn = container.querySelector('[data-copy-share-link]');
+    const igBtn = container.querySelector('[data-share-instagram]');
+    const igTooltip = container.querySelector('[data-ig-tooltip]');
     const url = container.getAttribute('data-share-url') || window.location.href;
+    const title = container.getAttribute('data-share-title') || document.title;
 
-    btn?.addEventListener('click', async () => {
+    copyBtn?.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(url);
-        const svg = btn.querySelector('svg');
+        const svg = copyBtn.querySelector('svg');
         if (svg) {
           const original = svg.outerHTML;
-          svg.outerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+          svg.outerHTML = '<svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
           setTimeout(() => {
-            const currentSvg = btn.querySelector('svg');
+            const currentSvg = copyBtn.querySelector('svg');
             if (currentSvg) currentSvg.outerHTML = original;
           }, 1500);
         }
       } catch (e) {
         console.error('Failed to copy link:', e);
       }
+    });
+
+    let igTimeout: ReturnType<typeof setTimeout> | undefined;
+
+    igBtn?.addEventListener('click', async () => {
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+        (navigator.maxTouchPoints > 1 && window.innerWidth < 768);
+
+      if (isMobile && navigator.share) {
+        try {
+          await navigator.share({
+            title: title,
+            url: url,
+          });
+          return;
+        } catch (err: any) {
+          if (err?.name === 'AbortError') {
+            return;
+          }
+        }
+      }
+
+      // Desktop or fallback: copy link to clipboard, show feedback tooltip, and open Instagram
+      try {
+        navigator.clipboard.writeText(url);
+      } catch (e) {
+        console.error('Failed to copy link for Instagram:', e);
+      }
+
+      if (igTooltip) {
+        igTooltip.classList.remove('hidden');
+        clearTimeout(igTimeout);
+        igTimeout = setTimeout(() => {
+          igTooltip.classList.add('hidden');
+        }, 2500);
+      }
+
+      window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer');
     });
   });
 </script>

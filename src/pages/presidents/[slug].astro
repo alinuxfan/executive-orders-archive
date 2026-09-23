@@ -5,6 +5,7 @@ import ShareButtons from '../../components/ShareButtons.astro';
 import ToneChart from '../../components/ToneChart.astro';
 import { resolvePortraitSlug } from '../../lib/portraits';
 import { formatPresidentNumbers } from '../../lib/presidentNumbers';
+import { getYoungstownClassification } from '../../lib/youngstown';
 import presidents from '../../../data/presidents.json';
 import allOrders from '../../../data/site_orders_summary.json';
 
@@ -21,17 +22,57 @@ const { president } = Astro.props;
 // identifier that doesn't match the canonical presidents.json slug (e.g. Clinton,
 // Ford, Biden, G.H.W. Bush, and both Trump terms) — resolvePortraitSlug maps those
 // known aliases back to the canonical slug before comparing.
-const presOrders = allOrders.filter(o => resolvePortraitSlug(o.president_slug) === president.slug);
+const presOrders = allOrders.filter(o => resolvePortraitSlug(o.slug || o.president_slug) === president.slug);
 
 const totalOrders = presOrders.length;
-const totalWords = presOrders.reduce((sum, o) => sum + (o.word_count || 0), 0);
+const totalWords = presOrders.reduce((sum, o) => sum + (o.words !== undefined ? o.words : (o.word_count || 0)), 0);
 const avgWords = totalOrders > 0 ? Math.round(totalWords / totalOrders) : 0;
-const avgReadingTime = totalOrders > 0 ? Math.round(presOrders.reduce((sum, o) => sum + (o.reading_time_minutes || 0), 0) / totalOrders) : 0;
-const avgSentiment = totalOrders > 0 ? (presOrders.reduce((sum, o) => sum + (o.sentiment_compound || 0), 0) / totalOrders).toFixed(2) : "0.00";
+const avgReadingTime = totalOrders > 0 ? Math.round(presOrders.reduce((sum, o) => sum + (o.time !== undefined ? o.time : (o.reading_time_minutes || 0)), 0) / totalOrders) : 0;
+const avgSentiment = totalOrders > 0 ? (presOrders.reduce((sum, o) => sum + (o.comp !== undefined ? o.comp : (o.sentiment_compound || 0)), 0) / totalOrders).toFixed(2) : "0.00";
 
-const positiveCount = presOrders.filter(o => o.sentiment_valence === "Constitutional Fidelity" || o.sentiment_valence === "Positive").length;
-const neutralCount = presOrders.filter(o => o.sentiment_valence === "Constitutional Neutral" || o.sentiment_valence === "Neutral").length;
-const urgentCount = presOrders.filter(o => o.sentiment_valence === "Constitutional Friction / Overreach" || o.sentiment_valence === "Urgent/Negative").length;
+const positiveCount = presOrders.filter(o => {
+  const v = o.val || o.sentiment_valence;
+  return v === "Constitutional Fidelity" || v === "Positive";
+}).length;
+
+const neutralCount = presOrders.filter(o => {
+  const v = o.val || o.sentiment_valence;
+  return v === "Constitutional Neutral" || v === "Neutral" || !v;
+}).length;
+
+const urgentCount = presOrders.filter(o => {
+  const v = o.val || o.sentiment_valence;
+  return v === "Constitutional Friction / Overreach" || v === "Urgent/Negative";
+}).length;
+
+// Youngstown Separation of Powers Breakdown
+let pZone1 = 0;
+let pZone2 = 0;
+let pZone3 = 0;
+
+for (const o of presOrders) {
+  const z = getYoungstownClassification(o).zone;
+  if (z === 1) pZone1++;
+  else if (z === 2) pZone2++;
+  else if (z === 3) pZone3++;
+}
+
+const pZone1Pct = totalOrders > 0 ? ((pZone1 / totalOrders) * 100).toFixed(1) : "0.0";
+const pZone2Pct = totalOrders > 0 ? ((pZone2 / totalOrders) * 100).toFixed(1) : "0.0";
+const pZone3Pct = totalOrders > 0 ? ((pZone3 / totalOrders) * 100).toFixed(1) : "0.0";
+
+// Calculate years in office & Washington Multiplier
+let yearsInOffice = 0;
+for (const t of president.terms) {
+  const parts = t.split('-');
+  if (parts.length === 2) {
+    yearsInOffice += Math.max(1, parseInt(parts[1], 10) - parseInt(parts[0], 10));
+  } else {
+    yearsInOffice += 1;
+  }
+}
+const annualRate = yearsInOffice > 0 ? (totalOrders / yearsInOffice) : 0;
+const washingtonMultiplier = annualRate / 1.0;
 
 // Party styling
 const partyColors: Record<string, { bg: string; text: string; border: string }> = {
@@ -150,15 +191,74 @@ const breadcrumbJsonLd = {
       </div>
     </header>
 
-    <!-- Sentiment Distribution if orders present -->
+    <!-- Separation of Powers & Youngstown Profile -->
     {totalOrders > 0 ? (
-      <div class="mb-10">
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+        
+        <!-- Youngstown Separation of Powers Card -->
+        <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-2">
+              <div class="flex items-center gap-2">
+                <span class="text-lg">⚖️</span>
+                <h2 class="font-serif font-bold text-lg text-slate-900 dark:text-white">
+                  Youngstown Separation of Powers
+                </h2>
+              </div>
+              <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+                1952 Standard
+              </span>
+            </div>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+              Distribution of orders across Justice Jackson's constitutional tiers:
+            </p>
+
+            <!-- Stacked bar -->
+            <div class="w-full h-3.5 rounded-full overflow-hidden flex bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 mb-4 shadow-inner">
+              <div style={`width: ${pZone1Pct}%`} class="h-full bg-emerald-500" title={`Zone 1: ${pZone1} orders (${pZone1Pct}%)`}></div>
+              <div style={`width: ${pZone2Pct}%`} class="h-full bg-amber-400" title={`Zone 2: ${pZone2} orders (${pZone2Pct}%)`}></div>
+              <div style={`width: ${pZone3Pct}%`} class="h-full bg-rose-500" title={`Zone 3: ${pZone3} orders (${pZone3Pct}%)`}></div>
+            </div>
+
+            <!-- 3 Columns -->
+            <div class="grid grid-cols-3 gap-2 text-center text-xs">
+              <div class="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60">
+                <div class="font-bold text-emerald-800 dark:text-emerald-300 text-sm">{pZone1Pct}%</div>
+                <div class="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium">Zone 1 ({pZone1})</div>
+                <div class="text-[9px] text-slate-400 mt-0.5">Statutory Authorization</div>
+              </div>
+
+              <div class="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800/60">
+                <div class="font-bold text-amber-800 dark:text-amber-300 text-sm">{pZone2Pct}%</div>
+                <div class="text-[10px] text-amber-700 dark:text-amber-400 font-medium">Zone 2 ({pZone2})</div>
+                <div class="text-[9px] text-slate-400 mt-0.5">Zone of Twilight</div>
+              </div>
+
+              <div class="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-800/60">
+                <div class="font-bold text-rose-800 dark:text-rose-300 text-sm">{pZone3Pct}%</div>
+                <div class="text-[10px] text-rose-700 dark:text-rose-400 font-medium">Zone 3 ({pZone3})</div>
+                <div class="text-[9px] text-slate-400 mt-0.5">Lowest Ebb / Friction</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Washington Multiplier comparison callout -->
+          <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs">
+            <span class="text-slate-500">Washington Rate Multiplier:</span>
+            <span class="font-mono font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/50 px-2 py-0.5 rounded">
+              {washingtonMultiplier.toFixed(1)}× Washington Baseline
+            </span>
+          </div>
+        </div>
+
+        <!-- ToneChart Card -->
         <ToneChart 
           positiveCount={positiveCount}
           neutralCount={neutralCount}
           urgentCount={urgentCount}
           totalOrders={totalOrders}
         />
+
       </div>
     ) : null}
 

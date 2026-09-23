@@ -3,10 +3,12 @@ import Layout from '../../layouts/Layout.astro';
 import CitationBox from '../../components/CitationBox.astro';
 import ShareButtons from '../../components/ShareButtons.astro';
 import OrderCard from '../../components/OrderCard.astro';
+import FramersPerspective from '../../components/FramersPerspective.astro';
 import { generateOrderSummary } from '../../lib/summary';
 import { getRelatedOrders, getReferencedByLater } from '../../lib/relatedOrders';
 import { resolvePortraitSlug } from '../../lib/portraits';
 import { formatSigningDate } from '../../lib/dates';
+import { getYoungstownClassification } from '../../lib/youngstown';
 import rawOrders from '../../../data/site_orders.json';
 
 export async function getStaticPaths() {
@@ -70,6 +72,9 @@ const formattedDate = order.signing_date ? formatSigningDate(order.signing_date,
   day: "numeric"
 }) : "Date not specified";
 
+// Youngstown Three-Tier Framework
+const youngstown = getYoungstownClassification(order);
+
 // Sentiment badge
 let sentimentColor = {
   bg: "bg-slate-100 dark:bg-slate-800",
@@ -106,6 +111,7 @@ const compactMeta = JSON.stringify({
   val: order.sentiment_valence,
   comp: order.sentiment_compound,
   tag: order.tone_tag,
+  zone: youngstown.zone,
   snip: summaryParagraphs[0] || ''
 });
 
@@ -153,32 +159,37 @@ const breadcrumbJsonLd = {
 };
 ---
 
-<Layout
-  title={order.title}
-  description={summaryParagraphs[0] || order.title}
-  image={order.president_slug ? `/portraits/${portraitSlug}.jpg` : '/og-default.png'}
+<Layout 
+  title={`${order.title} | Executive Orders Archive`}
+  description={summaryParagraphs[0] || `Read Executive Order by ${order.president_name} signed on ${formattedDate}. Full text, plain English translation, and constitutional analysis.`}
+  image={portraitSlug !== "default" ? `/portraits/${portraitSlug}.jpg` : "/og-default.png"}
   type="article"
   structuredData={[legislationJsonLd, breadcrumbJsonLd]}
 >
-  <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+  <div class="max-w-4xl mx-auto px-4 sm:px-6 py-8">
     
-    <!-- Breadcrumb -->
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-6 print:hidden">
-      <nav class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-mono">
+    <!-- Top Breadcrumb & Quick Actions -->
+    <div class="flex flex-wrap items-center justify-between gap-4 mb-6">
+      <nav class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
         <a href="/" class="hover:underline">Home</a>
         <span>/</span>
         <a href="/orders" class="hover:underline">Orders</a>
         <span>/</span>
-        <span class="text-slate-800 dark:text-slate-200 truncate max-w-xs">{order.id}</span>
+        <span class="text-slate-800 dark:text-slate-200 font-mono">
+          {order.eo_number ? `EO ${order.eo_number}` : order.id}
+        </span>
       </nav>
-      <div class="flex items-center gap-3">
+
+      <div class="flex items-center gap-2">
+        <!-- Print / Save / Share -->
         <button
           type="button"
-          onclick="window.print()"
-          aria-label="Print or save this order as a PDF"
-          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold transition-colors"
+          data-print-btn
+          aria-label="Print or save as PDF"
+          title="Print or save as PDF"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold transition-colors print:hidden"
         >
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a1 1 0 001-1v-5H8v5a1 1 0 001 1zm8-12V5a1 1 0 00-1-1H8a1 1 0 00-1 1v4h10z\"></path></svg>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a1 1 0 001-1v-5H8v5a1 1 0 001 1zm8-12V5a1 1 0 00-1-1H8a1 1 0 00-1 1v4h10z"></path></svg>
           <span>Print / PDF</span>
         </button>
         <button
@@ -208,6 +219,9 @@ const breadcrumbJsonLd = {
             Presidential Order
           </span>
         )}
+        <span class={`text-xs font-semibold px-2.5 py-1 rounded-full border ${youngstown.badgeClass}`} title={youngstown.tagline}>
+          {youngstown.icon} {youngstown.name}
+        </span>
         <span class={`text-xs font-semibold px-2.5 py-1 rounded-full border ${sentimentColor.bg} ${sentimentColor.text} ${sentimentColor.border}`}>
           {order.sentiment_valence} ({order.sentiment_compound >= 0 ? '+' : ''}{order.sentiment_compound.toFixed(2)})
         </span>
@@ -333,6 +347,9 @@ const breadcrumbJsonLd = {
       )}
     </section>
 
+    <!-- The Framers' Constitutional Council (Madison, Hamilton, Mason & Youngstown Framework) -->
+    <FramersPerspective order={order} youngstown={youngstown} />
+
     <!-- Quantitative Metrics Panel -->
     <section class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
       
@@ -365,291 +382,215 @@ const breadcrumbJsonLd = {
         <div class="text-2xl font-bold font-mono text-slate-900 dark:text-white">
           {order.sentiment_compound >= 0 ? '+' : ''}{order.sentiment_compound.toFixed(2)}
         </div>
-        <div class="text-[10px] text-slate-500 mt-1">Framers' Alignment index</div>
+        <div class="text-[10px] text-slate-500 mt-1 font-mono uppercase">{order.sentiment_valence}</div>
       </div>
 
     </section>
 
-    <!-- Scholarly & Legal Citation Panel -->
-    <CitationBox order={order} />
-
-    <!-- Full Official Document Text -->
-    <article class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-10 shadow-sm">
-      <div class="flex items-center justify-between pb-6 mb-6 border-b border-slate-200 dark:border-slate-800">
-        <div>
-          <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white">
-            Official Document Text
-          </h2>
-          <p class="text-xs text-slate-500 dark:text-slate-400">
-            Source: {order.source === 'federal_register' ? 'Federal Register (Official Presidential Document)' : 'The American Presidency Project (UCSB Archive)'}
-          </p>
-        </div>
-
-        <div class="flex items-center gap-2">
-          {order.source_url ? (
-            <a
-              href={order.source_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
-            >
-              Original Source &rarr;
-            </a>
-          ) : null}
+    <!-- Reader Controls: Text Size & Read Aloud -->
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 mb-6 flex flex-wrap items-center justify-between gap-3 text-xs text-slate-600 dark:text-slate-400 print:hidden">
+      <div class="flex items-center gap-2">
+        <span class="font-medium text-slate-700 dark:text-slate-300">Text size:</span>
+        <div class="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 p-0.5 bg-slate-50 dark:bg-slate-800">
+          <button type="button" data-text-size="sm" class="px-2 py-0.5 rounded text-[11px] font-mono hover:bg-white dark:hover:bg-slate-700">A-</button>
+          <button type="button" data-text-size="base" class="px-2 py-0.5 rounded text-[11px] font-mono bg-white dark:bg-slate-700 font-bold shadow-2xs">A</button>
+          <button type="button" data-text-size="lg" class="px-2 py-0.5 rounded text-[11px] font-mono hover:bg-white dark:hover:bg-slate-700">A+</button>
+          <button type="button" data-text-size="xl" class="px-2 py-0.5 rounded text-[11px] font-mono hover:bg-white dark:hover:bg-slate-700">A++</button>
         </div>
       </div>
 
-      <!-- Accessibility Toolbar: text size + read-aloud, for the Post-Graduate-level
-           legal text this page itself flags via the Flesch-Kincaid metric above -->
-      <div class="print:hidden flex flex-wrap items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-100 dark:border-slate-800/80">
-        <div class="flex items-center gap-2">
-          <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mr-1">Text Size</span>
-          <button
-            type="button"
-            id="text-size-decrease"
-            aria-label="Decrease text size"
-            class="w-7 h-7 rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-center transition-colors"
-          >
-            A-
-          </button>
-          <button
-            type="button"
-            id="text-size-reset"
-            aria-label="Reset text size to standard"
-            class="px-2 h-7 rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] font-mono text-slate-600 dark:text-slate-400 flex items-center justify-center transition-colors"
-          >
-            100%
-          </button>
-          <button
-            type="button"
-            id="text-size-increase"
-            aria-label="Increase text size"
-            class="w-7 h-7 rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-center transition-colors"
-          >
-            A+
-          </button>
-        </div>
+      <div class="flex items-center gap-2">
+        <button
+          type="button"
+          id="tts-toggle-btn"
+          class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
+        >
+          <svg id="tts-icon-play" class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+          <svg id="tts-icon-stop" class="w-3.5 h-3.5 hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path></svg>
+          <span id="tts-label">Read Aloud</span>
+        </button>
+      </div>
+    </div>
 
-        <div class="flex items-center gap-2" id="speech-toolbar">
-          <button
-            type="button"
-            id="speech-toggle"
-            aria-label="Listen to order read aloud"
-            class="flex items-center gap-1.5 px-3 py-1 rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-300 transition-colors"
-          >
-            <svg class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
-            <span id="speech-toggle-label">Read Aloud</span>
-          </button>
-          <button
-            type="button"
-            id="speech-stop"
-            aria-label="Stop reading aloud"
-            class="hidden px-2 py-1 rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium text-rose-600 dark:text-rose-400 transition-colors"
-          >
-            Stop
-          </button>
-        </div>
+    <!-- Official Full Document Body -->
+    <article class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-10 mb-10 shadow-sm">
+      <div class="border-b border-slate-100 dark:border-slate-800 pb-4 mb-6 flex items-center justify-between">
+        <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Official Archival Text</h2>
+        {order.source_url && (
+          <a href={order.source_url} target="_blank" rel="noopener noreferrer" class="text-xs text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1">
+            <span>View Source Document</span>
+            <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+          </a>
+        )}
       </div>
 
-      <div
-        id="order-text-content"
-        class="prose prose-slate dark:prose-invert max-w-none text-slate-800 dark:text-slate-200 font-serif leading-relaxed whitespace-pre-line text-sm sm:text-base selection:bg-amber-100 dark:selection:bg-amber-900/60"
-      >
-        {order.full_text || "The full primary source text for this executive order is currently being indexed."}
+      <div id="order-body-text" class="prose dark:prose-invert max-w-none text-base leading-relaxed font-serif text-slate-800 dark:text-slate-200 space-y-4 whitespace-pre-wrap">
+        {order.full_text || "The archival text for this order is not yet digitized."}
       </div>
     </article>
 
-    <script>
-      // Font-size zoom (A- / 100% / A+) persisted in localStorage
-      (function () {
-        const textEl = document.getElementById('order-text-content');
-        if (!textEl) return;
-        const SIZES = ['0.875rem', '1rem', '1.125rem', '1.25rem', '1.375rem'];
-        const DEFAULT_IDX = 1;
-        const KEY = 'eo-text-zoom';
-        let currentIdx = DEFAULT_IDX;
-        try {
-          const stored = localStorage.getItem(KEY);
-          if (stored !== null) currentIdx = Math.max(0, Math.min(SIZES.length - 1, parseInt(stored, 10)));
-        } catch (e) {}
-
-        function applySize() {
-          textEl.style.fontSize = SIZES[currentIdx];
-          const resetBtn = document.getElementById('text-size-reset');
-          if (resetBtn) {
-            const pct = [87, 100, 112, 125, 137][currentIdx];
-            resetBtn.textContent = `${pct}%`;
-          }
-          try { localStorage.setItem(KEY, String(currentIdx)); } catch (e) {}
-        }
-        applySize();
-
-        document.getElementById('text-size-decrease')?.addEventListener('click', () => {
-          if (currentIdx > 0) { currentIdx--; applySize(); }
-        });
-        document.getElementById('text-size-increase')?.addEventListener('click', () => {
-          if (currentIdx < SIZES.length - 1) { currentIdx++; applySize(); }
-        });
-        document.getElementById('text-size-reset')?.addEventListener('click', () => {
-          currentIdx = DEFAULT_IDX; applySize();
-        });
-      })();
-
-      // Client-side Web Speech API Read-Aloud
-      (function () {
-        const textEl = document.getElementById('order-text-content');
-        const toggleBtn = document.getElementById('speech-toggle');
-        const stopBtn = document.getElementById('speech-stop');
-        const label = document.getElementById('speech-toggle-label');
-        if (!textEl || !toggleBtn) return;
-
-        const supportsSpeech = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
-        if (!supportsSpeech) {
-          const speechToolbar = document.getElementById('speech-toolbar');
-          if (speechToolbar) speechToolbar.style.display = 'none';
-          return;
-        }
-
-        let isPaused = false;
-        let queue = [];
-        let queueIndex = 0;
-
-        function chunkText(text) {
-          // Chrome speech synthesis fails silently on utterances > ~200 chars,
-          // so split by sentence/newline chunks.
-          return text
-            .split(/(?<=[.?!])\s+|\n+/)
-            .map(s => s.trim())
-            .filter(s => s.length > 0 && !/^(\*|-|\d+\.)\s*$/.test(s));
-        }
-
-        function speakNext() {
-          if (!window.speechSynthesis) return;
-          if (queueIndex >= queue.length) {
-            setSpeakingUI(false);
-            return;
-          }
-          const utt = new SpeechSynthesisUtterance(queue[queueIndex]);
-          utt.rate = 1.0;
-          utt.pitch = 1.0;
-          utt.onend = () => {
-            queueIndex++;
-            speakNext();
-          };
-          utt.onerror = () => {
-            queueIndex++;
-            speakNext();
-          };
-          window.speechSynthesis.speak(utt);
-        }
-
-        function setSpeakingUI(speaking) {
-          if (label) label.textContent = speaking ? 'Pause' : 'Read Aloud';
-          if (stopBtn) stopBtn.classList.toggle('hidden', !speaking);
-          toggleBtn.classList.toggle('bg-blue-50', speaking);
-          toggleBtn.classList.toggle('dark:bg-blue-950/40', speaking);
-          toggleBtn.classList.toggle('border-blue-300', speaking);
-        }
-
-        toggleBtn.addEventListener('click', () => {
-          if (!supportsSpeech) return;
-          if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
-            window.speechSynthesis.pause();
-            isPaused = true;
-            if (label) label.textContent = 'Resume';
-            return;
-          }
-          if (isPaused) {
-            window.speechSynthesis.resume();
-            isPaused = false;
-            if (label) label.textContent = 'Pause';
-            return;
-          }
-          window.speechSynthesis.cancel();
-          queue = chunkText(textEl.innerText || textEl.textContent || '');
-          queueIndex = 0;
-          setSpeakingUI(true);
-          speakNext();
-        });
-
-        stopBtn?.addEventListener('click', () => {
-          if (!supportsSpeech) return;
-          window.speechSynthesis.cancel();
-          queue = [];
-          queueIndex = 0;
-          isPaused = false;
-          setSpeakingUI(false);
-        });
-
-        window.addEventListener('beforeunload', () => {
-          if (supportsSpeech) window.speechSynthesis.cancel();
-        });
-      })();
-    </script>
-
-    <!-- Referenced By Later Orders (reverse of the forward cross-references below) -->
+    <!-- Cross-Reference Network: Referenced By Later Orders -->
     {referencedByLater.length > 0 && (
-      <section class="mt-8 print:hidden">
-        <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white mb-1">
-          Referenced By Later Executive Orders
-        </h2>
+      <section class="mb-10 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 shadow-sm">
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-base">🔗</span>
+          <h2 class="font-serif font-bold text-lg text-slate-900 dark:text-white">
+            Referenced By Later Executive Orders ({referencedByLater.length})
+          </h2>
+        </div>
         <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
-          These later orders cite Executive Order {order.eo_number} by number in their text. Detected automatically from document text — always confirm current legal effect against the official Federal Register record.
+          Subsequent presidents who cited, amended, continued, or revoked this directive in later orders.
         </p>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {referencedByLater.map(o => (
-            <div class="relative">
-              <span class={`absolute top-3 right-3 z-10 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border ${relationBadgeClasses(o.relation)}`}>
-                {o.relation}
-              </span>
-              <OrderCard order={o} />
+
+        <div class="divide-y divide-slate-100 dark:divide-slate-800 border-t border-slate-100 dark:border-slate-800">
+          {referencedByLater.map(item => (
+            <div class="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span class={`font-mono text-[10px] font-bold px-2 py-0.5 rounded border ${relationBadgeClasses(item.relation)}`}>
+                  {item.relation}
+                </span>
+                <a href={`/orders/${item.id}`} class="text-sm font-serif font-semibold text-slate-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 line-clamp-1">
+                  {item.title}
+                </a>
+              </div>
+              <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 flex-shrink-0">
+                <span>{item.president_name || item.pres}</span>
+                <span>•</span>
+                <span class="font-mono">{item.signing_date || item.date}</span>
+              </div>
             </div>
           ))}
         </div>
       </section>
     )}
 
-    <!-- Related Orders -->
+    <!-- Related Orders (Cross-referenced in text, or same president) -->
     {relatedOrders.length > 0 && (
-      <section class="mt-8 print:hidden">
-        <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white mb-1">
-          Related Executive Orders
-        </h2>
-        <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
-          {referencedCount > 0
-            ? "Orders cross-referenced in this document's text, plus other orders from the same administration."
-            : `Other executive orders signed by ${order.president_name}.`}
-        </p>
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {relatedOrders.map(o => (
-            <OrderCard order={o} />
+      <section class="mb-10">
+        <div class="flex items-center justify-between mb-4">
+          <div>
+            <h2 class="font-serif font-bold text-lg text-slate-900 dark:text-white">
+              Related Executive Orders
+            </h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400">
+              {referencedCount > 0
+                ? `${referencedCount} order${referencedCount === 1 ? '' : 's'} cited directly in this text, plus related actions from this administration.`
+                : `Other executive actions signed by ${order.president_name} around this period.`}
+            </p>
+          </div>
+          <a href={`/presidents/${portraitSlug}`} class="text-xs text-blue-600 dark:text-blue-400 hover:underline">
+            All by this President &rarr;
+          </a>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {relatedOrders.map(ro => (
+            <OrderCard order={ro} />
           ))}
         </div>
       </section>
     )}
 
+    <!-- Academic Citation Helper -->
+    <CitationBox order={order} />
+
   </div>
 
-  <script>
-    document.querySelectorAll('[data-copy-anchor]').forEach((btn) => {
+  <script is:inline>
+    // Text size adjuster
+    const orderBody = document.getElementById('order-body-text');
+    const sizeButtons = document.querySelectorAll('[data-text-size]');
+    const sizeClasses = {
+      sm: ['text-sm', 'leading-normal'],
+      base: ['text-base', 'leading-relaxed'],
+      lg: ['text-lg', 'leading-relaxed'],
+      xl: ['text-xl', 'leading-loose']
+    };
+
+    sizeButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const size = btn.getAttribute('data-text-size');
+        if (!orderBody || !sizeClasses[size]) return;
+        
+        // Remove all size classes
+        Object.values(sizeClasses).flat().forEach(c => orderBody.classList.remove(c));
+        // Add new size classes
+        sizeClasses[size].forEach(c => orderBody.classList.add(c));
+
+        // Update active button styling
+        sizeButtons.forEach(b => {
+          b.classList.remove('bg-white', 'dark:bg-slate-700', 'font-bold', 'shadow-2xs');
+        });
+        btn.classList.add('bg-white', 'dark:bg-slate-700', 'font-bold', 'shadow-2xs');
+      });
+    });
+
+    // Directive permalink copy buttons
+    document.querySelectorAll('[data-copy-anchor]').forEach(btn => {
       btn.addEventListener('click', async () => {
         const anchorId = btn.getAttribute('data-copy-anchor');
-        const url = `${window.location.origin}${window.location.pathname}#${anchorId}`;
+        const url = new URL(window.location.href);
+        url.hash = anchorId;
         try {
-          await navigator.clipboard.writeText(url);
-          const svg = btn.querySelector('svg');
-          if (svg) {
-            const original = svg.outerHTML;
-            svg.outerHTML = '<svg class="w-3.5 h-3.5 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
-            setTimeout(() => {
-              const currentSvg = btn.querySelector('svg');
-              if (currentSvg) currentSvg.outerHTML = original;
-            }, 1500);
-          }
-        } catch (e) {
-          console.error('Failed to copy directive link:', e);
-        }
+          await navigator.clipboard.writeText(url.toString());
+          const origHtml = btn.innerHTML;
+          btn.innerHTML = '<span class="text-[10px] text-emerald-600 dark:text-emerald-400 font-sans font-bold">Copied!</span>';
+          setTimeout(() => { btn.innerHTML = origHtml; }, 1800);
+        } catch (e) {}
       });
+    });
+
+    // Text-to-Speech (Web Speech API)
+    const ttsBtn = document.getElementById('tts-toggle-btn');
+    const playIcon = document.getElementById('tts-icon-play');
+    const stopIcon = document.getElementById('tts-icon-stop');
+    const ttsLabel = document.getElementById('tts-label');
+
+    if ('speechSynthesis' in window && ttsBtn) {
+      let isSpeaking = false;
+
+      function stopSpeech() {
+        window.speechSynthesis.cancel();
+        isSpeaking = false;
+        playIcon?.classList.remove('hidden');
+        stopIcon?.classList.add('hidden');
+        if (ttsLabel) ttsLabel.textContent = 'Read Aloud';
+      }
+
+      ttsBtn.addEventListener('click', () => {
+        if (isSpeaking) {
+          stopSpeech();
+          return;
+        }
+
+        const textToRead = orderBody?.textContent?.slice(0, 5000) || '';
+        if (!textToRead) return;
+
+        window.speechSynthesis.cancel();
+        const utterance = new SpeechSynthesisUtterance(textToRead);
+        utterance.rate = 1.0;
+        utterance.pitch = 1.0;
+
+        utterance.onend = () => { stopSpeech(); };
+        utterance.onerror = () => { stopSpeech(); };
+
+        window.speechSynthesis.speak(utterance);
+        isSpeaking = true;
+        playIcon?.classList.add('hidden');
+        stopIcon?.classList.remove('hidden');
+        if (ttsLabel) ttsLabel.textContent = 'Stop';
+      });
+
+      window.addEventListener('beforeunload', () => {
+        window.speechSynthesis.cancel();
+      });
+    } else if (ttsBtn) {
+      ttsBtn.style.display = 'none';
+    }
+
+    // Print button
+    document.querySelector('[data-print-btn]')?.addEventListener('click', () => {
+      window.print();
     });
   </script>
 </Layout>

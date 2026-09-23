@@ -1,0 +1,241 @@
+---
+import type { YoungstownClassification } from '../lib/youngstown';
+
+interface Props {
+  order: {
+    title: string;
+    president_name: string;
+    signing_date?: string;
+    tone_tag?: string;
+    topic_tags?: string[] | string;
+    word_count?: number;
+    flesch_kincaid_grade?: number;
+  };
+  youngstown: YoungstownClassification;
+}
+
+const { order, youngstown } = Astro.props;
+
+// Parse topics if string
+let topics: string[] = [];
+if (Array.isArray(order.topic_tags)) {
+  topics = order.topic_tags;
+} else if (typeof order.topic_tags === 'string') {
+  try {
+    topics = JSON.parse(order.topic_tags);
+  } catch (e) {
+    topics = [];
+  }
+}
+
+const tone = order.tone_tag || "";
+const isDefense = topics.includes("Defense & Military") || tone.includes("Commander-in-Chief") || topics.includes("Foreign Relations & Treaties");
+const isCommerce = topics.includes("Economy & Finance") || topics.includes("Commerce & Trade") || tone.includes("Purse") || tone.includes("Tariff");
+const isCivilRights = topics.includes("Civil Rights & Liberties") || tone.includes("1st Amend") || tone.includes("5th") || tone.includes("Due Process");
+const isFederalism = topics.includes("Government Operations") || tone.includes("10th Amend") || topics.includes("Public Lands & Natural Resources");
+
+// --- James Madison Analysis ---
+let madisonQuote = "In republican government, the legislative authority necessarily predominates.";
+let madisonCite = "Federalist No. 51 (1788)";
+let madisonArgument = "";
+
+if (youngstown.zone === 3) {
+  madisonQuote = "The accumulation of all powers, legislative, executive, and judiciary, in the same hands... may justly be pronounced the very definition of tyranny.";
+  madisonCite = "Federalist No. 47 (1788)";
+  madisonArgument = `Madison would express grave alarm over this order. By asserting independent authority in tension with legislative limits or the Bill of Rights, the Executive risks collapsing the separation of powers into unilateral rule. Under the Madisonian model, no emergency justifies the Executive substituting its decree for a deliberative Act of Congress.`;
+} else if (youngstown.zone === 1) {
+  madisonQuote = "The constitutional magistracy was designed not to invent policy, but to be the faithful instrument of the laws passed by the people's representatives.";
+  madisonCite = "Speech in the First Congress (1789)";
+  madisonArgument = `Madison would approve the structural posture of this order. The President acts strictly in subordination to statutory authority granted under Article II, Section 3 ("take Care that the Laws be faithfully executed"). The checks and balances hold firm because the policy origin remains with the legislature.`;
+} else {
+  madisonQuote = "Power is of an encroaching nature, and it ought to be effectually restrained from passing the limits assigned to it.";
+  madisonCite = "Federalist No. 48 (1788)";
+  madisonArgument = `Madison would view this order with watchful scrutiny. Operating in the 'Zone of Twilight' where Congress is silent, each such directive establishes an administrative precedent that steadily expands the executive perimeter at the expense of legislative primacy.`;
+}
+
+// --- Alexander Hamilton Analysis ---
+let hamiltonQuote = "Energy in the Executive is a leading character in the definition of good government.";
+let hamiltonCite = "Federalist No. 70 (1788)";
+let hamiltonArgument = "";
+
+if (isDefense || isCommerce) {
+  hamiltonQuote = "The direction of war implies the direction of the common strength; and the power of directing and employing the common strength must be under the direction of the single hand of the Executive.";
+  hamiltonCite = "Federalist No. 74 (1788)";
+  hamiltonArgument = `Hamilton would forcefully champion executive discretion here. For foreign entanglements, commerce defense, and national security, deliberative assemblies are too slow and faction-ridden. A unified, energetic Executive exercising swift command is precisely what the Philadelphia Convention intended for national preservation.`;
+} else if (youngstown.zone === 3) {
+  hamiltonQuote = "The President is no King. He possesses no prerogative to dispense with statutes or command obedience contrary to the fundamental charter.";
+  hamiltonCite = "Federalist No. 69 (1788)";
+  hamiltonArgument = `Even Hamilton—the staunchest advocate of presidential energy—drew a sharp line at royal prerogative in Federalist 69. While defending vigor, Hamilton conceded that an order clashing with established statutory boundaries strains the constitutional fabric and invites judicial nullification or political backlash.`;
+} else {
+  hamiltonQuote = "A feeble Executive implies a feeble execution of the government; and a government ill executed, whatever it may be in theory, must be, in practice, a bad government.";
+  hamiltonCite = "Federalist No. 70 (1788)";
+  hamiltonArgument = `Hamilton would view this directive as the natural and indispensable functioning of administrative leadership. Without the power to coordinate agencies, manage personnel, and resolve operational ambiguities, the modern presidency would be reduced to an impotent figurehead.`;
+}
+
+// --- George Mason & Anti-Federalists Analysis ---
+let masonQuote = "There is no declaration of rights; and the laws of the general government being paramount to the constitutions of the several States, the declarations of rights in the separate States are no security.";
+let masonCite = "Objections to this Constitution (1787)";
+let masonArgument = "";
+
+if (isCivilRights || youngstown.zone === 3) {
+  masonQuote = "The purse and the sword ought never to be in the same hands... nor the liberties of the citizen placed at the pleasure of a single magistrate.";
+  masonCite = "Virginia Ratifying Convention (1788)";
+  masonArgument = `George Mason and the Anti-Federalists would sound a fierce warning. They feared that Article II would inevitably evolve into an elective monarchy. When an executive order impacts private rights, property, or civil liberties without individualized judicial process, Mason would see their darkest predictions verified.`;
+} else if (isFederalism) {
+  masonQuote = "The powers not delegated to the United States by the Constitution, nor prohibited by it to the States, are reserved to the States respectively, or to the people.";
+  masonCite = "10th Amendment to the US Constitution (1791)";
+  masonArgument = `Mason would scrutinize whether this federal directive intrudes into police powers, land stewardship, or municipal domains historically reserved to local citizens. The Anti-Federalist demand is that federal administration must never supplant state self-governance.`;
+} else {
+  masonQuote = "The president will be surrounded by flatterers and sycophants... and the great powers of the executive will gradually absorb the liberties of the people.";
+  masonCite = "Cato IV (Anti-Federalist, 1787)";
+  masonArgument = `The Anti-Federalist prism advises continuous democratic vigilance. Even routine administrative directives aggregate centralized federal power away from town halls and state assemblies toward a distant executive apparatus.`;
+}
+---
+
+<div class="bg-gradient-to-br from-amber-50/70 via-stone-50/50 to-amber-100/40 dark:from-slate-900/90 dark:via-slate-900 dark:to-amber-950/20 border-2 border-amber-300/80 dark:border-amber-800/60 rounded-2xl p-6 sm:p-8 mb-8 shadow-sm">
+  
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-amber-200 dark:border-amber-900/60">
+    <div class="flex items-center gap-3">
+      <div class="w-10 h-10 rounded-xl bg-amber-200/80 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 flex items-center justify-center text-xl shadow-xs">
+        🏛️
+      </div>
+      <div>
+        <div class="flex items-center gap-2">
+          <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white">
+            The Framers' Constitutional Council
+          </h2>
+          <span class="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-amber-200/80 dark:bg-amber-900/80 text-amber-900 dark:text-amber-200 font-bold">
+            1787 Prism
+          </span>
+        </div>
+        <p class="text-xs text-slate-600 dark:text-slate-400 mt-0.5">
+          Evaluating this order against the constitutional debates of 1787 and the limits of Article II executive power.
+        </p>
+      </div>
+    </div>
+
+    <!-- Youngstown Tier Pill -->
+    <div class="flex-shrink-0">
+      <span class={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-xs font-semibold shadow-xs ${youngstown.badgeClass}`}>
+        <span>{youngstown.icon}</span>
+        <span>{youngstown.shortName}</span>
+      </span>
+    </div>
+  </div>
+
+  <!-- Youngstown Jackson Rule Callout -->
+  <div class="my-6 p-4 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-amber-200/70 dark:border-amber-900/40 text-xs text-slate-700 dark:text-slate-300">
+    <div class="flex items-start gap-2.5">
+      <span class="text-amber-600 dark:text-amber-400 font-serif text-base font-bold">§</span>
+      <div>
+        <p class="font-serif italic text-slate-900 dark:text-slate-100 mb-1">
+          "{youngstown.jacksonQuote}"
+        </p>
+        <div class="text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+          <span>— Justice Robert H. Jackson, <em>Youngstown Sheet & Tube Co. v. Sawyer</em> (1952)</span>
+          <span class="font-semibold text-amber-700 dark:text-amber-400">{youngstown.tagline}</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Three Framer Cards Grid -->
+  <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+    <!-- Card 1: James Madison -->
+    <div class="bg-white/90 dark:bg-slate-900/90 rounded-xl p-5 border border-slate-200 dark:border-slate-800 flex flex-col justify-between shadow-2xs">
+      <div>
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-8 h-8 rounded-full bg-blue-100 dark:bg-blue-950 text-blue-800 dark:text-blue-300 flex items-center justify-center font-serif font-bold text-sm">
+            JM
+          </div>
+          <div>
+            <h3 class="font-serif font-bold text-sm text-slate-900 dark:text-white">James Madison</h3>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400">Separation of Powers & Legislative Primacy</p>
+          </div>
+        </div>
+
+        <blockquote class="text-xs font-serif italic text-blue-900 dark:text-blue-300 bg-blue-50/70 dark:bg-blue-950/40 p-3 rounded-lg border-l-2 border-blue-500 mb-3">
+          "{madisonQuote}"
+          <span class="block not-italic text-[10px] text-blue-700 dark:text-blue-400 mt-1 font-sans">— {madisonCite}</span>
+        </blockquote>
+
+        <p class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-sans">
+          {madisonArgument}
+        </p>
+      </div>
+
+      <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
+        <span class="text-slate-400">Madisonian Stance:</span>
+        <span class={`font-semibold ${youngstown.zone === 1 ? 'text-emerald-600 dark:text-emerald-400' : youngstown.zone === 2 ? 'text-amber-600 dark:text-amber-400' : 'text-rose-600 dark:text-rose-400'}`}>
+          {youngstown.zone === 1 ? 'Concurring (Statutory)' : youngstown.zone === 2 ? 'Vigilant / Cautionary' : 'Strict Dissent (Overreach)'}
+        </span>
+      </div>
+    </div>
+
+    <!-- Card 2: Alexander Hamilton -->
+    <div class="bg-white/90 dark:bg-slate-900/90 rounded-xl p-5 border border-slate-200 dark:border-slate-800 flex flex-col justify-between shadow-2xs">
+      <div>
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 flex items-center justify-center font-serif font-bold text-sm">
+            AH
+          </div>
+          <div>
+            <h3 class="font-serif font-bold text-sm text-slate-900 dark:text-white">Alexander Hamilton</h3>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400">The Energetic Executive & Unified Command</p>
+          </div>
+        </div>
+
+        <blockquote class="text-xs font-serif italic text-emerald-900 dark:text-emerald-300 bg-emerald-50/70 dark:bg-emerald-950/40 p-3 rounded-lg border-l-2 border-emerald-500 mb-3">
+          "{hamiltonQuote}"
+          <span class="block not-italic text-[10px] text-emerald-700 dark:text-emerald-400 mt-1 font-sans">— {hamiltonCite}</span>
+        </blockquote>
+
+        <p class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-sans">
+          {hamiltonArgument}
+        </p>
+      </div>
+
+      <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
+        <span class="text-slate-400">Hamiltonian Stance:</span>
+        <span class={`font-semibold ${youngstown.zone === 1 || isDefense ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}`}>
+          {isDefense ? 'Strong Prerogative Support' : youngstown.zone === 1 ? 'Supportive of Execution' : youngstown.zone === 2 ? 'Defends Vigor & Dispatch' : 'Qualified Caution'}
+        </span>
+      </div>
+    </div>
+
+    <!-- Card 3: George Mason & Anti-Federalists -->
+    <div class="bg-white/90 dark:bg-slate-900/90 rounded-xl p-5 border border-slate-200 dark:border-slate-800 flex flex-col justify-between shadow-2xs">
+      <div>
+        <div class="flex items-center gap-3 mb-3">
+          <div class="w-8 h-8 rounded-full bg-rose-100 dark:bg-rose-950 text-rose-800 dark:text-rose-300 flex items-center justify-center font-serif font-bold text-sm">
+            GM
+          </div>
+          <div>
+            <h3 class="font-serif font-bold text-sm text-slate-900 dark:text-white">George Mason</h3>
+            <p class="text-[10px] text-slate-500 dark:text-slate-400">Bill of Rights, Due Process & 10th Amendment</p>
+          </div>
+        </div>
+
+        <blockquote class="text-xs font-serif italic text-rose-900 dark:text-rose-300 bg-rose-50/70 dark:bg-rose-950/40 p-3 rounded-lg border-l-2 border-rose-500 mb-3">
+          "{masonQuote}"
+          <span class="block not-italic text-[10px] text-rose-700 dark:text-rose-400 mt-1 font-sans">— {masonCite}</span>
+        </blockquote>
+
+        <p class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed font-sans">
+          {masonArgument}
+        </p>
+      </div>
+
+      <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-[11px]">
+        <span class="text-slate-400">Anti-Federalist Stance:</span>
+        <span class={`font-semibold ${youngstown.zone === 3 ? 'text-rose-600 dark:text-rose-400' : 'text-amber-600 dark:text-amber-400'}`}>
+          {youngstown.zone === 3 ? 'Vehement Objection' : isCivilRights ? 'High Bill of Rights Scrutiny' : 'Eternal Vigilance Required'}
+        </span>
+      </div>
+    </div>
+
+  </div>
+
+</div>

@@ -3,8 +3,10 @@ import Layout from '../layouts/Layout.astro';
 import ToneChart from '../components/ToneChart.astro';
 import LengthChart from '../components/LengthChart.astro';
 import TimelineChart from '../components/TimelineChart.astro';
+import ConstitutionalBalanceChart from '../components/ConstitutionalBalanceChart.astro';
 import { getYearlyOrderCounts } from '../lib/yearly';
 import { resolvePortraitSlug } from '../lib/portraits';
+import { getYoungstownClassification } from '../lib/youngstown';
 import orders from '../../data/site_orders_summary.json';
 import presidents from '../../data/presidents.json';
 
@@ -14,11 +16,37 @@ const positiveOrders = orders.filter(o => (o.val || o.sentiment_valence) === "Co
 const neutralOrders = orders.filter(o => (o.val || o.sentiment_valence) === "Constitutional Neutral" || (o.val || o.sentiment_valence) === "Neutral" || !(o.val || o.sentiment_valence)).length;
 const urgentOrders = orders.filter(o => (o.val || o.sentiment_valence) === "Constitutional Friction / Overreach" || (o.val || o.sentiment_valence) === "Urgent/Negative").length;
 
+// Global Youngstown totals
+let totalZone1 = 0;
+let totalZone2 = 0;
+let totalZone3 = 0;
+
+for (const o of orders) {
+  const z = getYoungstownClassification(o).zone;
+  if (z === 1) totalZone1++;
+  else if (z === 2) totalZone2++;
+  else if (z === 3) totalZone3++;
+}
+
 // Map presidents. Normalize portrait slug so presidential orders aren't silently dropped.
-const presStats = new Map<string, { count: number; totalWords: number; totalSentiment: number; totalGrade: number }>();
+const presStats = new Map<string, { 
+  count: number; 
+  totalWords: number; 
+  totalSentiment: number; 
+  totalGrade: number;
+  zone1: number;
+  zone2: number;
+  zone3: number;
+}>();
+
 for (const o of orders) {
   const slug = resolvePortraitSlug(o.slug || o.president_slug);
-  const cur = presStats.get(slug) || { count: 0, totalWords: 0, totalSentiment: 0, totalGrade: 0 };
+  const cur = presStats.get(slug) || { count: 0, totalWords: 0, totalSentiment: 0, totalGrade: 0, zone1: 0, zone2: 0, zone3: 0 };
+  const z = getYoungstownClassification(o).zone;
+  if (z === 1) cur.zone1++;
+  else if (z === 2) cur.zone2++;
+  else if (z === 3) cur.zone3++;
+
   cur.count += 1;
   cur.totalWords += (o.words !== undefined ? o.words : (o.word_count || 0));
   cur.totalSentiment += (o.comp !== undefined ? o.comp : (o.sentiment_compound || 0));
@@ -36,6 +64,43 @@ const enriched = presidents.map(p => {
     avgWordCount: count > 0 ? Math.round(s!.totalWords / count) : 0,
     avgSentiment: count > 0 ? Number((s!.totalSentiment / count).toFixed(2)) : 0,
     avgGrade: count > 0 ? Number((s!.totalGrade / count).toFixed(1)) : 0
+  };
+}).filter(p => p.orderCount > 0);
+
+// Constitutional Presidents Stats for Separation of Powers & Washington Multiplier
+const constitutionalPresidentsData = presidents.map(p => {
+  const s = presStats.get(p.slug) || { count: 0, totalWords: 0, totalSentiment: 0, totalGrade: 0, zone1: 0, zone2: 0, zone3: 0 };
+  const count = s.count;
+  let years = 0;
+  for (const t of p.terms) {
+    const parts = t.split('-');
+    if (parts.length === 2) {
+      years += Math.max(1, parseInt(parts[1], 10) - parseInt(parts[0], 10));
+    } else {
+      years += 1;
+    }
+  }
+  const annualRate = years > 0 ? (count / years) : 0;
+  const washingtonMultiplier = annualRate / 1.0;
+  const avgWords = count > 0 ? Math.round(s.totalWords / count) : 0;
+  const wordInflationMultiplier = avgWords > 0 ? Number((avgWords / 180).toFixed(1)) : 1.0;
+
+  return {
+    name: p.name,
+    slug: p.slug,
+    party: p.party,
+    orderCount: count,
+    yearsInOffice: years,
+    annualRate,
+    washingtonMultiplier,
+    avgWords,
+    wordInflationMultiplier,
+    zone1Count: s.zone1,
+    zone2Count: s.zone2,
+    zone3Count: s.zone3,
+    zone1Pct: count > 0 ? Number(((s.zone1 / count) * 100).toFixed(1)) : 0,
+    zone2Pct: count > 0 ? Number(((s.zone2 / count) * 100).toFixed(1)) : 0,
+    zone3Pct: count > 0 ? Number(((s.zone3 / count) * 100).toFixed(1)) : 0,
   };
 }).filter(p => p.orderCount > 0);
 
@@ -112,6 +177,15 @@ const shortestOrder = [...orders].filter(o => ((o.words !== undefined ? o.words 
       </div>
 
     </div>
+
+    <!-- NEW: Constitutional Balance & Separation of Powers Framework -->
+    <ConstitutionalBalanceChart 
+      presidentsStats={constitutionalPresidentsData}
+      totalZone1={totalZone1}
+      totalZone2={totalZone2}
+      totalZone3={totalZone3}
+      totalOrders={totalOrders}
+    />
 
     <!-- Charts Section -->
     <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">

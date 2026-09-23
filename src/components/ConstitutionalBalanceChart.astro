@@ -1,0 +1,262 @@
+---
+interface PresidentConstitutionalStat {
+  name: string;
+  slug: string;
+  party: string;
+  orderCount: number;
+  yearsInOffice: number;
+  annualRate: number;
+  washingtonMultiplier: number;
+  avgWords: number;
+  wordInflationMultiplier: number;
+  zone1Count: number;
+  zone2Count: number;
+  zone3Count: number;
+  zone1Pct: number;
+  zone2Pct: number;
+  zone3Pct: number;
+}
+
+interface Props {
+  presidentsStats: PresidentConstitutionalStat[];
+  totalZone1: number;
+  totalZone2: number;
+  totalZone3: number;
+  totalOrders: number;
+}
+
+const { presidentsStats, totalZone1, totalZone2, totalZone3, totalOrders } = Astro.props;
+
+const zone1Pct = ((totalZone1 / totalOrders) * 100).toFixed(1);
+const zone2Pct = ((totalZone2 / totalOrders) * 100).toFixed(1);
+const zone3Pct = ((totalZone3 / totalOrders) * 100).toFixed(1);
+
+// Sort presidents with most orders for the chart
+const topPresidents = [...presidentsStats]
+  .filter(p => p.orderCount >= 10)
+  .sort((a, b) => b.orderCount - a.orderCount);
+
+// Sort by highest Washington Multiplier (order rate vs Washington)
+const topVolumeMultipliers = [...presidentsStats]
+  .filter(p => p.orderCount > 0)
+  .sort((a, b) => b.washingtonMultiplier - a.washingtonMultiplier)
+  .slice(0, 10);
+
+// Sort by highest Zone 3 (Constitutional Friction / Lowest Ebb) percentage
+const topFrictionPresidents = [...presidentsStats]
+  .filter(p => p.orderCount >= 20)
+  .sort((a, b) => b.zone3Pct - a.zone3Pct)
+  .slice(0, 8);
+---
+
+<div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 mb-12 shadow-sm">
+  
+  <!-- Header -->
+  <div class="max-w-3xl mb-8">
+    <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 text-xs font-semibold uppercase tracking-wider mb-3 border border-amber-200 dark:border-amber-900">
+      ⚖️ Separation of Powers & Framers' Intent
+    </div>
+    <h2 class="font-serif font-extrabold text-2xl sm:text-3xl text-slate-900 dark:text-white leading-tight">
+      Constitutional Balance Across Presidencies
+    </h2>
+    <p class="text-sm text-slate-500 dark:text-slate-400 mt-2 leading-relaxed">
+      Measuring presidential power through Justice Robert H. Jackson's <em>Youngstown</em> framework (1952) and the baseline established by George Washington in 1789.
+    </p>
+  </div>
+
+  <!-- Global Youngstown 3-Tier Distribution Cards -->
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-5 mb-10">
+    
+    <!-- Zone 1 -->
+    <div class="p-5 rounded-xl border border-emerald-200 dark:border-emerald-800/80 bg-emerald-50/40 dark:bg-emerald-950/20">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+          Zone 1: Maximum Authority
+        </span>
+        <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300">
+          {zone1Pct}%
+        </span>
+      </div>
+      <div class="font-serif font-extrabold text-3xl text-slate-900 dark:text-white mb-1">
+        {totalZone1.toLocaleString()} <span class="text-xs font-sans font-normal text-slate-500">orders</span>
+      </div>
+      <p class="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
+        <strong>Statutory Execution:</strong> President acts pursuant to an express or implied authorization of Congress under Article II, §3 (Take Care Clause).
+      </p>
+    </div>
+
+    <!-- Zone 2 -->
+    <div class="p-5 rounded-xl border border-amber-200 dark:border-amber-800/80 bg-amber-50/40 dark:bg-amber-950/20">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+          Zone 2: Zone of Twilight
+        </span>
+        <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300">
+          {zone2Pct}%
+        </span>
+      </div>
+      <div class="font-serif font-extrabold text-3xl text-slate-900 dark:text-white mb-1">
+        {totalZone2.toLocaleString()} <span class="text-xs font-sans font-normal text-slate-500">orders</span>
+      </div>
+      <p class="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
+        <strong>Congressional Silence:</strong> President acts in absence of either a grant or denial of authority; internal civil service management and foreign diplomacy.
+      </p>
+    </div>
+
+    <!-- Zone 3 -->
+    <div class="p-5 rounded-xl border border-rose-200 dark:border-rose-800/80 bg-rose-50/40 dark:bg-rose-950/20">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-xs font-bold uppercase tracking-wider text-rose-800 dark:text-rose-300">
+          Zone 3: Lowest Ebb
+        </span>
+        <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-rose-100 dark:bg-rose-900/60 text-rose-800 dark:text-rose-300">
+          {zone3Pct}%
+        </span>
+      </div>
+      <div class="font-serif font-extrabold text-3xl text-slate-900 dark:text-white mb-1">
+        {totalZone3.toLocaleString()} <span class="text-xs font-sans font-normal text-slate-500">orders</span>
+      </div>
+      <p class="text-xs text-slate-600 dark:text-slate-400 mt-2 leading-relaxed">
+        <strong>High Friction / Overreach:</strong> President takes measures in tension with Congress, reallocates funds, or unilateral property/liberty commands.
+      </p>
+    </div>
+
+  </div>
+
+  <!-- Separation of Powers Stacked Bar by Administration -->
+  <div class="mb-12">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+      <div>
+        <h3 class="font-serif font-bold text-lg text-slate-900 dark:text-white">
+          Youngstown Distribution by Presidency
+        </h3>
+        <p class="text-xs text-slate-500 dark:text-slate-400">
+          Proportion of each administration's orders under Zone 1 (green), Zone 2 (amber), and Zone 3 (rose).
+        </p>
+      </div>
+      <div class="flex items-center gap-3 text-xs">
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-xs bg-emerald-500 inline-block"></span> Zone 1</span>
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-xs bg-amber-400 inline-block"></span> Zone 2</span>
+        <span class="flex items-center gap-1.5"><span class="w-3 h-3 rounded-xs bg-rose-500 inline-block"></span> Zone 3</span>
+      </div>
+    </div>
+
+    <div class="space-y-3">
+      {topPresidents.slice(0, 16).map(p => (
+        <div class="group">
+          <div class="flex items-center justify-between text-xs mb-1">
+            <a href={`/presidents/${p.slug}`} class="font-semibold text-slate-800 dark:text-slate-200 hover:text-blue-600 dark:hover:text-blue-400 flex items-center gap-1.5">
+              <span>{p.name}</span>
+              <span class="text-[10px] text-slate-400 font-normal font-mono">({p.orderCount} orders)</span>
+            </a>
+            <div class="flex items-center gap-2 font-mono text-[11px] text-slate-500">
+              <span class="text-emerald-700 dark:text-emerald-400">{p.zone1Pct}% Z1</span>
+              <span>•</span>
+              <span class="text-amber-700 dark:text-amber-400">{p.zone2Pct}% Z2</span>
+              {p.zone3Count > 0 && (
+                <>
+                  <span>•</span>
+                  <span class="text-rose-700 dark:text-rose-400 font-bold">{p.zone3Pct}% Z3 ({p.zone3Count})</span>
+                </>
+              )}
+            </div>
+          </div>
+
+          <!-- Stacked Bar -->
+          <div class="w-full h-3 rounded-full overflow-hidden flex bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 shadow-inner">
+            <div 
+              style={`width: ${p.zone1Pct}%`} 
+              class="h-full bg-emerald-500 transition-all duration-300"
+              title={`Zone 1: ${p.zone1Count} orders (${p.zone1Pct}%)`}
+            ></div>
+            <div 
+              style={`width: ${p.zone2Pct}%`} 
+              class="h-full bg-amber-400 transition-all duration-300"
+              title={`Zone 2: ${p.zone2Count} orders (${p.zone2Pct}%)`}
+            ></div>
+            <div 
+              style={`width: ${p.zone3Pct}%`} 
+              class="h-full bg-rose-500 transition-all duration-300"
+              title={`Zone 3: ${p.zone3Count} orders (${p.zone3Pct}%)`}
+            ></div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <!-- The Washington Multiplier Section -->
+  <div class="pt-8 border-t border-slate-200 dark:border-slate-800">
+    <div class="mb-6">
+      <div class="flex items-center gap-2 mb-1">
+        <span class="text-lg">🏛️</span>
+        <h3 class="font-serif font-bold text-xl text-slate-900 dark:text-white">
+          The "Washington Standard" & Presidential Power Inflation
+        </h3>
+      </div>
+      <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 leading-relaxed max-w-4xl">
+        George Washington issued just <strong>8 executive orders across 8 years</strong> (1.0 order per year), averaging <strong>180 words per order</strong>. He used them exclusively for ceremonial proclamations (Thanksgiving) and basic departmental reports. Below is how subsequent presidencies multiplied executive power beyond the founding baseline:
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      
+      <!-- Table 1: Annual Order Frequency Multiplier -->
+      <div class="bg-slate-50 dark:bg-slate-800/40 rounded-xl p-5 border border-slate-200 dark:border-slate-800">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-3 flex items-center justify-between">
+          <span>Highest Volume Expansion</span>
+          <span class="font-mono text-[10px] text-slate-400">vs Washington (1.0/yr)</span>
+        </h4>
+        <div class="divide-y divide-slate-200/60 dark:divide-slate-700/60">
+          {topVolumeMultipliers.map((p, idx) => (
+            <div class="py-2.5 flex items-center justify-between text-xs">
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-slate-400 w-4">{idx + 1}.</span>
+                <a href={`/presidents/${p.slug}`} class="font-medium text-slate-800 dark:text-slate-200 hover:underline">
+                  {p.name}
+                </a>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-slate-500 font-mono text-[11px]">{p.annualRate.toFixed(1)}/yr</span>
+                <span class="font-mono font-bold text-amber-700 dark:text-amber-400 bg-amber-100 dark:bg-amber-900/60 px-2 py-0.5 rounded text-[11px]">
+                  {p.washingtonMultiplier.toFixed(0)}× Multiplier
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <!-- Table 2: Highest Constitutional Friction / Overreach -->
+      <div class="bg-slate-50 dark:bg-slate-800/40 rounded-xl p-5 border border-slate-200 dark:border-slate-800">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400 mb-3 flex items-center justify-between">
+          <span>Highest Friction / Zone 3 Concentration</span>
+          <span class="font-mono text-[10px] text-slate-400">min. 20 orders</span>
+        </h4>
+        <div class="divide-y divide-slate-200/60 dark:divide-slate-700/60">
+          {topFrictionPresidents.map((p, idx) => (
+            <div class="py-2.5 flex items-center justify-between text-xs">
+              <div class="flex items-center gap-2">
+                <span class="font-mono text-slate-400 w-4">{idx + 1}.</span>
+                <a href={`/presidents/${p.slug}`} class="font-medium text-slate-800 dark:text-slate-200 hover:underline">
+                  {p.name}
+                </a>
+              </div>
+              <div class="flex items-center gap-3">
+                <span class="text-slate-500 font-mono text-[11px]">{p.zone3Count} orders</span>
+                <span class="font-mono font-bold text-rose-700 dark:text-rose-400 bg-rose-100 dark:bg-rose-900/60 px-2 py-0.5 rounded text-[11px]">
+                  {p.zone3Pct}% Zone 3
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+        <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-4 leading-relaxed">
+          *Zone 3 spikes correlate historically with wartime mobilizations, unilateral property/asset freezes, emergency powers declarations, and regulatory decrees issued without express congressional authorization.
+        </p>
+      </div>
+
+    </div>
+  </div>
+
+</div>

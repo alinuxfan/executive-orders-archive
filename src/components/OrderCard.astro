@@ -1,6 +1,7 @@
 ---
 import { resolvePortraitSlug } from '../lib/portraits';
 import { formatSigningDate } from '../lib/dates';
+import { getYoungstownClassification } from '../lib/youngstown';
 
 interface Props {
   order: {
@@ -22,6 +23,7 @@ interface Props {
 
 const { order } = Astro.props;
 const portraitSlug = resolvePortraitSlug(order.president_slug);
+const youngstown = getYoungstownClassification(order);
 
 // Sentiment styling based on Early Statesman Constitutional Prism
 let sentimentBadge = {
@@ -68,6 +70,7 @@ const compactMeta = JSON.stringify({
   val: order.sentiment_valence,
   comp: order.sentiment_compound,
   tag: order.tone_tag,
+  zone: youngstown.zone,
   snip: order.snippet
 });
 ---
@@ -92,6 +95,10 @@ const compactMeta = JSON.stringify({
       </div>
 
       <div class="flex items-center gap-1.5">
+        <!-- Youngstown Zone Pill -->
+        <span class={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${youngstown.badgeClass}`} title={youngstown.tagline}>
+          {youngstown.icon} {youngstown.shortName}
+        </span>
         <!-- Sentiment Pill -->
         <span class={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${sentimentBadge.bg} ${sentimentBadge.text} ${sentimentBadge.border}`}>
           {sentimentBadge.label}
@@ -119,38 +126,40 @@ const compactMeta = JSON.stringify({
     <!-- Constitutional Tone Badge if available -->
     {order.tone_tag && (
       <div class="mb-3">
-        <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-900/60 font-medium">
-          🏛️ {order.tone_tag}
+        <span class="inline-block text-[11px] font-sans font-medium px-2 py-0.5 rounded bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700/80">
+          📜 {order.tone_tag}
         </span>
       </div>
     )}
 
-    <!-- Snippet / Overview -->
-    {order.snippet ? (
-      <p class="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed mb-4">
-        {order.snippet}
-      </p>
-    ) : null}
+    <!-- Plain text summary/snippet -->
+    <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 line-clamp-3 mb-4 leading-relaxed font-sans">
+      {order.snippet || "Historical Presidential decree and administrative action."}
+    </p>
   </div>
 
-  <!-- Bottom Details Bar -->
-  <div class="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-    <div class="flex items-center gap-1.5 font-medium">
+  <!-- Bottom Metadata Row -->
+  <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+    <!-- President Signature with portrait -->
+    <div class="flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-300 truncate max-w-[55%]">
       <img
         src={`/portraits/${portraitSlug}.jpg`}
         alt=""
-        class="w-5 h-5 rounded-full object-cover border border-slate-300 dark:border-slate-600"
+        class="w-4 h-4 rounded-full object-cover border border-slate-200 dark:border-slate-700 flex-shrink-0"
         onerror="this.style.display='none'"
       />
-      <span class="text-slate-700 dark:text-slate-300 truncate max-w-[140px] sm:max-w-none">
-        {order.president_name}
-      </span>
+      <span class="truncate">{order.president_name}</span>
     </div>
 
-    <div class="flex items-center gap-2 font-mono text-[11px]">
-      <span title="Estimated Reading Time">⏱ {order.reading_time_minutes}m</span>
-      <span class="opacity-40">•</span>
-      <span title="Word Count">{order.word_count.toLocaleString()} words</span>
+    <!-- Metrics -->
+    <div class="flex items-center gap-2 flex-shrink-0">
+      <span class="font-mono text-[11px]" title="Readability Grade Level">
+        {gradeLabel}
+      </span>
+      <span>•</span>
+      <span class="font-mono text-[11px]">
+        {order.reading_time_minutes}m
+      </span>
     </div>
   </div>
 </article>

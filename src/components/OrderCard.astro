@@ -58,6 +58,15 @@ else if (order.flesch_kincaid_grade >= 9) gradeLabel = "High School";
 // Date formatting (timezone safe)
 const formattedDate = formatSigningDate(order.signing_date);
 
+// Clean snippet of printing/filing artifacts for clean preview rendering
+const rawSnippet = order.snippet || "Historical Presidential decree and administrative action.";
+const cleanSnippet = rawSnippet
+  .replace(/\(?\s*printed page \d+\s*\)?/gi, '')
+  .replace(/Billing code\s+[0-9A-Z-]+/gi, '')
+  .replace(/\[\s*FR Doc\.[^\]]+\]/gi, '')
+  .replace(/\s{2,}/g, ' ')
+  .trim() || rawSnippet;
+
 const compactMeta = JSON.stringify({
   id: order.id,
   num: order.eo_number,
@@ -71,7 +80,7 @@ const compactMeta = JSON.stringify({
   comp: order.sentiment_compound,
   tag: order.tone_tag,
   zone: youngstown.zone,
-  snip: order.snippet
+  snip: cleanSnippet
 });
 ---
 
@@ -134,7 +143,7 @@ const compactMeta = JSON.stringify({
 
     <!-- Plain text summary/snippet -->
     <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 line-clamp-3 mb-4 leading-relaxed font-sans">
-      {order.snippet || "Historical Presidential decree and administrative action."}
+      {cleanSnippet}
     </p>
   </div>
 

@@ -5,6 +5,7 @@ import ShareButtons from '../../components/ShareButtons.astro';
 import OrderCard from '../../components/OrderCard.astro';
 import FramersPerspective from '../../components/FramersPerspective.astro';
 import ConstitutionalFrictionScorecard from '../../components/ConstitutionalFrictionScorecard.astro';
+import FormattedDocumentText from '../../components/FormattedDocumentText.astro';
 import { generateOrderSummary } from '../../lib/summary';
 import { getRelatedOrders, getReferencedByLater } from '../../lib/relatedOrders';
 import { resolvePortraitSlug } from '../../lib/portraits';
@@ -428,8 +429,8 @@ const breadcrumbJsonLd = {
         )}
       </div>
 
-      <div id="order-body-text" class="prose dark:prose-invert max-w-none text-base leading-relaxed font-serif text-slate-800 dark:text-slate-200 space-y-4 whitespace-pre-wrap">
-        {order.full_text || "The archival text for this order is not yet digitized."}
+      <div id="order-body-text" class="prose dark:prose-invert max-w-none text-base leading-relaxed font-serif text-slate-800 dark:text-slate-200 space-y-4">
+        <FormattedDocumentText text={order.full_text} />
       </div>
     </article>
 

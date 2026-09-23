@@ -4,7 +4,7 @@ import OrderCard from '../../components/OrderCard.astro';
 import ShareButtons from '../../components/ShareButtons.astro';
 import ToneChart from '../../components/ToneChart.astro';
 import { resolvePortraitSlug } from '../../lib/portraits';
-import { formatPresidentNumbers } from '../../lib/presidentNumbers';
+import { formatPresidentNumbers, calculateYearsInOffice } from '../../lib/presidentNumbers';
 import { getYoungstownClassification } from '../../lib/youngstown';
 import presidents from '../../../data/presidents.json';
 import allOrders from '../../../data/site_orders_summary.json';
@@ -61,16 +61,8 @@ const pZone1Pct = totalOrders > 0 ? ((pZone1 / totalOrders) * 100).toFixed(1) : 
 const pZone2Pct = totalOrders > 0 ? ((pZone2 / totalOrders) * 100).toFixed(1) : "0.0";
 const pZone3Pct = totalOrders > 0 ? ((pZone3 / totalOrders) * 100).toFixed(1) : "0.0";
 
-// Calculate years in office & Washington Multiplier
-let yearsInOffice = 0;
-for (const t of president.terms) {
-  const parts = t.split('-');
-  if (parts.length === 2) {
-    yearsInOffice += Math.max(1, parseInt(parts[1], 10) - parseInt(parts[0], 10));
-  } else {
-    yearsInOffice += 1;
-  }
-}
+// Calculate years in office & Washington Multiplier (handles multi-term & ongoing terms)
+const yearsInOffice = calculateYearsInOffice(president.terms);
 const annualRate = yearsInOffice > 0 ? (totalOrders / yearsInOffice) : 0;
 const washingtonMultiplier = annualRate / 1.0;
 

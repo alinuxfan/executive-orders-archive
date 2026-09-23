@@ -38,3 +38,34 @@ export function formatPresidentNumbersCompact(numbers: number[]): string {
 export function primaryNumber(numbers: number[]): number {
   return numbers[0];
 }
+
+/**
+ * Calculates the total years served across all presidential terms.
+ * Handles single years ('1841-1841'), standard ranges ('1789-1797'),
+ * non-consecutive terms ('1885-1889', '1893-1897'), and active/ongoing
+ * terms ('2025-present').
+ */
+export function calculateYearsInOffice(terms: string[], asOfDate: Date = new Date()): number {
+  let totalYears = 0;
+  const currentYear = asOfDate.getFullYear();
+  const currentMonth = asOfDate.getMonth(); // 0-indexed (0 = Jan, 8 = Sep)
+
+  for (const term of terms) {
+    const parts = term.split('-').map(p => p.trim());
+    if (parts.length === 2) {
+      const start = parseInt(parts[0], 10);
+      if (parts[1].toLowerCase() === 'present') {
+        // Active presidency: calculate elapsed time in years (month-accurate)
+        const elapsed = (currentYear - start) + (currentMonth + 1) / 12;
+        totalYears += Math.max(0.5, Number(elapsed.toFixed(1)));
+      } else {
+        const end = parseInt(parts[1], 10);
+        totalYears += Math.max(1, end - start);
+      }
+    } else {
+      totalYears += 1;
+    }
+  }
+
+  return Math.max(0.5, Number(totalYears.toFixed(1)));
+}

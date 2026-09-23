@@ -1,0 +1,2 @@
+# Cloudflare Pages Redirects
+/sitemap.xml    /sitemap-index.xml    301

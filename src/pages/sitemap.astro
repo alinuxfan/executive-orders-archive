@@ -1,0 +1,242 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { resolvePortraitSlug } from '../lib/portraits';
+import { formatPresidentNumbersCompact } from '../lib/presidentNumbers';
+import presidents from '../../data/presidents.json';
+import orders from '../../data/site_orders_summary.json';
+
+// Calculate order counts per president
+const presidentCounts = new Map<string, number>();
+for (const o of orders) {
+  const slug = resolvePortraitSlug(o.slug || o.president_slug);
+  presidentCounts.set(slug, (presidentCounts.get(slug) || 0) + 1);
+}
+
+const enrichedPresidents = presidents.map(p => ({
+  ...p,
+  orderCount: presidentCounts.get(p.slug) || 0
+}));
+
+const mainSections = [
+  {
+    title: "Executive Orders Archive",
+    path: "/orders",
+    desc: "Complete searchable collection of 10,800+ Presidential Executive Orders from 1789 to present day.",
+    badge: "10,800+ Orders"
+  },
+  {
+    title: "Presidents Directory",
+    path: "/presidents",
+    desc: "Comprehensive biographical directory and administrative archive across all 45 United States Presidencies.",
+    badge: "45 Presidencies"
+  },
+  {
+    title: "Presidents Head-to-Head Comparison",
+    path: "/presidents/compare",
+    desc: "Interactive comparison tool analyzing order volume, linguistic density, and constitutional separation-of-powers distributions.",
+    badge: "Comparison Tool"
+  },
+  {
+    title: "Historical Timeline",
+    path: "/timeline",
+    desc: "Interactive chronological timeline charting presidential decrees across 230+ years of American history.",
+    badge: "1789 – Present"
+  },
+  {
+    title: "Analytics, Trends & Graphs",
+    path: "/analytics",
+    desc: "Computational linguistics, text length inflation, Youngstown separation of powers, and the Washington Baseline Multiplier.",
+    badge: "Analytics"
+  },
+  {
+    title: "Search Portal",
+    path: "/search",
+    desc: "Full-text fuzzy search engine filtering by title, president, year, Youngstown zone, and constitutional tone.",
+    badge: "Instant Search"
+  },
+  {
+    title: "Saved Reading List",
+    path: "/saved",
+    desc: "Offline-capable research bookmarks stored locally in your browser for citations and deep reading.",
+    badge: "Client Storage"
+  },
+  {
+    title: "Support / Donate",
+    path: "/donate",
+    desc: "Support our independent, non-partisan open data public research mission and server hosting.",
+    badge: "Public Domain"
+  }
+];
+
+const machineEndpoints = [
+  {
+    title: "XML Sitemap Index",
+    path: "/sitemap-index.xml",
+    desc: "Standard XML sitemap index linking all sub-sitemaps for search engines and web crawlers.",
+    format: "application/xml"
+  },
+  {
+    title: "Primary XML URL Sitemap",
+    path: "/sitemap-0.xml",
+    desc: "Full XML URL inventory of all static pages and individual executive order archival records.",
+    format: "application/xml"
+  },
+  {
+    title: "Standard Sitemap Alias",
+    path: "/sitemap.xml",
+    desc: "Legacy root XML alias redirecting to the index.",
+    format: "application/xml"
+  },
+  {
+    title: "RSS 2.0 Feed",
+    path: "/feed.xml",
+    desc: "Syndication feed with recent executive orders for RSS readers and news aggregators.",
+    format: "application/rss+xml"
+  },
+  {
+    title: "JSON API Endpoint",
+    path: "/api/orders.json",
+    desc: "Public REST API endpoint returning metadata, dates, reading times, and constitutional scores.",
+    format: "application/json"
+  },
+  {
+    title: "Robots.txt",
+    path: "/robots.txt",
+    desc: "Crawler access policy and search engine sitemap declarations.",
+    format: "text/plain"
+  }
+];
+---
+
+<Layout
+  title="Sitemap & Site Directory | Executive Orders Archive"
+  description="Complete site index of the Executive Orders Archive, including presidential directories, research tools, analytics, and machine-readable feeds."
+>
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+
+    <!-- Header -->
+    <div class="mb-10 text-center max-w-3xl mx-auto">
+      <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold uppercase tracking-wider mb-3 border border-slate-200 dark:border-slate-700">
+        🧭 Navigation Index
+      </div>
+      <h1 class="font-serif font-extrabold text-3xl sm:text-4xl text-slate-900 dark:text-white leading-tight">
+        Site Index & Directory
+      </h1>
+      <p class="text-sm sm:text-base text-slate-500 dark:text-slate-400 mt-2">
+        An index of all primary portals, presidential archives, research tools, and machine-readable feeds.
+      </p>
+    </div>
+
+    <!-- Main Navigation Hubs -->
+    <section class="mb-12">
+      <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+        <span>🏛️</span>
+        <span>Primary Research Portals</span>
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {mainSections.map(sec => (
+          <a
+            href={sec.path}
+            class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:border-blue-500 dark:hover:border-blue-500 hover:shadow-md transition-all flex flex-col justify-between group"
+          >
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="font-bold text-slate-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 text-sm">
+                  {sec.title}
+                </span>
+                <span class="font-mono text-[10px] px-2 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                  {sec.badge}
+                </span>
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                {sec.desc}
+              </p>
+            </div>
+            <div class="mt-4 pt-2 border-t border-slate-100 dark:border-slate-800 font-mono text-[11px] text-blue-600 dark:text-blue-400 flex items-center justify-between">
+              <span>{sec.path}</span>
+              <span>→</span>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <!-- Presidents Directory Grid -->
+    <section class="mb-12">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-4">
+        <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white flex items-center gap-2">
+          <span>🇺🇸</span>
+          <span>Presidents Directory (45 Administrations)</span>
+        </h2>
+        <a href="/presidents" class="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+          View Full Portrait Gallery →
+        </a>
+      </div>
+      
+      <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 shadow-sm">
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+          {enrichedPresidents.map(p => (
+            <a
+              href={`/presidents/${p.slug}`}
+              class="p-2.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/60 border border-transparent hover:border-slate-200 dark:hover:border-slate-700 transition-all flex items-center justify-between gap-2 group"
+            >
+              <div class="truncate">
+                <div class="flex items-center gap-1.5">
+                  <span class="font-mono text-[10px] text-slate-400">
+                    {formatPresidentNumbersCompact(p.numbers)}
+                  </span>
+                  <span class="text-xs font-medium text-slate-800 dark:text-slate-200 group-hover:text-blue-600 dark:group-hover:text-blue-400 truncate">
+                    {p.name}
+                  </span>
+                </div>
+                <div class="text-[10px] text-slate-400 font-mono">
+                  {p.terms.join(", ")}
+                </div>
+              </div>
+              <span class="font-mono text-[11px] font-bold px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex-shrink-0">
+                {p.orderCount}
+              </span>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <!-- Machine & Developer Resources -->
+    <section>
+      <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+        <span>🤖</span>
+        <span>Developer Feeds & Machine-Readable Sitemaps</span>
+      </h2>
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {machineEndpoints.map(end => (
+          <a
+            href={end.path}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:border-amber-500 dark:hover:border-amber-500 hover:shadow-md transition-all flex flex-col justify-between group"
+          >
+            <div>
+              <div class="flex items-center justify-between mb-2">
+                <span class="font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 text-sm">
+                  {end.title}
+                </span>
+                <span class="font-mono text-[10px] px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-900">
+                  {end.format.split('/')[1] || end.format}
+                </span>
+              </div>
+              <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+                {end.desc}
+              </p>
+            </div>
+            <div class="mt-4 pt-2 border-t border-slate-100 dark:border-slate-800 font-mono text-[11px] text-amber-600 dark:text-amber-400 flex items-center justify-between">
+              <span>{end.path}</span>
+              <span>↗</span>
+            </div>
+          </a>
+        ))}
+      </div>
+    </section>
+
+  </div>
+</Layout>

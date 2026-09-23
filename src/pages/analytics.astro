@@ -6,6 +6,7 @@ import TimelineChart from '../components/TimelineChart.astro';
 import ConstitutionalBalanceChart from '../components/ConstitutionalBalanceChart.astro';
 import { getYearlyOrderCounts } from '../lib/yearly';
 import { resolvePortraitSlug } from '../lib/portraits';
+import { calculateYearsInOffice } from '../lib/presidentNumbers';
 import { getYoungstownClassification } from '../lib/youngstown';
 import orders from '../../data/site_orders_summary.json';
 import presidents from '../../data/presidents.json';
@@ -71,15 +72,7 @@ const enriched = presidents.map(p => {
 const constitutionalPresidentsData = presidents.map(p => {
   const s = presStats.get(p.slug) || { count: 0, totalWords: 0, totalSentiment: 0, totalGrade: 0, zone1: 0, zone2: 0, zone3: 0 };
   const count = s.count;
-  let years = 0;
-  for (const t of p.terms) {
-    const parts = t.split('-');
-    if (parts.length === 2) {
-      years += Math.max(1, parseInt(parts[1], 10) - parseInt(parts[0], 10));
-    } else {
-      years += 1;
-    }
-  }
+  const years = calculateYearsInOffice(p.terms);
   const annualRate = years > 0 ? (count / years) : 0;
   const washingtonMultiplier = annualRate / 1.0;
   const avgWords = count > 0 ? Math.round(s.totalWords / count) : 0;

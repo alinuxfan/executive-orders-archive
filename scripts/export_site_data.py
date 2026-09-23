@@ -32,9 +32,16 @@ def export_all():
         # Keep full_text in individual items
         orders.append(d)
 
+    # Compact (no indent, no ASCII-escaping) rather than pretty-printed — these
+    # files are machine-generated and only ever read by `import` in Astro, never
+    # hand-edited, and indent=2 was measurably ~40% of their on-disk size at this
+    # scale (11k+ records). Read data/orders.sqlite directly if you need to
+    # inspect field values interactively.
+    json_kwargs = {"ensure_ascii": False, "separators": (",", ":")}
+
     # Write site_orders.json
     with open(DATA_DIR / "site_orders.json", "w", encoding="utf-8") as f:
-        json.dump(orders, f, indent=2)
+        json.dump(orders, f, **json_kwargs)
 
     # Write site_orders_summary.json (lighter version without huge full_text for index/search)
     summary_orders = []
@@ -45,7 +52,7 @@ def export_all():
         summary_orders.append(summary_o)
 
     with open(DATA_DIR / "site_orders_summary.json", "w", encoding="utf-8") as f:
-        json.dump(summary_orders, f, indent=2)
+        json.dump(summary_orders, f, **json_kwargs)
 
     print(f"Exported {len(orders)} orders to data/site_orders.json and data/site_orders_summary.json")
     conn.close()

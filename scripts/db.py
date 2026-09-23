@@ -149,6 +149,18 @@ def upsert_order(order_dict):
     conn.commit()
     conn.close()
 
+def vacuum_db():
+    """Reclaims free pages left behind by UPDATE/DELETE churn (enrichment
+    fields going from NULL to populated, field corrections, etc.) so the file
+    on disk tracks its logical data size instead of accumulating slack. Cheap
+    at this database's scale (a few seconds even at ~11k rows), so it's run
+    at the end of every batch_constitutional_worker.py invocation — which
+    already runs twice on every weekday via the sync-orders GitHub Action —
+    rather than needing a separate maintenance schedule."""
+    conn = get_connection()
+    conn.execute("VACUUM")
+    conn.close()
+
 def get_order(order_id):
     """Fetch the current row for an order, or None if it doesn't exist yet.
     Used by sync_orders.py to snapshot pre-upsert state for diffing."""

@@ -13,7 +13,7 @@ SCRIPTS_DIR = Path(__file__).resolve().parent
 if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
-from db import init_db, get_connection
+from db import init_db, get_connection, vacuum_db
 from constitutional_engine import analyze_constitutional_sentiment, generate_statesman_summary
 from topics import classify_topics
 from export_site_data import export_all
@@ -106,6 +106,7 @@ def run_batch_worker(batch_size=300, workers=4, limit=None, force=False):
     if total_to_process == 0:
         logging.info("No unsummarized executive orders found in database. Exiting.")
         conn.close()
+        vacuum_db()
         return
 
     fetch_query = f"""
@@ -181,6 +182,7 @@ def run_batch_worker(batch_size=300, workers=4, limit=None, force=False):
     logging.info("Generating final static datasets for Astro...")
     export_stats_json()
     export_all()
+    vacuum_db()
     logging.info("All site datasets successfully updated and synchronized!")
 
 def main():

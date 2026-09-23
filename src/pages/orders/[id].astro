@@ -6,7 +6,7 @@ import OrderCard from '../../components/OrderCard.astro';
 import FramersPerspective from '../../components/FramersPerspective.astro';
 import ConstitutionalFrictionScorecard from '../../components/ConstitutionalFrictionScorecard.astro';
 import FormattedDocumentText from '../../components/FormattedDocumentText.astro';
-import { generateOrderSummary } from '../../lib/summary';
+import { generateOrderSummary, isGenericBoilerplate } from '../../lib/summary';
 import { getRelatedOrders, getReferencedByLater } from '../../lib/relatedOrders';
 import { resolvePortraitSlug } from '../../lib/portraits';
 import { formatSigningDate } from '../../lib/dates';
@@ -38,7 +38,10 @@ if (order.key_directives_json) {
   try {
     const parsed = JSON.parse(order.key_directives_json);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      directives = parsed;
+      const isBoilerplate = parsed.every((d) => isGenericBoilerplate(d?.description) || isGenericBoilerplate(d?.title));
+      if (!isBoilerplate) {
+        directives = parsed;
+      }
     }
   } catch (e) {}
 }
@@ -63,8 +66,11 @@ if (Array.isArray(order.topic_tags)) {
   } catch (e) {}
 }
 
-const rawSummaryText = order.summary_plain_english || fallbackSummary.plainEnglish;
-const summaryParagraphs = rawSummaryText.split("\n\n").filter(p => p.trim().length > 0);
+let rawSummaryText = order.summary_plain_english || fallbackSummary.plainEnglish;
+if (isGenericBoilerplate(rawSummaryText)) {
+  rawSummaryText = fallbackSummary.plainEnglish;
+}
+const summaryParagraphs = rawSummaryText.replace(/\\n/g, "\n").split("\n\n").filter(p => p.trim().length > 0);
 
 // Format date
 const formattedDate = order.signing_date ? formatSigningDate(order.signing_date, {
@@ -284,7 +290,7 @@ const breadcrumbJsonLd = {
 
       <div class="space-y-4 mb-6">
         {summaryParagraphs.map(p => {
-          const isCallout = p.startsWith("CONSTITUTIONAL") || p.startsWith("EXECUTIVE POWERS") || p.startsWith("STATUTORY");
+          const isCallout = p.startsWith("CONSTITUTIONAL") || p.startsWith("EXECUTIVE POWERS") || p.startsWith("STATUTORY") || p.startsWith("Constitutional Assessment:");
           return isCallout ? (
             <div class="p-4 rounded-xl bg-amber-100/60 dark:bg-amber-900/30 border border-amber-300/50 dark:border-amber-800/50 text-xs font-mono text-amber-950 dark:text-amber-200 leading-relaxed">
               {p}
@@ -308,7 +314,14 @@ const breadcrumbJsonLd = {
             return (
               <div id={anchorId} class="scroll-mt-24 group relative p-3.5 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 text-sm text-slate-700 dark:text-slate-300 flex items-start gap-3 target:ring-2 target:ring-amber-400">
                 <span class="text-amber-500 font-bold mt-0.5">▪</span>
-                <span class="flex-1">{d.description}</span>
+                <div class="flex-1">
+                  {d.title && !d.title.startsWith("Directive") && !d.title.startsWith("Operative Mandate") && (
+                    <div class="font-semibold text-slate-900 dark:text-white mb-1 text-xs uppercase tracking-wide text-amber-700 dark:text-amber-400">
+                      {d.title}
+                    </div>
+                  )}
+                  <p class="leading-relaxed">{d.description}</p>
+                </div>
                 <button
                   type="button"
                   data-copy-anchor={anchorId}

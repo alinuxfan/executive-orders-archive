@@ -1,0 +1,178 @@
+---
+import { evaluateConstitutionalFriction, type OrderFrictionProfile } from '../lib/frictionDimensions';
+
+interface Props {
+  order: {
+    title?: string;
+    full_text?: string;
+    sentiment_compound?: number;
+    sentiment_valence?: string;
+    tone_tag?: string;
+  };
+}
+
+const { order } = Astro.props;
+const profile: OrderFrictionProfile = evaluateConstitutionalFriction(order);
+
+const levelBadge = (level: 'Low' | 'Moderate' | 'High') => {
+  switch (level) {
+    case 'Low':
+      return {
+        text: 'text-emerald-700 dark:text-emerald-400',
+        bg: 'bg-emerald-50 dark:bg-emerald-950/40',
+        border: 'border-emerald-200 dark:border-emerald-800/60',
+        bar: 'bg-emerald-500',
+        label: 'Low Friction / Concordant'
+      };
+    case 'Moderate':
+      return {
+        text: 'text-amber-700 dark:text-amber-400',
+        bg: 'bg-amber-50 dark:bg-amber-950/40',
+        border: 'border-amber-200 dark:border-amber-800/60',
+        bar: 'bg-amber-400',
+        label: 'Moderate / Inherent Discretion'
+      };
+    case 'High':
+      return {
+        text: 'text-rose-700 dark:text-rose-400',
+        bg: 'bg-rose-50 dark:bg-rose-950/40',
+        border: 'border-rose-200 dark:border-rose-800/60',
+        bar: 'bg-rose-500',
+        label: 'High Friction / Overreach Scrutiny'
+      };
+  }
+};
+
+const overallBadge = () => {
+  if (profile.overallAssessment === 'Constitutional Concordance') {
+    return {
+      bg: 'bg-emerald-50 dark:bg-emerald-950/40',
+      text: 'text-emerald-800 dark:text-emerald-300',
+      border: 'border-emerald-300 dark:border-emerald-800',
+      icon: '🛡️',
+      title: 'High Constitutional Concordance'
+    };
+  }
+  if (profile.overallAssessment === 'Constitutional Friction') {
+    return {
+      bg: 'bg-rose-50 dark:bg-rose-950/40',
+      text: 'text-rose-800 dark:text-rose-300',
+      border: 'border-rose-300 dark:border-rose-800',
+      icon: '⚠️',
+      title: 'Elevated Constitutional Friction'
+    };
+  }
+  return {
+    bg: 'bg-amber-50 dark:bg-amber-950/40',
+    text: 'text-amber-800 dark:text-amber-300',
+    border: 'border-amber-300 dark:border-amber-800',
+    icon: '⚖️',
+    title: 'Discretionary Twilight Zone'
+  };
+};
+
+const assessmentStyle = overallBadge();
+---
+
+<section class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-7 shadow-sm mb-8">
+  
+  <!-- Header -->
+  <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-5 border-b border-slate-100 dark:border-slate-800">
+    <div>
+      <div class="flex items-center gap-2 mb-1.5">
+        <span class="text-xl">📐</span>
+        <h2 class="font-serif font-bold text-xl sm:text-2xl text-slate-900 dark:text-white">
+          Five Measurable "Constitutional Friction" Dimensions
+        </h2>
+      </div>
+      <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 max-w-2xl leading-relaxed">
+        An objective audit measuring potential separation-of-powers tension against the United States Constitution and established Supreme Court doctrine.
+      </p>
+    </div>
+
+    <!-- Composite Badge -->
+    <div class={`flex-shrink-0 p-3 rounded-xl border ${assessmentStyle.bg} ${assessmentStyle.border} text-right sm:text-left`}>
+      <div class="flex items-center gap-2">
+        <span>{assessmentStyle.icon}</span>
+        <span class={`text-xs font-bold ${assessmentStyle.text} uppercase tracking-wider`}>
+          {assessmentStyle.title}
+        </span>
+      </div>
+      <div class="mt-1 flex items-baseline gap-2">
+        <span class="text-2xl font-bold font-serif text-slate-900 dark:text-white">
+          {profile.compositeScore}
+        </span>
+        <span class="text-xs text-slate-500 dark:text-slate-400 font-mono">/ 100 friction index</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dimensions Grid -->
+  <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+    {profile.dimensions.map((dim, idx) => {
+      const b = levelBadge(dim.level);
+      return (
+        <div class="p-4 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-800 flex flex-col justify-between hover:border-slate-300 dark:hover:border-slate-700 transition-colors">
+          <div>
+            <div class="flex items-start justify-between gap-2 mb-2">
+              <div>
+                <span class="text-[10px] font-mono font-bold uppercase tracking-wider text-slate-400">
+                  Dimension {idx + 1} • {dim.article}
+                </span>
+                <h3 class="font-serif font-bold text-sm text-slate-900 dark:text-white mt-0.5">
+                  {dim.name}
+                </h3>
+              </div>
+              <span class={`text-[10px] font-bold px-2 py-0.5 rounded-full border whitespace-nowrap ${b.bg} ${b.text} ${b.border}`}>
+                {dim.level} Friction
+              </span>
+            </div>
+
+            <!-- Friction Bar Indicator -->
+            <div class="w-full bg-slate-200 dark:bg-slate-700/60 rounded-full h-1.5 mb-3 overflow-hidden">
+              <div 
+                class={`h-full rounded-full ${b.bar}`} 
+                style={`width: ${dim.score}%`}
+              ></div>
+            </div>
+
+            <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-3">
+              {dim.summary}
+            </p>
+          </div>
+
+          <div class="pt-2 border-t border-slate-200/60 dark:border-slate-700/40 text-[11px] text-slate-400 italic">
+            <strong>Benchmark:</strong> {dim.benchmark}
+          </div>
+        </div>
+      );
+    })}
+
+    <!-- Methodology Summary Card -->
+    <div class="p-4 rounded-xl bg-gradient-to-br from-slate-100 to-amber-50/40 dark:from-slate-800/60 dark:to-amber-950/20 border border-slate-200 dark:border-slate-700/60 flex flex-col justify-between">
+      <div>
+        <div class="flex items-center gap-2 mb-2">
+          <span class="text-sm">⚖️</span>
+          <span class="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+            Audit Synthesis
+          </span>
+        </div>
+        <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-3">
+          {profile.summaryRationale}
+        </p>
+      </div>
+      <div class="pt-2 border-t border-slate-200/60 dark:border-slate-700/40 text-[11px] text-slate-500 dark:text-slate-400">
+        Weighted composite: Art. I (25%), Art. II (25%), Federalism (15%), Due Process (15%), Youngstown (20%).
+      </div>
+    </div>
+  </div>
+
+  <!-- Bottom contextual notice -->
+  <div class="text-xs text-slate-500 dark:text-slate-400 bg-slate-50 dark:bg-slate-800/40 rounded-xl p-3 border border-slate-200 dark:border-slate-800 flex items-start gap-2.5">
+    <span class="text-sm flex-shrink-0 mt-0.5">ℹ️</span>
+    <div class="leading-relaxed">
+      <strong>How to read these dimensions:</strong> Executive power expands whenever an administration acts without explicit statutory authorization from Congress (Article I), touches upon police powers historically reserved to the states (Tenth Amendment), or limits private rights and property without judicial process. A low friction score indicates strict concordance with enacted law; a high friction score highlights orders testing the limits of presidential discretion.
+    </div>
+  </div>
+
+</section>

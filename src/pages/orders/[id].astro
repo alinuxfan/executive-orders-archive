@@ -4,6 +4,7 @@ import CitationBox from '../../components/CitationBox.astro';
 import ShareButtons from '../../components/ShareButtons.astro';
 import OrderCard from '../../components/OrderCard.astro';
 import FramersPerspective from '../../components/FramersPerspective.astro';
+import ConstitutionalFrictionScorecard from '../../components/ConstitutionalFrictionScorecard.astro';
 import { generateOrderSummary } from '../../lib/summary';
 import { getRelatedOrders, getReferencedByLater } from '../../lib/relatedOrders';
 import { resolvePortraitSlug } from '../../lib/portraits';
@@ -349,6 +350,9 @@ const breadcrumbJsonLd = {
 
     <!-- The Framers' Constitutional Council (Madison, Hamilton, Mason & Youngstown Framework) -->
     <FramersPerspective order={order} youngstown={youngstown} />
+
+    <!-- Five Measurable Constitutional Friction Dimensions Audit -->
+    <ConstitutionalFrictionScorecard order={order} />
 
     <!-- Quantitative Metrics Panel -->
     <section class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">

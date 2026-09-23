@@ -1,0 +1,1084 @@
+---
+import rawOrders from '../../data/site_orders_summary.json';
+import { resolvePortraitSlug } from '../lib/portraits';
+
+// Default to US Eastern Time at build time
+const now = new Date();
+const easternParts = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/New_York',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit'
+}).formatToParts(now);
+const partMap = Object.fromEntries(easternParts.map(p => [p.type, p.value]));
+const currentYear = parseInt(partMap.year, 10);
+const currentMonth = partMap.month;
+const currentDay = partMap.day;
+const currentMonthDay = `${currentMonth}-${currentDay}`;
+
+const monthNames = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December"
+];
+const currentMonthIndex = parseInt(currentMonth, 10) - 1;
+const currentMonthName = monthNames[currentMonthIndex];
+const dayNumber = parseInt(currentDay, 10);
+
+// Filter orders matching today's month and day across all years
+const todayOrders = rawOrders
+  .filter(o => o.signing_date && o.signing_date.slice(5, 10) === currentMonthDay)
+  .sort((a, b) => {
+    const yearA = parseInt(a.signing_date.slice(0, 4), 10);
+    const yearB = parseInt(b.signing_date.slice(0, 4), 10);
+    return yearB - yearA;
+  });
+
+const latestOrder = todayOrders.length > 0 ? todayOrders[0] : null;
+const oldestOrder = todayOrders.length > 0 ? todayOrders[todayOrders.length - 1] : null;
+
+// Curated milestone landmark orders
+const MILESTONE_DEFINITIONS = [
+  {
+    id: "app-commission-appointing-commissioners-for-surveying-the-district-territory-for-the-permanent",
+    badge: "🇺🇸 Washington #1",
+    shortLabel: "1st Executive Action (1791)",
+    description: "George Washington's survey establishing the permanent capital city of Washington, D.C."
+  },
+  {
+    id: "app-executive-order-suspension-the-writ-habeas-corpus",
+    badge: "⚖️ Civil War Power",
+    shortLabel: "Lincoln Habeas Corpus (1861)",
+    description: "Abraham Lincoln suspending the writ of habeas corpus during the early outbreak of the American Civil War."
+  },
+  {
+    id: "app-executive-order-6102-forbidding-the-hoarding-gold-coin-gold-bullion-and-gold-certificates",
+    badge: "💰 Gold Confiscation",
+    shortLabel: "FDR Gold Ban (1933)",
+    description: "Franklin D. Roosevelt prohibiting hoarding of gold coins, bullion, and certificates under Trading with the Enemy Act."
+  },
+  {
+    id: "app-executive-order-8985-establishing-the-office-censorship-and-prescribing-its-functions-and",
+    badge: "📉 High Constitutional Friction",
+    shortLabel: "FDR Censorship Office (1941)",
+    description: "WWII censorship decree with extreme constitutional friction (-0.91) following the attack on Pearl Harbor."
+  },
+  {
+    id: "app-executive-order-9066-authorizing-the-secretary-war-prescribe-military-areas",
+    badge: "⚠️ Landmark Friction",
+    shortLabel: "FDR Japanese Internment (1942)",
+    description: "WWII order authorizing the forced internment and removal of Japanese Americans from coastal military zones."
+  },
+  {
+    id: "app-executive-order-9981-establishing-the-presidents-committee-equality-treatment-and",
+    badge: "🎖️ Military Integration",
+    shortLabel: "Truman Desegregation (1948)",
+    description: "Harry S. Truman desegregating the United States Armed Forces, establishing equality of treatment and opportunity."
+  },
+  {
+    id: "app-executive-order-10214-prescribing-the-manual-for-courts-martial-united-states-1951",
+    badge: "📚 Longest in US History",
+    shortLabel: "Manual for Courts-Martial (1951)",
+    description: "Harry S. Truman's massive 52,000-word Uniform Code of Military Justice codification."
+  },
+  {
+    id: "app-executive-order-10340-directing-the-secretary-commerce-take-possession-and-operate-the",
+    badge: "🏛️ Youngstown Precedent",
+    shortLabel: "Youngstown Steel Seizure (1952)",
+    description: "The steel mills seizure struck down in Youngstown v. Sawyer, creating the modern 3-tier presidential power test."
+  }
+];
+
+const milestoneOrders = MILESTONE_DEFINITIONS.map(m => {
+  const match = rawOrders.find(o => o.id === m.id);
+  return {
+    ...m,
+    order: match || null
+  };
+}).filter(m => m.order !== null);
+
+// Initial JSON payload passed to inline script
+const initialDataJson = JSON.stringify({
+  todayOrders: todayOrders.slice(0, 50).map(o => ({
+    id: o.id,
+    eo_number: o.eo_number,
+    title: o.title,
+    president_name: o.president_name,
+    president_slug: o.president_slug,
+    signing_date: o.signing_date,
+    sentiment_valence: o.sentiment_valence,
+    sentiment_compound: o.sentiment_compound,
+    snippet: o.snippet
+  })),
+  milestones: milestoneOrders.map(m => ({
+    badge: m.badge,
+    shortLabel: m.shortLabel,
+    description: m.description,
+    order: {
+      id: m.order.id,
+      eo_number: m.order.eo_number,
+      title: m.order.title,
+      president_name: m.order.president_name,
+      president_slug: m.order.president_slug,
+      signing_date: m.order.signing_date,
+      sentiment_valence: m.order.sentiment_valence,
+      sentiment_compound: m.order.sentiment_compound,
+      snippet: m.order.snippet
+    }
+  })),
+  rouletteSeed: [
+    ...todayOrders.slice(0, 10),
+    ...milestoneOrders.map(m => m.order)
+  ].map(o => ({
+    id: o.id,
+    eo_number: o.eo_number,
+    title: o.title,
+    president_name: o.president_name,
+    president_slug: o.president_slug,
+    signing_date: o.signing_date,
+    sentiment_valence: o.sentiment_valence,
+    sentiment_compound: o.sentiment_compound,
+    snippet: o.snippet
+  })),
+  dateInfo: {
+    year: currentYear,
+    month: currentMonth,
+    day: currentDay,
+    monthDay: currentMonthDay,
+    monthName: currentMonthName,
+    dayInt: dayNumber
+  }
+});
+---
+
+<!-- Global Quick Share Modal Container -->
+<div 
+  id="quick-share-modal" 
+  class="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm hidden print:hidden" 
+  role="dialog" 
+  aria-modal="true" 
+  aria-labelledby="quick-share-modal-title"
+>
+  <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl max-w-2xl w-full max-h-[92vh] overflow-y-auto flex flex-col p-5 sm:p-7 relative transition-all animate-in fade-in zoom-in-95 duration-150">
+    
+    <!-- Top Header -->
+    <div class="flex items-start justify-between gap-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-2xl bg-amber-400/15 border border-amber-400/30 text-amber-600 dark:text-amber-400 flex items-center justify-center text-xl font-bold shadow-xs">
+          ⚡
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 font-mono">
+              Quick Share Hub
+            </span>
+            <span class="text-slate-300 dark:text-slate-700">•</span>
+            <span class="text-[10px] text-slate-500 dark:text-slate-400">Executive Orders Archive</span>
+          </div>
+          <h2 id="quick-share-modal-title" class="font-serif font-bold text-lg text-slate-900 dark:text-white leading-tight">
+            Share Presidential History
+          </h2>
+        </div>
+      </div>
+
+      <button 
+        type="button" 
+        id="quick-share-close-btn"
+        aria-label="Close share dialog"
+        class="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors"
+      >
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+      </button>
+    </div>
+
+    <!-- Quick Mode Tabs -->
+    <div class="flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-800/80 rounded-2xl mt-4 border border-slate-200 dark:border-slate-700/60 text-xs font-medium">
+      <button 
+        type="button" 
+        data-quick-tab="today"
+        class="quick-tab-btn flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-semibold border border-blue-300 dark:border-blue-800 shadow-xs"
+      >
+        <span>📅 On This Day (<span id="modal-date-badge">{currentMonthName} {dayNumber}</span>)</span>
+      </button>
+
+      <button 
+        type="button" 
+        data-quick-tab="milestones"
+        class="quick-tab-btn flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-transparent"
+      >
+        <span>🏛️ Historic Milestones</span>
+      </button>
+
+      <button 
+        type="button" 
+        data-quick-tab="roulette"
+        class="quick-tab-btn flex-1 py-2 px-3 rounded-xl transition-all text-center flex items-center justify-center gap-1.5 text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white border border-transparent"
+      >
+        <span>🎲 Archive Roulette</span>
+      </button>
+    </div>
+
+    <!-- Mode 1: Submode selector for "Today" -->
+    <div class="mt-4">
+      <div id="submode-today-controls" class="space-y-2">
+        <div class="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+          <span>Choose which order on this date to highlight:</span>
+          <a href="/#this-day-section" class="text-amber-600 dark:text-amber-400 hover:underline text-[11px] font-medium">
+            View all on date &rarr;
+          </a>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <button
+            type="button"
+            data-submode="latest"
+            class="submode-btn active p-2.5 rounded-xl border text-left transition-all bg-amber-50/80 dark:bg-amber-950/40 border-amber-300 dark:border-amber-800 text-amber-900 dark:text-amber-200"
+          >
+            <div class="text-[11px] font-bold flex items-center gap-1">
+              <span>⚡</span>
+              <span>Latest</span>
+            </div>
+            <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5" id="submode-latest-year">
+              {latestOrder?.signing_date ? latestOrder.signing_date.slice(0, 4) : 'Recent'}
+            </div>
+          </button>
+
+          <button
+            type="button"
+            data-submode="oldest"
+            class="submode-btn p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-left transition-all text-slate-700 dark:text-slate-200"
+          >
+            <div class="text-[11px] font-bold flex items-center gap-1">
+              <span>🏛️</span>
+              <span>Oldest</span>
+            </div>
+            <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5" id="submode-oldest-year">
+              {oldestOrder?.signing_date ? oldestOrder.signing_date.slice(0, 4) : 'Earliest'}
+            </div>
+          </button>
+
+          <button
+            type="button"
+            data-submode="random"
+            class="submode-btn p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-left transition-all text-slate-700 dark:text-slate-200"
+          >
+            <div class="text-[11px] font-bold flex items-center gap-1">
+              <span>🎲</span>
+              <span>Surprise</span>
+            </div>
+            <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Random On Date
+            </div>
+          </button>
+
+          <button
+            type="button"
+            data-submode="summary"
+            class="submode-btn p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60 text-left transition-all text-slate-700 dark:text-slate-200"
+          >
+            <div class="text-[11px] font-bold flex items-center gap-1">
+              <span>📜</span>
+              <span>Day Digest</span>
+            </div>
+            <div class="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+              Date Summary
+            </div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Mode 2: Milestone Selectors -->
+      <div id="submode-milestones-controls" class="hidden space-y-2">
+        <div class="text-xs text-slate-500 dark:text-slate-400">
+          Pick a landmark presidential decree from American history:
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          {milestoneOrders.map((m, idx) => (
+            <button
+              type="button"
+              data-milestone-index={idx}
+              class={`milestone-pick-btn p-2 rounded-xl border text-left transition-all text-xs ${idx === 0 ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-400 dark:border-blue-700 font-semibold' : 'border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800/60'}`}
+            >
+              <div class="text-[10px] font-bold text-amber-600 dark:text-amber-400 truncate">
+                {m.badge}
+              </div>
+              <div class="text-[11px] text-slate-800 dark:text-slate-200 truncate mt-0.5">
+                {m.shortLabel}
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <!-- Mode 3: Roulette Controls -->
+      <div id="submode-roulette-controls" class="hidden flex items-center justify-between p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20">
+        <div>
+          <div class="text-xs font-bold text-amber-800 dark:text-amber-300">
+            🎲 Random Archive Discovery
+          </div>
+          <p class="text-[11px] text-slate-600 dark:text-slate-400">
+            Spin the wheel across all 10,845 orders from George Washington to present.
+          </p>
+        </div>
+        <button
+          type="button"
+          id="roulette-spin-btn"
+          class="px-3.5 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs flex items-center gap-1.5 transition-all shadow-xs"
+        >
+          <span class="animate-spin-once" id="spin-dice-icon">🎲</span>
+          <span>Spin Again</span>
+        </button>
+      </div>
+
+      <!-- Live Order Preview Card -->
+      <div id="preview-card-container" class="mt-4 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-850/80 transition-all relative">
+        <div class="flex items-center justify-between gap-2 mb-2">
+          <span id="preview-category-badge" class="px-2 py-0.5 rounded-full font-mono text-[11px] font-bold bg-amber-400/15 text-amber-700 dark:text-amber-300 border border-amber-400/30">
+            ⚡ Latest on {currentMonthName} {dayNumber}
+          </span>
+          <span id="preview-score-badge" class="text-[10px] font-medium px-2 py-0.5 rounded-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300">
+            {latestOrder?.sentiment_valence || 'Order'}
+          </span>
+        </div>
+
+        <h3 id="preview-title" class="font-serif font-bold text-base sm:text-lg text-slate-900 dark:text-white leading-snug mb-2">
+          {latestOrder?.title || 'Executive Order'}
+        </h3>
+
+        <p id="preview-snippet" class="text-xs text-slate-600 dark:text-slate-300 line-clamp-3 leading-relaxed mb-4">
+          {latestOrder?.snippet || 'Historical decree recorded in presidential archives.'}
+        </p>
+
+        <div class="pt-3 border-t border-slate-200 dark:border-slate-700/80 flex items-center justify-between text-xs">
+          <div class="flex items-center gap-2">
+            <img 
+              id="preview-portrait"
+              src={`/portraits/${resolvePortraitSlug(latestOrder?.president_slug || '')}.jpg`} 
+              alt="" 
+              class="w-6 h-6 rounded-full object-cover border border-slate-300 dark:border-slate-700" 
+              onerror="this.style.display='none'"
+            />
+            <div class="text-xs">
+              <span id="preview-president" class="font-medium text-slate-800 dark:text-slate-200">{latestOrder?.president_name || 'President'}</span>
+              <span id="preview-date" class="text-slate-400 ml-1">({latestOrder?.signing_date || 'Historic'})</span>
+            </div>
+          </div>
+
+          <a 
+            id="preview-view-link"
+            href={latestOrder ? `/orders/${latestOrder.id}` : '#'} 
+            class="text-amber-600 dark:text-amber-400 hover:underline font-semibold text-xs flex items-center gap-1"
+          >
+            <span>View Full Order</span>
+            <span>&rarr;</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Generated Share Message Output Box -->
+      <div class="mt-4">
+        <label for="share-text-output" class="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+          Share Text Preview:
+        </label>
+        <div class="relative">
+          <textarea
+            id="share-text-output"
+            rows="4"
+            readonly
+            class="w-full text-xs font-mono p-3 rounded-2xl bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none resize-none"
+          ></textarea>
+        </div>
+      </div>
+
+      <!-- Action Buttons Row -->
+      <div class="mt-4 pt-3 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3">
+        
+        <!-- Native Share / Web Share API -->
+        <button
+          type="button"
+          id="modal-native-share-btn"
+          class="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs flex items-center justify-center gap-2 shadow-xs transition-colors"
+        >
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path>
+          </svg>
+          <span id="modal-native-share-label">Share Order</span>
+        </button>
+
+        <!-- Social & Clipboard Fast Triggers -->
+        <div class="flex items-center gap-1.5 w-full sm:w-auto justify-end">
+          
+          <!-- Copy Post Text -->
+          <button
+            type="button"
+            id="modal-copy-text-btn"
+            title="Copy formatted post to clipboard"
+            class="px-2.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-medium text-slate-700 dark:text-slate-200 transition-colors flex items-center gap-1.5"
+          >
+            <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"></path></svg>
+            <span class="hidden sm:inline">Copy Post</span>
+          </button>
+
+          <!-- Copy Link -->
+          <button
+            type="button"
+            id="modal-copy-link-btn"
+            title="Copy clean order link"
+            class="px-2.5 py-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-xs font-medium text-slate-700 dark:text-slate-200 transition-colors flex items-center gap-1.5"
+          >
+            <svg class="w-3.5 h-3.5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>
+            <span class="hidden sm:inline">Copy Link</span>
+          </button>
+
+          <!-- Twitter / X -->
+          <a
+            id="modal-x-link"
+            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Share on X"
+            class="p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-colors"
+          >
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 22.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+          </a>
+
+          <!-- Bluesky -->
+          <a
+            id="modal-bsky-link"
+            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Share on Bluesky"
+            class="p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-[#0285FF] transition-colors"
+          >
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 568 501"><path d="M123.121 33.664C188.241 82.553 258.281 181.68 284 234.873c25.719-53.192 95.759-152.32 160.879-201.21C491.866-1.611 568-28.906 568 57.947c0 17.346-9.945 145.713-15.778 166.555-20.275 72.453-94.155 90.933-159.875 79.748C507.222 323.8 536.444 388.56 473.333 453.32c-119.25 122.392-162.226-41.274-189.333-87.893-27.107 46.619-70.083 210.285-189.333 87.893C31.556 388.56 60.778 323.8 175.653 304.25c-65.72 11.185-139.6-7.295-159.875-79.748C9.945 203.66 0 75.293 0 57.947 0-28.906 76.135-1.612 123.121 33.664Z"/></svg>
+          </a>
+
+          <!-- LinkedIn -->
+          <a
+            id="modal-linkedin-link"
+            href="#"
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Share on LinkedIn"
+            class="p-2 rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-[#0077b5] transition-colors"
+          >
+            <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z"/></svg>
+          </a>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notification for modal actions -->
+    <div 
+      id="quick-share-toast" 
+      class="pointer-events-none fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-xs font-semibold px-4 py-2.5 rounded-full shadow-lg border border-slate-700 transition-opacity duration-200 opacity-0"
+    >
+      <span id="quick-share-toast-msg">Copied to clipboard!</span>
+    </div>
+
+  </div>
+</div>
+
+<!-- Seed Data Script for Client Interactivity -->
+<script is:inline id="quick-share-seed-data" type="application/json" set:html={initialDataJson}></script>
+
+<script is:inline>
+  const modal = document.getElementById('quick-share-modal');
+  const closeBtn = document.getElementById('quick-share-close-btn');
+  const modalDateBadge = document.getElementById('modal-date-badge');
+  const tabBtns = document.querySelectorAll('.quick-tab-btn');
+  const submodeBtns = document.querySelectorAll('.submode-btn');
+  const submodeTodayControls = document.getElementById('submode-today-controls');
+  const submodeMilestonesControls = document.getElementById('submode-milestones-controls');
+  const submodeRouletteControls = document.getElementById('submode-roulette-controls');
+  const submodeLatestYear = document.getElementById('submode-latest-year');
+  const submodeOldestYear = document.getElementById('submode-oldest-year');
+  const previewCard = document.getElementById('preview-card-container');
+  const categoryBadge = document.getElementById('preview-category-badge');
+  const scoreBadge = document.getElementById('preview-score-badge');
+  const previewTitle = document.getElementById('preview-title');
+  const previewSnippet = document.getElementById('preview-snippet');
+  const previewPortrait = document.getElementById('preview-portrait');
+  const previewPresident = document.getElementById('preview-president');
+  const previewDate = document.getElementById('preview-date');
+  const previewViewLink = document.getElementById('preview-view-link');
+  const shareTextOutput = document.getElementById('share-text-output');
+  const nativeShareBtn = document.getElementById('modal-native-share-btn');
+  const copyTextBtn = document.getElementById('modal-copy-text-btn');
+  const copyLinkBtn = document.getElementById('modal-copy-link-btn');
+  const xLink = document.getElementById('modal-x-link');
+  const bskyLink = document.getElementById('modal-bsky-link');
+  const linkedinLink = document.getElementById('modal-linkedin-link');
+  const rouletteSpinBtn = document.getElementById('roulette-spin-btn');
+  const spinDiceIcon = document.getElementById('spin-dice-icon');
+  const milestoneBtns = document.querySelectorAll('.milestone-pick-btn');
+  const toast = document.getElementById('quick-share-toast');
+  const toastMsg = document.getElementById('quick-share-toast-msg');
+
+  // Read initial seed data
+  let seedData = { todayOrders: [], milestones: [], rouletteSeed: [], dateInfo: {} };
+  try {
+    const rawEl = document.getElementById('quick-share-seed-data');
+    if (rawEl && rawEl.textContent) {
+      seedData = JSON.parse(rawEl.textContent);
+    }
+  } catch (e) {
+    console.error('Failed to parse quick-share seed data', e);
+  }
+
+  let activeTab = 'today'; // 'today' | 'milestones' | 'roulette'
+  let activeSubmode = 'latest'; // 'latest' | 'oldest' | 'random' | 'summary'
+  let activeMilestoneIndex = 0;
+  let customOrder = null; // Specific order picked from page
+  let activeDateOrders = seedData.todayOrders || [];
+  let currentDate = seedData.dateInfo || {};
+  let fullSearchData = null;
+
+  function showToast(msg) {
+    if (!toast) return;
+    if (toastMsg) toastMsg.textContent = msg;
+    toast.classList.remove('opacity-0');
+    toast.classList.add('opacity-100');
+    setTimeout(() => {
+      toast.classList.remove('opacity-100');
+      toast.classList.add('opacity-0');
+    }, 2200);
+  }
+
+  function getBaseSiteUrl() {
+    return window.location.origin || 'https://executiveordersarchive.org';
+  }
+
+  function resolvePortrait(slug) {
+    if (window.resolvePortraitSlug) return window.resolvePortraitSlug(slug);
+    return slug || 'default';
+  }
+
+  function formatDate(dStr) {
+    if (window.formatSigningDate) return window.formatSigningDate(dStr);
+    return dStr || 'Historic';
+  }
+
+  // Generate rich share text & tweet text
+  function generateSharePayload() {
+    const siteUrl = getBaseSiteUrl();
+
+    if (activeTab === 'today') {
+      if (activeSubmode === 'summary') {
+        const count = activeDateOrders.length;
+        const oldest = activeDateOrders.length > 0 ? activeDateOrders[activeDateOrders.length - 1] : null;
+        const latest = activeDateOrders.length > 0 ? activeDateOrders[0] : null;
+        const oldestYear = oldest?.signing_date ? oldest.signing_date.slice(0, 4) : '';
+        const latestYear = latest?.signing_date ? latest.signing_date.slice(0, 4) : '';
+
+        const text = [
+          `📜 On This Day in Presidential History (${currentDate.monthName} ${currentDate.dayInt}):`,
+          count > 0 ? `${count} Executive Order${count === 1 ? '' : 's'} signed across history${oldestYear && latestYear ? ` (${oldestYear} – ${latestYear})` : ''}.` : `Exploring executive actions signed on this calendar date.`,
+          oldest ? `• Oldest: "${oldest.title.slice(0, 60)}" (${oldest.president_name}, ${oldestYear})` : '',
+          latest ? `• Latest: "${latest.title.slice(0, 60)}" (${latest.president_name}, ${latestYear})` : '',
+          '',
+          `Explore all decrees on Executive Orders Archive:`,
+          `${siteUrl}/#this-day-section`
+        ].filter(Boolean).join('\n');
+
+        const tweet = `On This Day in Presidential History (${currentDate.monthName} ${currentDate.dayInt}): ${count} historic Executive Orders spanning ${oldestYear}–${latestYear}.\n\nExplore:`;
+
+        return {
+          title: `This Day in Presidential History (${currentDate.monthName} ${currentDate.dayInt})`,
+          text,
+          tweetText: tweet,
+          url: `${siteUrl}/#this-day-section`
+        };
+      }
+
+      const order = getActiveTodayOrder();
+      if (!order) {
+        return {
+          title: `Executive Orders Archive`,
+          text: `Explore presidential executive orders on Executive Orders Archive:\n${siteUrl}`,
+          tweetText: `Explore presidential executive orders on Executive Orders Archive`,
+          url: siteUrl
+        };
+      }
+
+      const year = order.signing_date ? order.signing_date.slice(0, 4) : '';
+      const eoLabel = order.eo_number ? `Executive Order ${order.eo_number}` : 'Presidential Order';
+      const valence = order.sentiment_valence || order.val || 'Order';
+      const orderUrl = `${siteUrl}/orders/${order.id}`;
+
+      let prefix = `⚡ Latest on This Day (${currentDate.monthName} ${currentDate.dayInt}):`;
+      if (customOrder) prefix = `📅 Executive Order on This Day (${currentDate.monthName} ${currentDate.dayInt}):`;
+      else if (activeSubmode === 'oldest') prefix = `🏛️ Earliest on This Day (${currentDate.monthName} ${currentDate.dayInt}):`;
+      else if (activeSubmode === 'random') prefix = `🎲 On This Day in Presidential History (${currentDate.monthName} ${currentDate.dayInt}):`;
+
+      const text = [
+        prefix,
+        `${eoLabel}: "${order.title}"`,
+        `Signed by ${order.president_name || order.pres}${year ? ` (${year})` : ''}`,
+        '',
+        `⚖️ Constitutional Alignment: ${valence}`,
+        `🏛️ Read order & constitutional analysis:`,
+        orderUrl
+      ].join('\n');
+
+      const shortTitle = order.title.length > 55 ? order.title.substring(0, 52).trim() + '...' : order.title;
+      const tweetText = `${prefix}\n${order.eo_number ? `EO ${order.eo_number}` : 'Order'}: "${shortTitle}" (${order.president_name || order.pres}, ${year})\n⚖️ ${valence}`;
+
+      return {
+        title: `${eoLabel}: ${order.title}`,
+        text,
+        tweetText,
+        url: orderUrl
+      };
+    }
+
+    if (activeTab === 'milestones') {
+      const milestone = seedData.milestones?.[activeMilestoneIndex];
+      const order = milestone?.order;
+      if (!order) return { title: 'Milestone', text: '', tweetText: '', url: siteUrl };
+
+      const orderUrl = `${siteUrl}/orders/${order.id}`;
+      const year = order.signing_date ? order.signing_date.slice(0, 4) : '';
+      const text = [
+        `${milestone.badge}: ${milestone.shortLabel}`,
+        `"${order.title}"`,
+        `Signed by ${order.president_name}${year ? ` (${year})` : ''}`,
+        `• ${milestone.description}`,
+        '',
+        `Explore the full text & constitutional scoring on Executive Orders Archive:`,
+        orderUrl
+      ].join('\n');
+
+      const tweetText = `${milestone.badge}: "${order.title.slice(0, 60)}" (${order.president_name}, ${year})\n${milestone.description}`;
+
+      return {
+        title: `${milestone.shortLabel} — Executive Orders Archive`,
+        text,
+        tweetText,
+        url: orderUrl
+      };
+    }
+
+    // Archive Roulette
+    const order = customOrder || seedData.rouletteSeed?.[0];
+    if (!order) return { title: 'Executive Order', text: '', tweetText: '', url: siteUrl };
+
+    const orderUrl = `${siteUrl}/orders/${order.id}`;
+    const year = order.signing_date ? order.signing_date.slice(0, 4) : '';
+    const eoLabel = order.eo_number ? `EO ${order.eo_number}` : 'Order';
+    const valence = order.sentiment_valence || order.val || 'Order';
+
+    const text = [
+      `🎲 Executive Orders Roulette (Archive Curiosity):`,
+      `${eoLabel}: "${order.title}"`,
+      `Signed by ${order.president_name || order.pres}${year ? ` (${year})` : ''}`,
+      '',
+      `⚖️ Constitutional Alignment: ${valence}`,
+      `Explore this executive action:`,
+      orderUrl
+    ].join('\n');
+
+    const tweetText = `🎲 Archive Curiosity: ${eoLabel} "${order.title.slice(0, 55)}" (${order.president_name || order.pres}, ${year})\n⚖️ ${valence}`;
+
+    return {
+      title: `${eoLabel}: ${order.title}`,
+      text,
+      tweetText,
+      url: orderUrl
+    };
+  }
+
+  function getActiveTodayOrder() {
+    if (customOrder && activeTab === 'today') return customOrder;
+    if (!activeDateOrders || activeDateOrders.length === 0) return null;
+    if (activeSubmode === 'latest') return activeDateOrders[0];
+    if (activeSubmode === 'oldest') return activeDateOrders[activeDateOrders.length - 1];
+    if (activeSubmode === 'random') {
+      if (!window._randomTodayOrder || !activeDateOrders.includes(window._randomTodayOrder)) {
+        window._randomTodayOrder = activeDateOrders[Math.floor(Math.random() * activeDateOrders.length)];
+      }
+      return window._randomTodayOrder;
+    }
+    return activeDateOrders[0];
+  }
+
+  // Update Preview UI
+  function updateModalUI() {
+    const payload = generateSharePayload();
+    if (shareTextOutput) {
+      shareTextOutput.value = payload.text;
+    }
+
+    // Social URLs
+    const encUrl = encodeURIComponent(payload.url);
+    const encText = encodeURIComponent(payload.tweetText);
+    const encBsky = encodeURIComponent(`${payload.tweetText}\n${payload.url}`);
+
+    if (xLink) xLink.href = `https://twitter.com/intent/tweet?url=${encUrl}&text=${encText}`;
+    if (bskyLink) bskyLink.href = `https://bsky.app/intent/compose?text=${encBsky}`;
+    if (linkedinLink) linkedinLink.href = `https://www.linkedin.com/sharing/share-offsite/?url=${encUrl}`;
+
+    // Update Card UI
+    if (activeTab === 'today') {
+      if (activeSubmode === 'summary') {
+        const count = activeDateOrders.length;
+        const oldest = activeDateOrders.length > 0 ? activeDateOrders[activeDateOrders.length - 1] : null;
+        const latest = activeDateOrders.length > 0 ? activeDateOrders[0] : null;
+
+        if (categoryBadge) categoryBadge.textContent = `📜 Historic Day Digest`;
+        if (scoreBadge) scoreBadge.textContent = `${count} Orders Found`;
+        if (previewTitle) previewTitle.textContent = `Presidential Executive Actions on ${currentDate.monthName} ${currentDate.dayInt}`;
+        if (previewSnippet) {
+          previewSnippet.textContent = count > 0 ? 
+            `From ${oldest?.president_name || 'Early Presidents'} in ${oldest?.signing_date?.slice(0, 4) || 'early history'} to ${latest?.president_name || 'Modern Presidents'} in ${latest?.signing_date?.slice(0, 4) || 'recent times'}, discover every decree signed on this day.` :
+            `No executive orders recorded on this calendar date. Try another date in the date picker!`;
+        }
+        if (previewPortrait) previewPortrait.src = `/portraits/george-washington.jpg`;
+        if (previewPresident) previewPresident.textContent = `United States Presidents`;
+        if (previewDate) previewDate.textContent = `(${currentDate.monthName} ${currentDate.dayInt})`;
+        if (previewViewLink) {
+          previewViewLink.href = `/#this-day-section`;
+          previewViewLink.innerHTML = `<span>Browse Section</span> <span>&rarr;</span>`;
+        }
+        return;
+      }
+
+      const order = getActiveTodayOrder();
+      const badgeText = customOrder ?
+        `📅 ${order?.signing_date ? order.signing_date.slice(0, 4) : 'Selected'} Order` :
+        (activeSubmode === 'latest' ? `⚡ Latest on ${currentDate.monthName} ${currentDate.dayInt}` : activeSubmode === 'oldest' ? `🏛️ Earliest on ${currentDate.monthName} ${currentDate.dayInt}` : `🎲 Surprise Pick on ${currentDate.monthName} ${currentDate.dayInt}`);
+      renderOrderInPreview(order, badgeText);
+      return;
+    }
+
+    if (activeTab === 'milestones') {
+      const milestone = seedData.milestones?.[activeMilestoneIndex];
+      if (milestone && milestone.order) {
+        renderOrderInPreview(milestone.order, milestone.badge, milestone.description);
+      }
+      return;
+    }
+
+    if (activeTab === 'roulette') {
+      const order = customOrder || seedData.rouletteSeed?.[0];
+      renderOrderInPreview(order, '🎲 Archive Roulette Pick');
+      return;
+    }
+  }
+
+  function renderOrderInPreview(order, badgeText, customDesc) {
+    if (!order) {
+      if (categoryBadge) categoryBadge.textContent = badgeText || 'Executive Order';
+      if (scoreBadge) scoreBadge.textContent = 'None';
+      if (previewTitle) previewTitle.textContent = 'No Order Available';
+      if (previewSnippet) previewSnippet.textContent = 'No orders available for this selection.';
+      return;
+    }
+
+    const year = order.signing_date ? order.signing_date.slice(0, 4) : '';
+    const num = order.eo_number !== undefined ? order.eo_number : (order.num !== undefined ? order.num : null);
+    const presName = order.president_name || order.pres || 'President';
+    const presSlug = order.president_slug || order.slug || '';
+    const valence = order.sentiment_valence || order.val || 'Executive Order';
+
+    if (categoryBadge) categoryBadge.textContent = badgeText || 'Executive Order';
+    if (scoreBadge) {
+      scoreBadge.textContent = `${num ? `EO ${num} • ` : ''}${valence}`;
+      let colorClass = "text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700";
+      if (valence.includes('Fidelity') || valence.includes('Positive')) {
+        colorClass = "text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40";
+      } else if (valence.includes('Friction') || valence.includes('Urgent') || valence.includes('Negative')) {
+        colorClass = "text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40";
+      }
+      scoreBadge.className = `text-[10px] font-medium px-2 py-0.5 rounded-full border ${colorClass}`;
+    }
+
+    if (previewTitle) previewTitle.textContent = order.title || 'Executive Order';
+    if (previewSnippet) previewSnippet.textContent = customDesc || order.snippet || order.snip || 'Plain-English summary and constitutional scoring available on Executive Orders Archive.';
+    if (previewPortrait) {
+      previewPortrait.style.display = '';
+      previewPortrait.src = `/portraits/${resolvePortrait(presSlug)}.jpg`;
+    }
+    if (previewPresident) previewPresident.textContent = presName;
+    if (previewDate) previewDate.textContent = `(${formatDate(order.signing_date || order.date)})`;
+    if (previewViewLink) {
+      previewViewLink.href = `/orders/${order.id}`;
+      previewViewLink.innerHTML = `<span>View Full Order</span> <span>&rarr;</span>`;
+    }
+  }
+
+  // Open modal
+  function openModal(tab = 'today', submode = 'latest', custom = null) {
+    activeTab = tab;
+    activeSubmode = submode;
+    customOrder = custom;
+
+    // Switch tab buttons
+    tabBtns.forEach(btn => {
+      const match = btn.getAttribute('data-quick-tab') === tab;
+      btn.classList.toggle('active', match);
+      btn.classList.toggle('bg-blue-50', match);
+      btn.classList.toggle('dark:bg-blue-950/60', match);
+      btn.classList.toggle('text-blue-700', match);
+      btn.classList.toggle('dark:text-blue-300', match);
+      btn.classList.toggle('border-blue-300', match);
+      btn.classList.toggle('dark:border-blue-800', match);
+      btn.classList.toggle('border-transparent', !match);
+    });
+
+    // Toggle controls
+    submodeTodayControls?.classList.toggle('hidden', tab !== 'today');
+    submodeMilestonesControls?.classList.toggle('hidden', tab !== 'milestones');
+    submodeRouletteControls?.classList.toggle('hidden', tab !== 'roulette');
+
+    // Switch submodes
+    submodeBtns.forEach(btn => {
+      const match = !customOrder && btn.getAttribute('data-submode') === submode;
+      btn.classList.toggle('active', match);
+      btn.classList.toggle('bg-amber-50/80', match);
+      btn.classList.toggle('dark:bg-amber-950/40', match);
+      btn.classList.toggle('border-amber-300', match);
+      btn.classList.toggle('dark:border-amber-800', match);
+      btn.classList.toggle('text-amber-900', match);
+      btn.classList.toggle('dark:text-amber-200', match);
+      btn.classList.toggle('border-slate-200', !match);
+      btn.classList.toggle('dark:border-slate-800', !match);
+    });
+
+    if (tab === 'roulette' && !customOrder) {
+      rollRoulette();
+    }
+
+    updateModalUI();
+    modal?.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    modal?.classList.add('hidden');
+    document.body.style.overflow = '';
+  }
+
+  // Roll archive roulette
+  async function rollRoulette() {
+    spinDiceIcon?.classList.add('animate-spin');
+    setTimeout(() => spinDiceIcon?.classList.remove('animate-spin'), 600);
+
+    // Try picking from search index if available
+    if (fullSearchData && fullSearchData.length > 0) {
+      const pick = fullSearchData[Math.floor(Math.random() * fullSearchData.length)];
+      customOrder = {
+        id: pick.id,
+        eo_number: pick.num,
+        title: pick.title,
+        president_name: pick.pres,
+        president_slug: pick.slug,
+        signing_date: pick.date,
+        sentiment_valence: pick.val,
+        sentiment_compound: pick.comp,
+        snippet: pick.snip || ''
+      };
+    } else if (seedData.rouletteSeed && seedData.rouletteSeed.length > 0) {
+      const pick = seedData.rouletteSeed[Math.floor(Math.random() * seedData.rouletteSeed.length)];
+      customOrder = pick;
+      // Preload search index in background for subsequent rolls
+      fetch('/search_index.json')
+        .then(r => r.json())
+        .then(d => { fullSearchData = d; })
+        .catch(() => {});
+    }
+
+    updateModalUI();
+  }
+
+  // Update date & sync orders
+  function updateDateContext(dateInfo, orders) {
+    currentDate = dateInfo;
+    activeDateOrders = orders || [];
+    if (modalDateBadge) {
+      modalDateBadge.textContent = `${dateInfo.monthName} ${dateInfo.dayInt}`;
+    }
+
+    const latest = activeDateOrders.length > 0 ? activeDateOrders[0] : null;
+    const oldest = activeDateOrders.length > 0 ? activeDateOrders[activeDateOrders.length - 1] : null;
+
+    if (submodeLatestYear) {
+      submodeLatestYear.textContent = latest?.signing_date ? latest.signing_date.slice(0, 4) : 'Recent';
+    }
+    if (submodeOldestYear) {
+      submodeOldestYear.textContent = oldest?.signing_date ? oldest.signing_date.slice(0, 4) : 'Earliest';
+    }
+
+    window._randomTodayOrder = null;
+    if (activeTab === 'today') {
+      updateModalUI();
+    }
+  }
+
+  // Event Listeners
+  closeBtn?.addEventListener('click', closeModal);
+
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) closeModal();
+  });
+
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !modal?.classList.contains('hidden')) {
+      closeModal();
+    }
+  });
+
+  tabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      customOrder = null;
+      const tab = btn.getAttribute('data-quick-tab');
+      if (tab) openModal(tab, tab === 'today' ? activeSubmode : 'latest');
+    });
+  });
+
+  submodeBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      customOrder = null;
+      const sub = btn.getAttribute('data-submode');
+      if (sub === 'random') {
+        // Pick new random on date
+        if (activeDateOrders && activeDateOrders.length > 0) {
+          window._randomTodayOrder = activeDateOrders[Math.floor(Math.random() * activeDateOrders.length)];
+        }
+      }
+      openModal('today', sub);
+    });
+  });
+
+  milestoneBtns.forEach((btn, idx) => {
+    btn.addEventListener('click', () => {
+      activeMilestoneIndex = idx;
+      milestoneBtns.forEach((b, i) => {
+        b.classList.toggle('active', i === idx);
+        b.classList.toggle('bg-blue-50/80', i === idx);
+        b.classList.toggle('dark:bg-blue-950/40', i === idx);
+        b.classList.toggle('border-blue-400', i === idx);
+        b.classList.toggle('dark:border-blue-700', i === idx);
+        b.classList.toggle('font-semibold', i === idx);
+      });
+      updateModalUI();
+    });
+  });
+
+  rouletteSpinBtn?.addEventListener('click', rollRoulette);
+
+  // Native share / rich copy
+  nativeShareBtn?.addEventListener('click', async () => {
+    const payload = generateSharePayload();
+    if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+      try {
+        await navigator.share({
+          title: payload.title,
+          text: payload.text,
+          url: payload.url
+        });
+        return;
+      } catch (err) {
+        if (err?.name === 'AbortError') return;
+      }
+    }
+
+    // Fallback: copy to clipboard
+    try {
+      await navigator.clipboard.writeText(`${payload.text}\n\n${payload.url}`);
+      showToast('Summary and link copied to clipboard!');
+    } catch (e) {
+      showToast('Failed to copy');
+    }
+  });
+
+  // Copy formatted text
+  copyTextBtn?.addEventListener('click', async () => {
+    const payload = generateSharePayload();
+    try {
+      await navigator.clipboard.writeText(payload.text);
+      showToast('Formatted post copied to clipboard!');
+    } catch (e) {
+      showToast('Failed to copy');
+    }
+  });
+
+  // Copy clean link
+  copyLinkBtn?.addEventListener('click', async () => {
+    const payload = generateSharePayload();
+    try {
+      await navigator.clipboard.writeText(payload.url);
+      showToast('Clean link copied to clipboard!');
+    } catch (e) {
+      showToast('Failed to copy');
+    }
+  });
+
+  // Global listeners for buttons on the page
+  document.addEventListener('click', (e) => {
+    // Open trigger without specific type
+    const trigger = e.target.closest('[data-open-quick-share]');
+    if (trigger) {
+      e.preventDefault();
+      openModal('today', 'latest');
+      return;
+    }
+
+    // Quick share type trigger
+    const typeBtn = e.target.closest('[data-quick-share-type]');
+    if (typeBtn) {
+      e.preventDefault();
+      const type = typeBtn.getAttribute('data-quick-share-type');
+      if (type === 'latest') openModal('today', 'latest');
+      else if (type === 'oldest') openModal('today', 'oldest');
+      else if (type === 'random-date') {
+        if (activeDateOrders && activeDateOrders.length > 0) {
+          window._randomTodayOrder = activeDateOrders[Math.floor(Math.random() * activeDateOrders.length)];
+        }
+        openModal('today', 'random');
+      }
+      else if (type === 'summary') openModal('today', 'summary');
+      else if (type === 'milestones') openModal('milestones', 'latest');
+      else if (type === 'roulette') openModal('roulette', 'latest');
+      else openModal('today', 'latest');
+      return;
+    }
+
+    // Order card share trigger
+    const cardBtn = e.target.closest('[data-card-share-btn]');
+    if (cardBtn) {
+      e.preventDefault();
+      e.stopPropagation();
+      const orderId = cardBtn.getAttribute('data-order-id');
+      const orderMeta = cardBtn.getAttribute('data-order-meta');
+      let order = null;
+      if (orderMeta) {
+        try { order = JSON.parse(orderMeta); } catch (err) {}
+      }
+      if (!order && activeDateOrders) {
+        order = activeDateOrders.find(o => o.id === orderId);
+      }
+      if (order) {
+        openModal('today', 'latest', order);
+      } else {
+        openModal('today', 'latest');
+      }
+      return;
+    }
+  });
+
+  // Listen for custom date change events from ThisDayInHistory
+  document.addEventListener('eo-this-day-updated', (e) => {
+    const detail = e.detail;
+    if (detail && detail.dateInfo && detail.orders) {
+      updateDateContext(detail.dateInfo, detail.orders);
+    }
+  });
+
+  // Expose global controller
+  window.EOQuickShare = {
+    open: openModal,
+    close: closeModal,
+    setTodayOrders: updateDateContext
+  };
+</script>

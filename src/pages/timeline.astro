@@ -125,7 +125,7 @@ const breadcrumbJsonLd = {
       }
 
       const rawDate = order.date || order.signing_date;
-      const formattedDate = rawDate ? new Date(rawDate).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Undated";
+      const formattedDate = window.formatSigningDate ? window.formatSigningDate(rawDate) : (rawDate || "Undated");
       const num = order.num !== undefined ? order.num : order.eo_number;
       const eoBadge = num ?
         `<span class="font-mono text-xs font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-900">EO ${num}</span>` :
@@ -199,7 +199,7 @@ const breadcrumbJsonLd = {
       }
 
       emptyState.classList.add('hidden');
-      const sorted = [...matches].sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+      const sorted = [...matches].sort((a, b) => (b.date || '').localeCompare(a.date || ''));
       const capped = sorted.slice(0, RENDER_CAP);
       grid.innerHTML = capped.map(renderCard).join('');
 

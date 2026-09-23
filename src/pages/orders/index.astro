@@ -8,7 +8,7 @@ const totalOrders = orders.length;
 const initialOrders = orders.slice(0, 48);
 
 const signingYears = orders
-  .map(o => o.signing_date ? new Date(o.signing_date).getFullYear() : null)
+  .map(o => o.signing_date ? parseInt(o.signing_date.slice(0, 4), 10) : null)
   .filter((y): y is number => y !== null && !Number.isNaN(y));
 const minYear = Math.min(...signingYears);
 const maxYear = Math.max(...signingYears);
@@ -220,10 +220,10 @@ const TOPIC_OPTIONS = [
       const sorted = [...list];
       const getComp = o => (o.comp !== undefined ? o.comp : (o.sentiment_compound || 0));
       const getWords = o => (o.words !== undefined ? o.words : (o.word_count || 0));
-      const getDate = o => new Date(o.date || o.signing_date || 0).getTime();
+      const getDateStr = o => (o.date || o.signing_date || '');
       switch (sortMode) {
         case 'oldest':
-          sorted.sort((a, b) => getDate(a) - getDate(b));
+          sorted.sort((a, b) => getDateStr(a).localeCompare(getDateStr(b)));
           break;
         case 'longest':
           sorted.sort((a, b) => getWords(b) - getWords(a));
@@ -239,7 +239,7 @@ const TOPIC_OPTIONS = [
           break;
         case 'newest':
         default:
-          sorted.sort((a, b) => getDate(b) - getDate(a));
+          sorted.sort((a, b) => getDateStr(b).localeCompare(getDateStr(a)));
       }
       return sorted;
     }
@@ -292,11 +292,7 @@ const TOPIC_OPTIONS = [
       }
 
       const rawDate = order.date || order.signing_date;
-      const formattedDate = rawDate ? new Date(rawDate).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric"
-      }) : "Undated";
+      const formattedDate = window.formatSigningDate ? window.formatSigningDate(rawDate) : (rawDate || "Undated");
 
       const num = order.num !== undefined ? order.num : order.eo_number;
       const eoBadge = num ? 
@@ -310,6 +306,22 @@ const TOPIC_OPTIONS = [
       const toneTag = order.tag || order.tone_tag;
       const snippet = order.snip || order.snippet;
 
+      const metaObj = {
+        id: order.id,
+        num: num,
+        title: order.title,
+        pres: presName,
+        slug: slug,
+        date: rawDate,
+        words: order.words || order.word_count || 0,
+        time: readTime,
+        val: val,
+        comp: comp,
+        tag: toneTag,
+        snip: snippet
+      };
+      const compactMeta = JSON.stringify(metaObj).replace(/'/g, "&apos;");
+
       return `
         <article class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-200 flex flex-col justify-between">
           <div>
@@ -322,7 +334,7 @@ const TOPIC_OPTIONS = [
                 <span class="text-[11px] font-medium px-2 py-0.5 rounded-full border ${sentimentBadge.bg} ${sentimentBadge.text} ${sentimentBadge.border}">
                   ${sentimentBadge.label}
                 </span>
-                <button type="button" data-bookmark-btn="${order.id}" aria-label="Save this order" aria-pressed="false" class="p-1 rounded-md text-slate-400 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <button type="button" data-bookmark-btn="${order.id}" data-order-meta='${compactMeta}' aria-label="Save this order" aria-pressed="false" class="p-1 rounded-md text-slate-400 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path></svg>
                 </button>
               </div>
@@ -341,7 +353,7 @@ const TOPIC_OPTIONS = [
           </div>
           <div class="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
             <div class="flex items-center gap-1.5 font-medium">
-              <img src="/portraits/${slug}.jpg" alt="" class="w-5 h-5 rounded-full object-cover border border-slate-300 dark:border-slate-600" onerror="this.style.display='none'" />
+              <img src="/portraits/${slug}.jpg" alt="" class="w-5 h-5 rounded-full object-cover border border-slate-300 dark:border-slate-600" onerror="this.style.display='none'\" />
               <span class="text-slate-700 dark:text-slate-300 truncate max-w-[140px] sm:max-w-none">${presName}</span>
             </div>
             <div class="flex items-center gap-2 font-mono text-[11px]">
@@ -384,6 +396,18 @@ const TOPIC_OPTIONS = [
       try {
         const res = await fetch('/search_index.json');
         allOrders = await res.json();
+        for (let i = 0; i < allOrders.length; i++) {
+          const o = allOrders[i];
+          const pres = o.pres || o.president_name || '';
+          const num = o.num !== undefined ? String(o.num) : String(o.eo_number || '');
+          const snip = o.snip || o.snippet || '';
+          const tag = o.tag || o.tone_tag || '';
+          const kw = o.kw || '';
+          o._hay = `${o.title || ''} ${num} ${snip} ${tag} ${kw}`.toLowerCase();
+          const rawDate = o.date || o.signing_date || '';
+          o._year = rawDate.length >= 4 ? parseInt(rawDate.slice(0, 4), 10) : null;
+          o._presLower = pres.toLowerCase();
+        }
       } catch (e) {
         console.error('Failed to load dataset:', e);
         allOrders = initialOrders;
@@ -412,11 +436,10 @@ const TOPIC_OPTIONS = [
       const dataset = await loadIndex();
 
       filteredOrders = dataset.filter(item => {
-        const itemPres = (item.pres || item.president_name || '').toLowerCase();
+        const itemPres = item._presLower !== undefined ? item._presLower : (item.pres || item.president_name || '').toLowerCase();
         const itemVal = item.val || item.sentiment_valence || '';
-        const itemNum = item.num !== undefined ? String(item.num) : String(item.eo_number || '');
-        const itemYear = (item.date || item.signing_date) ? new Date(item.date || item.signing_date).getFullYear() : null;
-        const hay = `${item.title} ${itemNum} ${item.snip || item.snippet || ''} ${item.tag || item.tone_tag || ''} ${item.kw || ''}`.toLowerCase();
+        const itemYear = item._year !== undefined ? item._year : (item.date || item.signing_date ? parseInt(String(item.date || item.signing_date).slice(0, 4), 10) : null);
+        const hay = item._hay || `${item.title} ${itemPres}`.toLowerCase();
 
         const matchQ = terms.length === 0 || terms.every(term => hay.includes(term));
         const matchPres = !pres || itemPres.includes(pres);

@@ -1,10 +1,10 @@
 {
-  "generated_at": "2026-09-23T10:33:27.571364+00:00",
-  "last_sync_timestamp": "2026-09-23T10:33:27.571364+00:00",
-  "total_orders": 11048,
+  "generated_at": "2026-09-23T16:28:37.386564+00:00",
+  "last_sync_timestamp": "2026-09-23T16:28:37.386564+00:00",
+  "total_orders": 10845,
   "sentiment_breakdown": {
-    "Constitutional Fidelity": 2364,
-    "Constitutional Friction / Overreach": 233,
+    "Constitutional Fidelity": 2162,
+    "Constitutional Friction / Overreach": 232,
     "Constitutional Neutral": 8451
   },
   "presidents": [
@@ -69,12 +69,6 @@
       "avg_sentiment": 0.342
     },
     {
-      "president": "Donald J. Trump (2nd Term)",
-      "total_orders": 285,
-      "avg_word_count": 1263.0,
-      "avg_sentiment": 0.59
-    },
-    {
       "president": "Barack Obama",
       "total_orders": 276,
       "avg_word_count": 1197.0,
@@ -94,8 +88,8 @@
     },
     {
       "president": "Donald Trump",
-      "total_orders": 203,
-      "avg_word_count": 1274.0,
+      "total_orders": 202,
+      "avg_word_count": 1272.0,
       "avg_sentiment": 0.596
     },
     {
@@ -151,6 +145,12 @@
       "total_orders": 104,
       "avg_word_count": 122.0,
       "avg_sentiment": 0.026
+    },
+    {
+      "president": "Donald J. Trump (2nd Term)",
+      "total_orders": 83,
+      "avg_word_count": 1036.0,
+      "avg_sentiment": 0.576
     },
     {
       "president": "Calvin Coolidge",
@@ -274,17 +274,6 @@
       "sentiment_compound": 0.52
     },
     {
-      "id": "app-executive-order-enhancing-program-integrity-and-integrity-and-interagency-coordination-the",
-      "eo_number": null,
-      "title": "Executive Order\u2014Enhancing Program Integrity and Integrity and Interagency Coordination in the Administration of the H-1B Nonimmigrant Visa Program",
-      "president_name": "Donald J. Trump (2nd Term)",
-      "signing_date": "2026-09-18",
-      "word_count": 1148,
-      "reading_time_minutes": 6,
-      "sentiment_valence": "Constitutional Fidelity",
-      "sentiment_compound": 0.52
-    },
-    {
       "id": "fr-2026-19417",
       "eo_number": 14430,
       "title": "Restoring American Saltwater Angling and Recreation",
@@ -307,45 +296,12 @@
       "sentiment_compound": 0.66
     },
     {
-      "id": "app-executive-order-restoring-american-saltwater-angling-and-recreation",
-      "eo_number": null,
-      "title": "Executive Order\u2014Restoring American Saltwater Angling and Recreation",
-      "president_name": "Donald J. Trump (2nd Term)",
-      "signing_date": "2026-09-17",
-      "word_count": 2053,
-      "reading_time_minutes": 10,
-      "sentiment_valence": "Constitutional Fidelity",
-      "sentiment_compound": 0.86
-    },
-    {
-      "id": "app-executive-order-reinvigorating-americas-hunting-heritage",
-      "eo_number": null,
-      "title": "Executive Order\u2014Reinvigorating America's Hunting Heritage",
-      "president_name": "Donald J. Trump (2nd Term)",
-      "signing_date": "2026-09-17",
-      "word_count": 1174,
-      "reading_time_minutes": 6,
-      "sentiment_valence": "Constitutional Fidelity",
-      "sentiment_compound": 0.66
-    },
-    {
       "id": "fr-2026-19335",
       "eo_number": 14428,
       "title": "Providing Meaningful Water Quality Improvements Through Collaboration and Oversight of Federal Support",
       "president_name": "Donald Trump",
       "signing_date": "2026-09-16",
       "word_count": 984,
-      "reading_time_minutes": 5,
-      "sentiment_valence": "Constitutional Fidelity",
-      "sentiment_compound": 0.52
-    },
-    {
-      "id": "app-executive-order-14428-providing-meaningful-water-quality-improvements-through",
-      "eo_number": 14428,
-      "title": "Executive Order 14428\u2014Providing Meaningful Water Quality Improvements Through Collaboration and Oversight of Federal Support",
-      "president_name": "Donald J. Trump (2nd Term)",
-      "signing_date": "2026-09-16",
-      "word_count": 946,
       "reading_time_minutes": 5,
       "sentiment_valence": "Constitutional Fidelity",
       "sentiment_compound": 0.52
@@ -369,6 +325,50 @@
       "signing_date": "2026-09-08",
       "word_count": 908,
       "reading_time_minutes": 5,
+      "sentiment_valence": "Constitutional Fidelity",
+      "sentiment_compound": 0.6
+    },
+    {
+      "id": "fr-2026-18571",
+      "eo_number": 14425,
+      "title": "Supporting America's Ranchers",
+      "president_name": "Donald Trump",
+      "signing_date": "2026-09-04",
+      "word_count": 1032,
+      "reading_time_minutes": 5,
+      "sentiment_valence": "Constitutional Fidelity",
+      "sentiment_compound": 0.7
+    },
+    {
+      "id": "fr-2026-18567",
+      "eo_number": 14424,
+      "title": "Promoting Fair Competition in Livestock Markets and Expanding Market Access for American Meat Producers",
+      "president_name": "Donald Trump",
+      "signing_date": "2026-09-04",
+      "word_count": 910,
+      "reading_time_minutes": 5,
+      "sentiment_valence": "Constitutional Fidelity",
+      "sentiment_compound": 0.76
+    },
+    {
+      "id": "fr-2026-18141",
+      "eo_number": 14423,
+      "title": "Establishing the United States Space Academy",
+      "president_name": "Donald Trump",
+      "signing_date": "2026-08-28",
+      "word_count": 931,
+      "reading_time_minutes": 5,
+      "sentiment_valence": "Constitutional Fidelity",
+      "sentiment_compound": 0.6
+    },
+    {
+      "id": "fr-2026-18020",
+      "eo_number": 14422,
+      "title": "Honoring the American History of the Great Lakes and Renaming Lake Ontario as Lake America",
+      "president_name": "Donald Trump",
+      "signing_date": "2026-08-27",
+      "word_count": 856,
+      "reading_time_minutes": 4,
       "sentiment_valence": "Constitutional Fidelity",
       "sentiment_compound": 0.6
     }

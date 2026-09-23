@@ -3,33 +3,39 @@ import '../styles/global.css';
 import syncStatus from '../../data/stats.json';
 
 interface Props {
-  title: string;
+  title?: string;
   description?: string;
   image?: string;
   type?: string;
-  structuredData?: Record<string, any> | Record<string, any>[];
+  structuredData?: Record<string, any> | Array<Record<string, any>>;
 }
 
-const {
-  title,
-  description = "A comprehensive historical archive of United States Presidential Executive Orders from 1789 to present, featuring sentiment analysis, length metrics, and plain English summaries.",
+const { 
+  title = "Executive Orders Archive | Every US Presidential Executive Order (1789-Present)",
+  description = "A living, non-partisan constitutional archive indexing every executive order signed by United States Presidents from George Washington to the current administration.",
   image = "/og-default.png",
   type = "website",
   structuredData
 } = Astro.props;
 
-const structuredDataList = structuredData
-  ? (Array.isArray(structuredData) ? structuredData : [structuredData])
-  : [];
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+const socialImageURL = new URL(image, Astro.site);
 
 const lastSyncDate = syncStatus?.last_sync_timestamp ? new Date(syncStatus.last_sync_timestamp).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : "Recent";
+const lastSyncTimestamp = syncStatus?.last_sync_timestamp || "";
 
-const pageTitle = `${title} | US Executive Orders Archive`;
-const canonicalUrl = new URL(Astro.url.pathname, Astro.site).toString();
-const absoluteImageUrl = new URL(image, Astro.site).toString();
-// Only the generated default banner is guaranteed to be 1200x630 — portrait
-// images vary in size, so don't assert incorrect dimensions for those.
-const isDefaultImage = image === "/og-default.png";
+const organizationJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "GovernmentPermit",
+  "name": "Executive Orders Archive",
+  "url": Astro.site?.toString() || "https://executive-orders-archive.org",
+  "description": "Comprehensive, non-partisan computational linguistics and constitutional analysis archive of US Presidential Executive Orders."
+};
+
+const structuredDataArray = [
+  organizationJsonLd,
+  ...(Array.isArray(structuredData) ? structuredData : structuredData ? [structuredData] : [])
+];
 ---
 
 <!doctype html>
@@ -38,47 +44,43 @@ const isDefaultImage = image === "/og-default.png";
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="manifest" href="/manifest.json" />
-    <meta name="theme-color" content="#0B2545" />
-    <meta name="generator" content={Astro.generator} />
-    <title>{pageTitle}</title>
-    <meta name="description" content={description} />
-    <link rel="canonical" href={canonicalUrl} />
     <link rel="alternate" type="application/rss+xml" title="Executive Orders Archive RSS Feed" href="/feed.xml" />
-    <link rel="sitemap" href="/sitemap-index.xml" />
+    <meta name="generator" content={Astro.generator} />
 
-    <!-- Open Graph -->
-    <meta property="og:type" content={type} />
-    <meta property="og:site_name" content="Executive Orders Archive" />
-    <meta property="og:title" content={pageTitle} />
-    <meta property="og:description" content={description} />
-    <meta property="og:url" content={canonicalUrl} />
-    <meta property="og:image" content={absoluteImageUrl} />
-    {isDefaultImage && (
-      <>
-        <meta property="og:image:width" content="1200" />
-        <meta property="og:image:height" content="630" />
-      </>
-    )}
-
-    <!-- Twitter Card -->
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content={pageTitle} />
-    <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content={absoluteImageUrl} />
-
-    <!-- Structured Data -->
-    {structuredDataList.map(sd => (
-      <script type="application/ld+json" set:html={JSON.stringify(sd)} />
-    ))}
-
-    <!-- Fonts -->
+    <!-- Google Fonts: Playfair Display (Serif / Official tone) & Inter (Sans / Clean UI) -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Inter:wght@300;400;500;600;700&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;900&family=Inter:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,600;0,700;0,900;1,400;1,600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 
+    <!-- SEO Meta Tags -->
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalURL} />
+
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content={type} />
+    <meta property="og:url" content={canonicalURL} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:image" content={socialImageURL} />
+
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:url" content={canonicalURL} />
+    <meta property="twitter:title" content={title} />
+    <meta property="twitter:description" content={description} />
+    <meta property="twitter:image" content={socialImageURL} />
+
+    <!-- JSON-LD Structured Data for Legal & Academic Search Engines -->
+    {structuredDataArray.map(data => (
+      <script type="application/ld+json" set:html={JSON.stringify(data)} />
+    ))}
+
+    <!-- Global bookmark helper (client-side reading list) -->
+    <script is:inline src="/bookmarks.js"></script>
+
+    <!-- Theme initialization script (prevents flash of incorrect theme) -->
     <script is:inline>
-      // Support light/dark mode preference
       if (localStorage.getItem('color-theme') === 'dark' || (!('color-theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
         document.documentElement.classList.add('dark');
       } else {
@@ -86,25 +88,36 @@ const isDefaultImage = image === "/og-default.png";
       }
     </script>
   </head>
-  <body class="bg-slate-50 dark:bg-slate-950 text-slate-800 dark:text-slate-100 flex flex-col min-h-screen">
-    <!-- Loaded first so window.EOBookmarks / window.resolvePortraitSlug exist before
-         any page-level inline script (e.g. search/orders client renderers) runs. -->
-    <script src="/bookmarks.js" is:inline></script>
-
-    <!-- Top Sync Banner -->
-    <div class="bg-flag-blue text-slate-200 text-xs py-1.5 px-4 text-center border-b border-blue-900 flex justify-center items-center gap-2 print:hidden">
-      <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-      <span>Automated Sync Active • Database updated as of <strong>{lastSyncDate}</strong></span>
-      <span class="opacity-40">•</span>
-      <a href="/orders" class="text-flag-accent hover:underline font-medium">Browse All Orders &rarr;</a>
+  <body class="bg-parchment-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 min-h-screen flex flex-col font-sans selection:bg-amber-200 dark:selection:bg-amber-900/60 selection:text-slate-900 dark:selection:text-amber-100">
+    
+    <!-- Top Federal Banner / Live Status -->
+    <div class="bg-flag-blue dark:bg-slate-900 text-slate-200 text-xs py-1.5 px-4 border-b border-flag-blue/20 dark:border-slate-800">
+      <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2">
+        <div class="flex items-center gap-2">
+          <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="font-medium tracking-wide">Official Historical & Presidential Archive</span>
+          <span class="hidden sm:inline text-slate-400">•</span>
+          <span class="hidden sm:inline text-slate-300">Constitutional Analysis Engine Active</span>
+        </div>
+        <div class="flex items-center gap-3 text-[11px] text-slate-300" data-sync-ts={lastSyncTimestamp}>
+          <span>Synced: <time id="sync-banner-date" datetime={lastSyncTimestamp}>{lastSyncDate}</time></span>
+          <span class="opacity-50">|</span>
+          <a href="/about" class="hover:text-white transition-colors underline decoration-slate-400 underline-offset-2">About Archive</a>
+          <span class="opacity-50">|</span>
+          <a href="/donate" class="text-amber-400 hover:text-amber-300 transition-colors font-semibold flex items-center gap-1">
+            <span>★</span>
+            <span>Support</span>
+          </a>
+        </div>
+      </div>
     </div>
 
     <!-- Main Navigation Header -->
-    <header class="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors print:hidden">
-      <div class="max-w-7xl mx-auto px-4 lg:px-8 h-16 flex items-center justify-between gap-2">
-
+    <header class="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-4">
+        
         <!-- Brand Logo -->
-        <a href="/" class="flex items-center gap-2 sm:gap-3 group flex-shrink-0">
+        <a href="/" class="flex items-center gap-2 sm:group flex-shrink-0">
           <div class="w-10 h-10 rounded-full bg-flag-blue text-amber-400 flex items-center justify-center font-bold text-xl shadow-md border-2 border-amber-400 group-hover:scale-105 transition-transform font-serif">
             ★
           </div>
@@ -125,6 +138,9 @@ const isDefaultImage = image === "/og-default.png";
           <a href="/presidents" class="px-2 lg:px-3 py-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors whitespace-nowrap">
             Presidents
           </a>
+          <a href="/timeline" class="px-2 lg:px-3 py-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors whitespace-nowrap">
+            Timeline
+          </a>
           <a href="/analytics" class="px-2 lg:px-3 py-2 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 whitespace-nowrap">
             <span>Analytics</span>
             <span class="w-1.5 h-1.5 rounded-full bg-blue-500"></span>
@@ -136,7 +152,7 @@ const isDefaultImage = image === "/og-default.png";
           </a>
         </nav>
 
-        <!-- Right Side Actions: Search & Dark Mode Toggle -->
+        <!-- Right Side Actions: Search, Saved, Theme Toggle, & Mobile Menu -->
         <div class="flex items-center gap-1 lg:gap-2">
           <!-- Search trigger button -->
           <a href="/search" class="flex items-center gap-2 px-2.5 lg:px-3 py-1.5 text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-700 transition-colors">
@@ -156,9 +172,26 @@ const isDefaultImage = image === "/og-default.png";
             <svg id="theme-toggle-dark-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z"></path></svg>
             <svg id="theme-toggle-light-icon" class="hidden w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" fill-rule="evenodd" clip-rule="evenodd"></path></svg>
           </button>
+
+          <!-- Mobile Hamburger Toggle -->
+          <button id="mobile-menu-toggle" type="button" aria-label="Toggle navigation menu" aria-expanded="false" class="md:hidden p-2 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-sm transition-colors">
+            <svg id="menu-open-icon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+            <svg id="menu-close-icon" class="hidden w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
         </div>
 
       </div>
+
+      <!-- Mobile Navigation Drawer -->
+      <nav id="mobile-menu" class="hidden md:hidden border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-4 py-3 space-y-1">
+        <a href="/orders" class="block px-3 py-2 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">All Orders</a>
+        <a href="/presidents" class="block px-3 py-2 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Presidents</a>
+        <a href="/timeline" class="block px-3 py-2 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Timeline</a>
+        <a href="/analytics" class="block px-3 py-2 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Analytics</a>
+        <a href="/founding" class="block px-3 py-2 rounded-lg text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 hover:bg-amber-100 dark:hover:bg-amber-900/40 font-serif font-bold text-xs uppercase tracking-wider transition-colors">📜 Founding Documents</a>
+        <a href="/saved" class="block px-3 py-2 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">Saved Orders</a>
+        <a href="/donate" class="block px-3 py-2 rounded-lg text-sm font-medium text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/40 transition-colors">★ Support & Donate</a>
+      </nav>
     </header>
 
     <!-- Main Content Area -->
@@ -185,49 +218,50 @@ const isDefaultImage = image === "/og-default.png";
             </a>
             <span>•</span>
             <a href="/sitemap-index.xml" class="hover:text-slate-600 dark:hover:text-slate-300">Sitemap</a>
+            <span>•</span>
+            <a href="/donate" class="hover:text-amber-500 font-medium text-amber-600 dark:text-amber-400 flex items-center gap-1">
+              <span>★</span>
+              <span>Support / Donate</span>
+            </a>
           </div>
         </div>
 
         <div>
-          <h4 class="font-semibold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-3">Founding Charters</h4>
-          <ul class="space-y-2 text-xs text-slate-600 dark:text-slate-400">
-            <li><a href="/founding" class="hover:underline font-bold text-amber-600 dark:text-amber-400">Founding Library Overview</a></li>
-            <li><a href="/founding/constitution" class="hover:underline">The Constitution (1787)</a></li>
-            <li><a href="/founding/amendments" class="hover:underline">All 27 Amendments</a></li>
-            <li><a href="/founding/declaration" class="hover:underline">Declaration of Independence (1776)</a></li>
-            <li><a href="/founding/articles-of-confederation" class="hover:underline">Articles of Confederation (1777)</a></li>
-            <li><a href="/founding/ratifying-conventions" class="hover:underline">Ratifying Conventions & Debates</a></li>
-          </ul>
-        </div>
-
-        <div>
-          <h4 class="font-semibold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-3">Executive Orders</h4>
-          <ul class="space-y-2 text-xs text-slate-600 dark:text-slate-400">
+          <h2 class="font-bold text-slate-900 dark:text-white mb-3 text-xs uppercase tracking-wider">Explore Archives</h2>
+          <ul class="space-y-2 text-slate-600 dark:text-slate-400 text-xs">
             <li><a href="/orders" class="hover:underline">All Executive Orders</a></li>
-            <li><a href="/presidents" class="hover:underline">Presidential Directory</a></li>
-            <li><a href="/presidents/compare" class="hover:underline">Compare Presidents</a></li>
-            <li><a href="/timeline" class="hover:underline">Historical Timeline</a></li>
-            <li><a href="/analytics" class="hover:underline">Sentiment & Length Graphs</a></li>
-            <li><a href="/search" class="hover:underline">Full-Text Search</a></li>
-            <li><a href="/saved" class="hover:underline">Saved Orders</a></li>
-            <li><a href="/api" class="hover:underline">Developer API</a></li>
-            <li><a href="/about" class="hover:underline">About & Methodology</a></li>
+            <li><a href="/presidents" class="hover:underline">Presidents Directory</a></li>
+            <li><a href="/timeline" class="hover:underline">Chronological Timeline</a></li>
+            <li><a href="/analytics" class="hover:underline">Analytics & Trend Graphs</a></li>
+            <li><a href="/saved" class="hover:underline">Saved Reading List</a></li>
           </ul>
         </div>
 
         <div>
-          <h4 class="font-semibold text-slate-900 dark:text-white text-xs uppercase tracking-wider mb-3">Data Sources</h4>
-          <ul class="space-y-2 text-xs text-slate-600 dark:text-slate-400">
-            <li><a href="https://www.federalregister.gov" target="_blank" rel="noopener" class="hover:underline">Federal Register API (1994-Present)</a></li>
-            <li><a href="https://www.presidency.ucsb.edu" target="_blank" rel="noopener" class="hover:underline">UCSB American Presidency Project (1789-1993)</a></li>
-            <li><a href="https://www.archives.gov" target="_blank" rel="noopener" class="hover:underline">National Archives (NARA)</a></li>
-            <li><a href="https://commons.wikimedia.org" target="_blank" rel="noopener" class="hover:underline">Wikimedia Commons (Portraits)</a></li>
+          <h2 class="font-bold text-slate-900 dark:text-white mb-3 text-xs uppercase tracking-wider">Key Eras & Topics</h2>
+          <ul class="space-y-2 text-slate-600 dark:text-slate-400 text-xs">
+            <li><a href="/presidents/abraham-lincoln" class="hover:underline">Civil War & Emancipation (Lincoln)</a></li>
+            <li><a href="/presidents/franklin-d-roosevelt" class="hover:underline">New Deal & WWII (FDR)</a></li>
+            <li><a href="/orders?sentiment=Constitutional+Friction+%2F+Overreach" class="hover:underline">Constitutional Friction / Overreach</a></li>
+            <li><a href="/orders?sentiment=Constitutional+Fidelity" class="hover:underline">Constitutional Fidelity</a></li>
+            <li><a href="/founding" class="hover:underline text-amber-700 dark:text-amber-400 font-serif font-bold">📜 US Constitution & Declaration</a></li>
           </ul>
+        </div>
+
+        <div>
+          <h2 class="font-bold text-slate-900 dark:text-white mb-3 text-xs uppercase tracking-wider">About Early Statesman</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400 leading-relaxed mb-3">
+            Built using public domain records from the Federal Register, UCSB American Presidency Project, and the Library of Congress.
+          </p>
+          <div class="p-3 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400 text-[11px] leading-relaxed">
+            Public records published for educational, historical, and civic research purposes.
+          </div>
         </div>
 
       </div>
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 pt-8 border-t border-slate-100 dark:border-slate-800 text-xs text-center text-slate-400">
-        Public Domain and Open Source Data Project. Not affiliated with the United States Government.
+
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-10 pt-6 border-t border-slate-100 dark:border-slate-800 text-center text-xs text-slate-400 dark:text-slate-500">
+        &copy; {new Date().getFullYear()} Executive Orders Archive. Open source, non-partisan, public domain civic project.
       </div>
     </footer>
 
@@ -255,6 +289,35 @@ const isDefaultImage = image === "/og-default.png";
           localStorage.setItem('color-theme', 'dark');
         }
       });
+
+      // Mobile menu toggle
+      const mobileMenuToggle = document.getElementById('mobile-menu-toggle');
+      const mobileMenu = document.getElementById('mobile-menu');
+      const menuOpenIcon = document.getElementById('menu-open-icon');
+      const menuCloseIcon = document.getElementById('menu-close-icon');
+
+      mobileMenuToggle?.addEventListener('click', function() {
+        const isClosed = mobileMenu?.classList.toggle('hidden');
+        menuOpenIcon?.classList.toggle('hidden', !isClosed);
+        menuCloseIcon?.classList.toggle('hidden', isClosed);
+        mobileMenuToggle.setAttribute('aria-expanded', String(!isClosed));
+      });
+
+      // Localize sync date in user's browser timezone
+      const syncBannerDate = document.getElementById('sync-banner-date');
+      const syncTs = syncBannerDate?.parentElement?.getAttribute('data-sync-ts');
+      if (syncBannerDate && syncTs) {
+        try {
+          const d = new Date(syncTs);
+          if (!isNaN(d.getTime())) {
+            syncBannerDate.textContent = d.toLocaleDateString(undefined, {
+              month: 'short',
+              day: 'numeric',
+              year: 'numeric'
+            });
+          }
+        } catch (e) {}
+      }
 
       // Global ⌘K / Ctrl+K search shortcut
       document.addEventListener('keydown', function(e) {

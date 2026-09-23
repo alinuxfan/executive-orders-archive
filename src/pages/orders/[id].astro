@@ -6,6 +6,7 @@ import OrderCard from '../../components/OrderCard.astro';
 import { generateOrderSummary } from '../../lib/summary';
 import { getRelatedOrders, getReferencedByLater } from '../../lib/relatedOrders';
 import { resolvePortraitSlug } from '../../lib/portraits';
+import { formatSigningDate } from '../../lib/dates';
 import rawOrders from '../../../data/site_orders.json';
 
 export async function getStaticPaths() {
@@ -48,11 +49,21 @@ if (order.who_it_affects_json) {
   } catch (e) {}
 }
 
+let topicTags: string[] = [];
+if (Array.isArray(order.topic_tags)) {
+  topicTags = order.topic_tags;
+} else if (order.topic_tags_json) {
+  try {
+    const parsed = JSON.parse(order.topic_tags_json);
+    if (Array.isArray(parsed)) topicTags = parsed;
+  } catch (e) {}
+}
+
 const rawSummaryText = order.summary_plain_english || fallbackSummary.plainEnglish;
 const summaryParagraphs = rawSummaryText.split("\n\n").filter(p => p.trim().length > 0);
 
 // Format date
-const formattedDate = order.signing_date ? new Date(order.signing_date).toLocaleDateString("en-US", {
+const formattedDate = order.signing_date ? formatSigningDate(order.signing_date, {
   weekday: "long",
   year: "numeric",
   month: "long",
@@ -82,6 +93,21 @@ if (order.sentiment_valence === "Constitutional Fidelity" || order.sentiment_val
 
 const orderCanonicalUrl = new URL(`/orders/${order.id}`, Astro.site).toString();
 const portraitSlug = resolvePortraitSlug(order.president_slug);
+
+const compactMeta = JSON.stringify({
+  id: order.id,
+  num: order.eo_number,
+  title: order.title,
+  pres: order.president_name,
+  slug: order.president_slug,
+  date: order.signing_date,
+  words: order.word_count,
+  time: order.reading_time_minutes,
+  val: order.sentiment_valence,
+  comp: order.sentiment_compound,
+  tag: order.tone_tag,
+  snip: summaryParagraphs[0] || ''
+});
 
 const legislationJsonLd = {
   "@context": "https://schema.org",
@@ -152,12 +178,13 @@ const breadcrumbJsonLd = {
           aria-label="Print or save this order as a PDF"
           class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold transition-colors"
         >
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a1 1 0 001-1v-5H8v5a1 1 0 001 1zm8-12V5a1 1 0 00-1-1H8a1 1 0 00-1 1v4h10z"></path></svg>
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a1 1 0 001-1v-5H8v5a1 1 0 001 1zm8-12V5a1 1 0 00-1-1H8a1 1 0 00-1 1v4h10z\"></path></svg>
           <span>Print / PDF</span>
         </button>
         <button
           type="button"
           data-bookmark-btn={order.id}
+          data-order-meta={compactMeta}
           aria-label="Save this order"
           aria-pressed="false"
           class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold transition-colors"
@@ -198,9 +225,13 @@ const breadcrumbJsonLd = {
             class="w-6 h-6 rounded-full object-cover border border-slate-300 dark:border-slate-600"
             onerror="this.style.display='none'"
           />
-          <a href={`/presidents/${portraitSlug}`} class="hover:underline">
-            {order.president_name}
-          </a>
+          {portraitSlug !== 'default' ? (
+            <a href={`/presidents/${portraitSlug}`} class="hover:underline">
+              {order.president_name}
+            </a>
+          ) : (
+            <span>{order.president_name}</span>
+          )}
         </div>
         <span>•</span>
         <div class="font-mono">{formattedDate}</div>
@@ -280,6 +311,26 @@ const breadcrumbJsonLd = {
           ))}
         </div>
       </div>
+
+      <!-- Policy Areas & Topics -->
+      {topicTags.length > 0 && (
+        <div class="mt-4 pt-4 border-t border-amber-200/60 dark:border-amber-900/40">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+            Policy Areas & Topics
+          </h3>
+          <div class="flex flex-wrap gap-2">
+            {topicTags.map(topic => (
+              <a
+                href={`/orders?topic=${encodeURIComponent(topic)}`}
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-amber-100/70 dark:bg-slate-800 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-xs font-medium text-slate-800 dark:text-slate-200 transition-colors shadow-2xs"
+              >
+                <span>🏷️</span>
+                <span>{topic}</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
     </section>
 
     <!-- Quantitative Metrics Panel -->
@@ -357,145 +408,165 @@ const breadcrumbJsonLd = {
             type="button"
             id="text-size-decrease"
             aria-label="Decrease text size"
-            class="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold transition-colors"
-          >A&minus;</button>
+            class="w-7 h-7 rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-center transition-colors"
+          >
+            A-
+          </button>
+          <button
+            type="button"
+            id="text-size-reset"
+            aria-label="Reset text size to standard"
+            class="px-2 h-7 rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-[11px] font-mono text-slate-600 dark:text-slate-400 flex items-center justify-center transition-colors"
+          >
+            100%
+          </button>
           <button
             type="button"
             id="text-size-increase"
             aria-label="Increase text size"
-            class="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold transition-colors"
-          >A+</button>
+            class="w-7 h-7 rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold text-slate-700 dark:text-slate-300 flex items-center justify-center transition-colors"
+          >
+            A+
+          </button>
         </div>
 
-        <div class="flex items-center gap-2">
+        <div class="flex items-center gap-2" id="speech-toolbar">
           <button
             type="button"
-            id="read-aloud-btn"
-            aria-label="Read this order aloud"
-            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold transition-colors"
+            id="speech-toggle"
+            aria-label="Listen to order read aloud"
+            class="flex items-center gap-1.5 px-3 py-1 rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium text-slate-700 dark:text-slate-300 transition-colors"
           >
-            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M7 9v6h4l5 5V4l-5 5H7z"></path></svg>
-            <span id="read-aloud-label">Read Aloud</span>
+            <svg class="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z"></path></svg>
+            <span id="speech-toggle-label">Read Aloud</span>
           </button>
           <button
             type="button"
-            id="read-aloud-stop-btn"
-            aria-label="Stop reading"
-            class="hidden p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
+            id="speech-stop"
+            aria-label="Stop reading aloud"
+            class="hidden px-2 py-1 rounded border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-medium text-rose-600 dark:text-rose-400 transition-colors"
           >
-            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"></rect></svg>
+            Stop
           </button>
         </div>
       </div>
 
-      <!-- Legal Text Rendering -->
-      <div id="order-full-text" class="prose dark:prose-invert max-w-none font-serif text-slate-800 dark:text-slate-200 text-sm sm:text-base leading-loose whitespace-pre-line prose-legal">
-        {order.full_text || "Full document text is being harvested and will be displayed shortly."}
+      <div
+        id="order-text-content"
+        class="prose prose-slate dark:prose-invert max-w-none text-slate-800 dark:text-slate-200 font-serif leading-relaxed whitespace-pre-line text-sm sm:text-base selection:bg-amber-100 dark:selection:bg-amber-900/60"
+      >
+        {order.full_text || "The full primary source text for this executive order is currently being indexed."}
       </div>
     </article>
 
     <script>
+      // Font-size zoom (A- / 100% / A+) persisted in localStorage
       (function () {
-        const textEl = document.getElementById('order-full-text');
-        const decreaseBtn = document.getElementById('text-size-decrease');
-        const increaseBtn = document.getElementById('text-size-increase');
-        const SIZES_PX = [14, 16, 18, 20, 24, 28];
-        const STORAGE_KEY = 'eo-text-size-index';
+        const textEl = document.getElementById('order-text-content');
+        if (!textEl) return;
+        const SIZES = ['0.875rem', '1rem', '1.125rem', '1.25rem', '1.375rem'];
+        const DEFAULT_IDX = 1;
+        const KEY = 'eo-text-zoom';
+        let currentIdx = DEFAULT_IDX;
+        try {
+          const stored = localStorage.getItem(KEY);
+          if (stored !== null) currentIdx = Math.max(0, Math.min(SIZES.length - 1, parseInt(stored, 10)));
+        } catch (e) {}
 
-        function applyTextSize(index) {
-          if (textEl) textEl.style.fontSize = `${SIZES_PX[index]}px`;
-        }
-
-        function getStoredIndex() {
-          const raw = localStorage.getItem(STORAGE_KEY);
-          const parsed = raw !== null ? parseInt(raw, 10) : 2;
-          return Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), SIZES_PX.length - 1) : 2;
-        }
-
-        let sizeIndex = getStoredIndex();
-        applyTextSize(sizeIndex);
-
-        decreaseBtn?.addEventListener('click', () => {
-          sizeIndex = Math.max(0, sizeIndex - 1);
-          localStorage.setItem(STORAGE_KEY, String(sizeIndex));
-          applyTextSize(sizeIndex);
-        });
-        increaseBtn?.addEventListener('click', () => {
-          sizeIndex = Math.min(SIZES_PX.length - 1, sizeIndex + 1);
-          localStorage.setItem(STORAGE_KEY, String(sizeIndex));
-          applyTextSize(sizeIndex);
-        });
-
-        // Read Aloud — chunked into sentence groups since Chrome silently
-        // truncates/drops very long single SpeechSynthesisUtterance instances.
-        const speakBtn = document.getElementById('read-aloud-btn');
-        const speakLabel = document.getElementById('read-aloud-label');
-        const stopBtn = document.getElementById('read-aloud-stop-btn');
-        const supportsSpeech = typeof window !== 'undefined' && 'speechSynthesis' in window;
-
-        if (!supportsSpeech && speakBtn) {
-          speakBtn.setAttribute('disabled', 'true');
-          speakBtn.classList.add('opacity-50', 'cursor-not-allowed');
-        }
-
-        let queue: string[] = [];
-        let queueIndex = 0;
-        let isPaused = false;
-
-        function chunkText(text: string, maxLen = 900): string[] {
-          const sentences = text.replace(/\s+/g, ' ').trim().split(/(?<=[.!?])\s+/);
-          const chunks: string[] = [];
-          let current = '';
-          for (const s of sentences) {
-            if (current && (current.length + s.length + 1) > maxLen) {
-              chunks.push(current.trim());
-              current = s;
-            } else {
-              current = current ? `${current} ${s}` : s;
-            }
+        function applySize() {
+          textEl.style.fontSize = SIZES[currentIdx];
+          const resetBtn = document.getElementById('text-size-reset');
+          if (resetBtn) {
+            const pct = [87, 100, 112, 125, 137][currentIdx];
+            resetBtn.textContent = `${pct}%`;
           }
-          if (current) chunks.push(current.trim());
-          return chunks;
+          try { localStorage.setItem(KEY, String(currentIdx)); } catch (e) {}
+        }
+        applySize();
+
+        document.getElementById('text-size-decrease')?.addEventListener('click', () => {
+          if (currentIdx > 0) { currentIdx--; applySize(); }
+        });
+        document.getElementById('text-size-increase')?.addEventListener('click', () => {
+          if (currentIdx < SIZES.length - 1) { currentIdx++; applySize(); }
+        });
+        document.getElementById('text-size-reset')?.addEventListener('click', () => {
+          currentIdx = DEFAULT_IDX; applySize();
+        });
+      })();
+
+      // Client-side Web Speech API Read-Aloud
+      (function () {
+        const textEl = document.getElementById('order-text-content');
+        const toggleBtn = document.getElementById('speech-toggle');
+        const stopBtn = document.getElementById('speech-stop');
+        const label = document.getElementById('speech-toggle-label');
+        if (!textEl || !toggleBtn) return;
+
+        const supportsSpeech = 'speechSynthesis' in window && 'SpeechSynthesisUtterance' in window;
+        if (!supportsSpeech) {
+          const speechToolbar = document.getElementById('speech-toolbar');
+          if (speechToolbar) speechToolbar.style.display = 'none';
+          return;
         }
 
-        function setSpeakingUI(active: boolean) {
-          if (speakLabel) speakLabel.textContent = active ? 'Pause' : 'Read Aloud';
-          if (stopBtn) stopBtn.classList.toggle('hidden', !active && !isPaused);
+        let isPaused = false;
+        let queue = [];
+        let queueIndex = 0;
+
+        function chunkText(text) {
+          // Chrome speech synthesis fails silently on utterances > ~200 chars,
+          // so split by sentence/newline chunks.
+          return text
+            .split(/(?<=[.?!])\s+|\n+/)
+            .map(s => s.trim())
+            .filter(s => s.length > 0 && !/^(\*|-|\d+\.)\s*$/.test(s));
         }
 
         function speakNext() {
+          if (!window.speechSynthesis) return;
           if (queueIndex >= queue.length) {
             setSpeakingUI(false);
-            queueIndex = 0;
             return;
           }
-          const utterance = new SpeechSynthesisUtterance(queue[queueIndex]);
-          utterance.onend = () => {
-            queueIndex += 1;
+          const utt = new SpeechSynthesisUtterance(queue[queueIndex]);
+          utt.rate = 1.0;
+          utt.pitch = 1.0;
+          utt.onend = () => {
+            queueIndex++;
             speakNext();
           };
-          utterance.onerror = () => setSpeakingUI(false);
-          window.speechSynthesis.speak(utterance);
+          utt.onerror = () => {
+            queueIndex++;
+            speakNext();
+          };
+          window.speechSynthesis.speak(utt);
         }
 
-        speakBtn?.addEventListener('click', () => {
-          if (!supportsSpeech) return;
+        function setSpeakingUI(speaking) {
+          if (label) label.textContent = speaking ? 'Pause' : 'Read Aloud';
+          if (stopBtn) stopBtn.classList.toggle('hidden', !speaking);
+          toggleBtn.classList.toggle('bg-blue-50', speaking);
+          toggleBtn.classList.toggle('dark:bg-blue-950/40', speaking);
+          toggleBtn.classList.toggle('border-blue-300', speaking);
+        }
 
+        toggleBtn.addEventListener('click', () => {
+          if (!supportsSpeech) return;
           if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
             window.speechSynthesis.pause();
             isPaused = true;
-            if (speakLabel) speakLabel.textContent = 'Resume';
+            if (label) label.textContent = 'Resume';
             return;
           }
           if (isPaused) {
             window.speechSynthesis.resume();
             isPaused = false;
-            if (speakLabel) speakLabel.textContent = 'Pause';
+            if (label) label.textContent = 'Pause';
             return;
           }
-
-          const fullText = textEl?.textContent || '';
-          queue = chunkText(fullText);
+          window.speechSynthesis.cancel();
+          queue = chunkText(textEl.innerText || textEl.textContent || '');
           queueIndex = 0;
           setSpeakingUI(true);
           speakNext();

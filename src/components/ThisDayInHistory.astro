@@ -2,19 +2,28 @@
 import rawOrders from '../../data/site_orders_summary.json';
 import { resolvePortraitSlug } from '../lib/portraits';
 
-// Get current date in US Eastern / UTC
+// Default to US Eastern Time (Washington, D.C. where presidential orders originate) at build time.
+// In the client browser, dynamic hydration aligns this with the user's local timezone.
 const now = new Date();
-const currentYear = now.getUTCFullYear();
-const currentMonth = String(now.getUTCMonth() + 1).padStart(2, '0');
-const currentDay = String(now.getUTCDate()).padStart(2, '0');
+const easternParts = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'America/New_York',
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit'
+}).formatToParts(now);
+const partMap = Object.fromEntries(easternParts.map(p => [p.type, p.value]));
+const currentYear = parseInt(partMap.year, 10);
+const currentMonth = partMap.month;
+const currentDay = partMap.day;
 const currentMonthDay = `${currentMonth}-${currentDay}`;
 
 const monthNames = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December"
 ];
-const currentMonthName = monthNames[now.getUTCMonth()];
-const dayNumber = now.getUTCDate();
+const currentMonthIndex = parseInt(currentMonth, 10) - 1;
+const currentMonthName = monthNames[currentMonthIndex];
+const dayNumber = parseInt(currentDay, 10);
 
 // Filter orders matching today's month and day across all years
 const todayOrders = rawOrders
@@ -27,7 +36,7 @@ const todayOrders = rawOrders
   });
 ---
 
-<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+<section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8" id="this-day-section">
   <div class="bg-gradient-to-br from-slate-900 via-blue-950 to-slate-900 border-2 border-blue-900/60 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
     
     <!-- Background Watermark -->
@@ -42,6 +51,7 @@ const todayOrders = rawOrders
           <span>📅 This Day in Presidential History</span>
           <span>•</span>
           <span id="active-date-label">{currentMonthName} {dayNumber}</span>
+          <span id="history-tz-badge" class="text-[10px] text-blue-300 font-mono font-normal"></span>
         </div>
         <h2 class="font-serif font-extrabold text-2xl sm:text-3xl text-white">
           Orders Signed on <span id="heading-date" class="text-amber-300">{currentMonthName} {dayNumber}</span> Through the Ages
@@ -73,7 +83,7 @@ const todayOrders = rawOrders
     <div class="mt-6 relative z-10">
       <div class="flex items-center justify-between text-xs text-slate-400 mb-4">
         <span id="history-count-badge">Found {todayOrders.length} historic order{todayOrders.length === 1 ? '' : 's'}</span>
-        <span class="text-[11px] opacity-75">Spanning {todayOrders.length > 0 ? `${todayOrders[todayOrders.length - 1].signing_date.slice(0, 4)} – ${todayOrders[0].signing_date.slice(0, 4)}` : 'Various Eras'}</span>
+        <span id="history-span-badge" class="text-[11px] opacity-75">Spanning {todayOrders.length > 0 ? `${todayOrders[todayOrders.length - 1].signing_date.slice(0, 4)} – ${todayOrders[0].signing_date.slice(0, 4)}` : 'Various Eras'}</span>
       </div>
 
       <div id="history-cards-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -164,13 +174,33 @@ const todayOrders = rawOrders
   const headingDate = document.getElementById('heading-date');
   const activeDateLabel = document.getElementById('active-date-label');
   const countBadge = document.getElementById('history-count-badge');
+  const spanBadge = document.getElementById('history-span-badge');
   const container = document.getElementById('history-cards-grid');
   const emptyView = document.getElementById('history-empty');
+  const tzBadge = document.getElementById('history-tz-badge');
 
   const monthNames = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
   ];
+
+  function getUserLocalDate() {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    const monthIndex = d.getMonth();
+    const dayInt = d.getDate();
+    return {
+      year,
+      month,
+      day,
+      monthDay: `${month}-${day}`,
+      monthName: monthNames[monthIndex],
+      dayInt,
+      dateStr: `${year}-${month}-${day}`
+    };
+  }
 
   let dataset = null;
 
@@ -201,7 +231,7 @@ const todayOrders = rawOrders
     const eoBadge = num ? 
       `<span class="px-1.5 py-0.5 rounded font-mono text-[11px] bg-blue-900/40 text-blue-200 border border-blue-800/40">EO ${num}</span>` : '';
 
-    const slug = window.resolvePortraitSlug(order.slug || order.president_slug);
+    const slug = window.resolvePortraitSlug ? window.resolvePortraitSlug(order.slug || order.president_slug) : (order.slug || order.president_slug || 'default');
     const presName = order.pres || order.president_name;
     const snippet = order.snip || order.snippet || '';
 
@@ -270,6 +300,16 @@ const todayOrders = rawOrders
       countBadge.textContent = `Found ${matches.length} historic order${matches.length === 1 ? '' : 's'}`;
     }
 
+    if (spanBadge) {
+      if (matches.length > 0) {
+        const oldest = (matches[matches.length - 1].date || matches[matches.length - 1].signing_date || '').slice(0, 4);
+        const newest = (matches[0].date || matches[0].signing_date || '').slice(0, 4);
+        spanBadge.textContent = oldest && newest ? `Spanning ${oldest} – ${newest}` : 'Various Eras';
+      } else {
+        spanBadge.textContent = 'Various Eras';
+      }
+    }
+
     if (matches.length > 0) {
       container.innerHTML = matches.map(renderHistoryCard).join('');
       emptyView.classList.add('hidden');
@@ -280,13 +320,40 @@ const todayOrders = rawOrders
     }
   }
 
+  // Determine user's local date in their browser timezone
+  const userToday = getUserLocalDate();
+  const serverMonthDay = `${currentMonth}-${currentDay}`;
+
+  // Populate user's detected local timezone abbreviation
+  try {
+    const tzName = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const tzAbbr = new Intl.DateTimeFormat('en-US', { timeZoneName: 'short' })
+      .formatToParts(new Date())
+      .find(p => p.type === 'timeZoneName')?.value || '';
+    if (tzBadge) {
+      tzBadge.textContent = tzAbbr ? `(${tzAbbr})` : `(${tzName})`;
+      tzBadge.title = `Using your local timezone: ${tzName}`;
+    }
+  } catch (e) {}
+
+  // Sync date picker with user's local date
+  if (picker) {
+    picker.value = userToday.dateStr;
+  }
+
+  // If user's local month/day differs from server build date (e.g. UTC rollover or timezone difference),
+  // immediately update the view for the user's timezone date
+  if (userToday.monthDay !== serverMonthDay) {
+    updateForDate(userToday.dateStr);
+  }
+
   picker?.addEventListener('change', (e) => {
     updateForDate(e.target.value);
   });
 
   resetBtn?.addEventListener('click', () => {
-    const todayStr = `${currentYear}-${currentMonth}-${currentDay}`;
-    if (picker) picker.value = todayStr;
-    updateForDate(todayStr);
+    const todayUser = getUserLocalDate();
+    if (picker) picker.value = todayUser.dateStr;
+    updateForDate(todayUser.dateStr);
   });
 </script>

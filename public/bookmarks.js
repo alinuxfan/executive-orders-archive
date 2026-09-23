@@ -1,5 +1,6 @@
 (function () {
   const STORAGE_KEY = 'eo-bookmarks';
+  const META_STORAGE_KEY = 'eo-bookmarks-meta';
 
   function getAll() {
     try {
@@ -11,15 +12,53 @@
     }
   }
 
+  function getMetadataMap() {
+    try {
+      const raw = localStorage.getItem(META_STORAGE_KEY);
+      const parsed = raw ? JSON.parse(raw) : {};
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveMetadata(id, meta) {
+    if (!id || !meta) return;
+    try {
+      const map = getMetadataMap();
+      map[id] = meta;
+      localStorage.setItem(META_STORAGE_KEY, JSON.stringify(map));
+    } catch (e) {}
+  }
+
+  function removeMetadata(id) {
+    if (!id) return;
+    try {
+      const map = getMetadataMap();
+      delete map[id];
+      localStorage.setItem(META_STORAGE_KEY, JSON.stringify(map));
+    } catch (e) {}
+  }
+
   function isSaved(id) {
     return getAll().includes(id);
   }
 
-  function toggle(id) {
+  function toggle(id, meta = null) {
     let all = getAll();
     const saved = all.includes(id);
-    all = saved ? all.filter((x) => x !== id) : [...all, id];
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    if (saved) {
+      all = all.filter((x) => x !== id);
+      removeMetadata(id);
+    } else {
+      all = [...all, id];
+      if (meta) {
+        saveMetadata(id, meta);
+      }
+    }
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+    } catch (e) {}
     document.dispatchEvent(new CustomEvent('eo-bookmarks-changed', { detail: { id, saved: !saved, all } }));
     return !saved;
   }
@@ -51,14 +90,21 @@
     e.preventDefault();
     e.stopPropagation();
     const id = btn.getAttribute('data-bookmark-btn');
-    toggle(id);
+    let meta = null;
+    const metaAttr = btn.getAttribute('data-order-meta');
+    if (metaAttr) {
+      try {
+        meta = JSON.parse(metaAttr);
+      } catch (err) {}
+    }
+    toggle(id, meta);
   });
 
   document.addEventListener('eo-bookmarks-changed', refreshAllButtons);
   document.addEventListener('DOMContentLoaded', refreshAllButtons);
   refreshAllButtons();
 
-  window.EOBookmarks = { getAll, isSaved, toggle, refreshAllButtons };
+  window.EOBookmarks = { getAll, isSaved, toggle, refreshAllButtons, getMetadataMap, saveMetadata, removeMetadata };
 })();
 
 // Some harvested orders report a president identifier that doesn't match the
@@ -77,5 +123,23 @@
   window.resolvePortraitSlug = function (slug) {
     if (!slug) return 'default';
     return PORTRAIT_SLUG_ALIASES[slug] || slug;
+  };
+
+  // Global timezone-safe date formatter for order signing dates (YYYY-MM-DD)
+  // Prevents UTC midnight parsing from shifting dates backward in western timezones.
+  window.formatSigningDate = function (rawDate, options, locale) {
+    if (!rawDate) return 'Undated';
+    const parts = String(rawDate).slice(0, 10).split('-');
+    if (parts.length < 3) return rawDate;
+    const y = parseInt(parts[0], 10);
+    const m = parseInt(parts[1], 10) - 1;
+    const d = parseInt(parts[2], 10);
+    if (isNaN(y) || isNaN(m) || isNaN(d)) return rawDate;
+    const dateObj = new Date(y, m, d);
+    return dateObj.toLocaleDateString(locale || 'en-US', options || {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    });
   };
 })();

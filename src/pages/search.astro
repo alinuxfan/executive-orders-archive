@@ -153,10 +153,10 @@ const TOPIC_OPTIONS = [
       const sorted = [...list];
       const getComp = o => (o.comp !== undefined ? o.comp : (o.sentiment_compound || 0));
       const getWords = o => (o.words !== undefined ? o.words : (o.word_count || 0));
-      const getDate = o => new Date(o.date || o.signing_date || 0).getTime();
+      const getDateStr = o => (o.date || o.signing_date || '');
       switch (sortMode) {
         case 'oldest':
-          sorted.sort((a, b) => getDate(a) - getDate(b));
+          sorted.sort((a, b) => getDateStr(a).localeCompare(getDateStr(b)));
           break;
         case 'longest':
           sorted.sort((a, b) => getWords(b) - getWords(a));
@@ -171,7 +171,7 @@ const TOPIC_OPTIONS = [
           sorted.sort((a, b) => getComp(b) - getComp(a));
           break;
         case 'newest':
-          sorted.sort((a, b) => getDate(b) - getDate(a));
+          sorted.sort((a, b) => getDateStr(b).localeCompare(getDateStr(a)));
           break;
       }
       return sorted;
@@ -215,11 +215,7 @@ const TOPIC_OPTIONS = [
       }
 
       const rawDate = order.date || order.signing_date;
-      const formattedDate = rawDate ? new Date(rawDate).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric"
-      }) : "Undated";
+      const formattedDate = window.formatSigningDate ? window.formatSigningDate(rawDate) : (rawDate || "Undated");
 
       const num = order.num !== undefined ? order.num : order.eo_number;
       const eoBadge = num ? 
@@ -233,6 +229,22 @@ const TOPIC_OPTIONS = [
       const toneTag = order.tag || order.tone_tag;
       const snippet = order.snip || order.snippet;
 
+      const metaObj = {
+        id: order.id,
+        num: order.num !== undefined ? order.num : order.eo_number,
+        title: order.title,
+        pres: presName,
+        slug: order.slug || order.president_slug,
+        date: rawDate,
+        words: order.words || order.word_count || 0,
+        time: readTime,
+        val: val,
+        comp: comp,
+        tag: toneTag,
+        snip: snippet
+      };
+      const compactMeta = JSON.stringify(metaObj).replace(/'/g, "&apos;");
+
       return `
         <article class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-200 flex flex-col justify-between">
           <div>
@@ -245,7 +257,7 @@ const TOPIC_OPTIONS = [
                 <span class="text-[11px] font-medium px-2 py-0.5 rounded-full border ${sentimentBadge.bg} ${sentimentBadge.text} ${sentimentBadge.border}">
                   ${sentimentBadge.label}
                 </span>
-                <button type="button" data-bookmark-btn="${order.id}" aria-label="Save this order" aria-pressed="false" class="p-1 rounded-md text-slate-400 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                <button type="button" data-bookmark-btn="${order.id}" data-order-meta='${compactMeta}' aria-label="Save this order" aria-pressed="false" class="p-1 rounded-md text-slate-400 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
                   <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path></svg>
                 </button>
               </div>
@@ -308,6 +320,15 @@ const TOPIC_OPTIONS = [
       try {
         const res = await fetch('/search_index.json');
         allOrders = await res.json();
+        for (let i = 0; i < allOrders.length; i++) {
+          const o = allOrders[i];
+          const pres = o.pres || o.president_name || '';
+          const num = o.num !== undefined ? String(o.num) : String(o.eo_number || '');
+          const snip = o.snip || o.snippet || '';
+          const tag = o.tag || o.tone_tag || '';
+          const kw = o.kw || '';
+          o._hay = `${o.title || ''} ${pres} ${num} ${snip} ${tag} ${kw}`.toLowerCase();
+        }
       } catch (e) {
         console.error('Failed to load search index:', e);
         allOrders = initialOrders;
@@ -332,7 +353,7 @@ const TOPIC_OPTIONS = [
 
       const terms = q.split(/\s+/).filter(Boolean);
       currentMatches = dataset.filter(order => {
-        const hay = `${order.title} ${order.pres || order.president_name} ${order.num || order.eo_number || ''} ${order.snip || order.snippet || ''} ${order.tag || ''} ${order.kw || ''}`.toLowerCase();
+        const hay = order._hay || `${order.title} ${order.pres || ''} ${order.num || ''}`.toLowerCase();
         const matchQ = terms.every(term => hay.includes(term));
         const matchTopic = !topic || getTopics(order).includes(topic);
         return matchQ && matchTopic;
@@ -382,9 +403,8 @@ const TOPIC_OPTIONS = [
     suggestBtns.forEach(btn => {
       btn.addEventListener('click', () => {
         if (input) {
-          input.value = btn.textContent;
-          performSearch(btn.textContent);
-          input.focus();
+          input.value = btn.textContent.trim();
+          performSearch(input.value);
         }
       });
     });

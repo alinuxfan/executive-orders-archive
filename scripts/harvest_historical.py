@@ -32,8 +32,10 @@ def get_existing_ids():
     cursor = conn.cursor()
     cursor.execute("SELECT id FROM orders WHERE source = 'presidency_project' AND word_count > 0")
     ids = {row[0] for row in cursor.fetchall()}
+    cursor.execute("SELECT eo_number FROM orders WHERE eo_number IS NOT NULL AND source = 'federal_register'")
+    fr_eos = {row[0] for row in cursor.fetchall()}
     conn.close()
-    return ids
+    return ids, fr_eos
 
 def parse_date(date_str):
     if not date_str:
@@ -95,7 +97,9 @@ def fetch_document_content(relative_url):
 
     return president_name, clean_text
 
-def harvest_historical_page(page_num, existing_ids, force=False):
+def harvest_historical_page(page_num, existing_ids, existing_fr_eos=None, force=False):
+    if existing_fr_eos is None:
+        existing_fr_eos = set()
     params = {
         "items_per_page": 100,
         "page": page_num
@@ -127,12 +131,17 @@ def harvest_historical_page(page_num, existing_ids, force=False):
             continue
 
         title = a_tag.get_text().strip()
+        eo_num = extract_eo_number_from_title(title)
+        
+        # Deduplication guard: do not ingest if Federal Register already tracks this EO
+        if eo_num and eo_num in existing_fr_eos:
+            continue
+
         date_span = row.find("span", class_="date-display-single")
         signing_date = parse_date(date_span.get_text()) if date_span else None
 
         president_name, full_text = fetch_document_content(relative_url)
         metrics = compute_metrics(full_text)
-        eo_num = extract_eo_number_from_title(title)
 
         record = {
             "id": order_id,
@@ -171,7 +180,7 @@ def harvest_historical_page(page_num, existing_ids, force=False):
 
 def harvest_historical(start_page=0, max_pages=None, limit=None, force=False):
     init_db()
-    existing_ids = set() if force else get_existing_ids()
+    existing_ids, existing_fr_eos = (set(), set()) if force else get_existing_ids()
     print(f"Found {len(existing_ids)} existing historical orders in database.")
 
     page = start_page
@@ -183,7 +192,7 @@ def harvest_historical(start_page=0, max_pages=None, limit=None, force=False):
         if max_pages and (page - start_page) >= max_pages:
             break
 
-        count_in_page, processed = harvest_historical_page(page, existing_ids, force=force)
+        count_in_page, processed = harvest_historical_page(page, existing_ids, existing_fr_eos=existing_fr_eos, force=force)
         if count_in_page == 0:
             print(f"No more items found at page {page}. Ingestion complete.")
             break

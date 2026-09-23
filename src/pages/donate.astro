@@ -1,0 +1,352 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { donationConfig } from '../lib/donationConfig';
+
+const breadcrumbJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home", "item": new URL("/", Astro.site).toString() },
+    { "@type": "ListItem", "position": 2, "name": "Support & Donate", "item": new URL("/donate", Astro.site).toString() }
+  ]
+};
+
+const donatePageJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebPage",
+  "name": "Support & Donate | Executive Orders Archive",
+  "description": "Support the Executive Orders Archive with Buy Me a Coffee, Ko-fi, or GitHub Sponsors to fund server hosting, continuous data synchronization, and open-source civic research tools.",
+  "potentialAction": {
+    "@type": "DonateAction",
+    "recipient": {
+      "@type": "Organization",
+      "name": "Executive Orders Archive",
+      "url": new URL("/", Astro.site).toString()
+    }
+  }
+};
+---
+
+<Layout
+  title="Support & Donate"
+  description="Support the Executive Orders Archive. Your contribution funds server hosting, daily Federal Register syncing, NLP pipelines, and free public access to over 230 years of presidential history."
+  structuredData={[breadcrumbJsonLd, donatePageJsonLd]}
+>
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
+
+    <!-- Breadcrumb Navigation -->
+    <nav class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 mb-6 font-mono">
+      <a href="/" class="hover:underline">Home</a>
+      <span>/</span>
+      <span class="text-slate-800 dark:text-slate-200">Support & Donate</span>
+    </nav>
+
+    <!-- Header / Mission -->
+    <div class="text-center max-w-3xl mx-auto mb-12 sm:mb-16">
+      <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-900 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 mb-4 font-serif">
+        <span>★</span>
+        <span>Independent • Non-Partisan • Open Access</span>
+      </div>
+
+      <h1 class="font-serif font-extrabold text-3xl sm:text-4xl lg:text-5xl text-slate-900 dark:text-white tracking-tight mb-4">
+        Support Independent Presidential Research
+      </h1>
+
+      <p class="text-sm sm:text-base text-slate-600 dark:text-slate-300 leading-relaxed">
+        The Executive Orders Archive provides free, transparent, and computationally enriched access to presidential actions from 1789 to today. We maintain no paywalls, run no tracking ads, and collect no personal information. Your support directly funds server infrastructure, daily synchronization pipelines, and open civic research.
+      </p>
+    </div>
+
+    <!-- Donation Platform Cards: 3 Options -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 sm:gap-6 mb-14 sm:mb-18">
+      
+      <!-- Option 1: Buy Me a Coffee -->
+      <div class="relative flex flex-col justify-between rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 p-6 shadow-sm hover:shadow-md hover:border-amber-500/40 dark:hover:border-amber-500/40 transition-all duration-200">
+        <div>
+          <div class="flex items-start justify-between gap-3 mb-4">
+            <div class="w-11 h-11 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 flex items-center justify-center text-amber-600 dark:text-amber-400">
+              <!-- Coffee Cup Icon -->
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M20.25 10H19V6c0-1.1-.9-2-2-2H4c-1.1 0-2 .9-2 2v10c0 2.21 1.79 4 4 4h9c2.21 0 4-1.79 4-4v-2h1.25c1.24 0 2.25-1.01 2.25-2.25v-1.5c0-1.24-1.01-2.25-2.25-2.25zM17 16c0 1.1-.9 2-2 2H6c-1.1 0-2-.9-2-2V6h13v10zm3.25-2c0 .14-.11.25-.25.25H19v-2.5h1c.14 0 .25.11.25.25v2zM5 1h12v2H5V1z"/>
+              </svg>
+            </div>
+            <span class="text-[10px] font-semibold tracking-wide uppercase px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60">
+              {donationConfig.buyMeACoffee.recommendedType}
+            </span>
+          </div>
+
+          <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white mb-1">
+            {donationConfig.buyMeACoffee.name}
+          </h2>
+          <p class="text-xs font-medium text-amber-700 dark:text-amber-400 mb-2.5">
+            {donationConfig.buyMeACoffee.tagline}
+          </p>
+          <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-5">
+            {donationConfig.buyMeACoffee.description}
+          </p>
+
+          <div class="space-y-2 mb-6">
+            {donationConfig.buyMeACoffee.features.map(feature => (
+              <div class="flex items-start gap-2 text-xs text-slate-700 dark:text-slate-300">
+                <svg class="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <span>{feature}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div class="text-[11px] text-slate-400 dark:text-slate-500 mb-2.5">
+            Accepted: {donationConfig.buyMeACoffee.methods.join(' • ')}
+          </div>
+          <a
+            href={donationConfig.buyMeACoffee.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-amber-400 hover:bg-amber-300 text-slate-950 transition-colors shadow-sm group"
+          >
+            <span class="group-hover:rotate-12 transition-transform">☕</span>
+            <span>{donationConfig.buyMeACoffee.ctaText}</span>
+            <span class="text-xs opacity-75">↗</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Option 2: Ko-fi -->
+      <div class="relative flex flex-col justify-between rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 p-6 shadow-sm hover:shadow-md hover:border-sky-500/40 dark:hover:border-sky-500/40 transition-all duration-200">
+        <div>
+          <div class="flex items-start justify-between gap-3 mb-4">
+            <div class="w-11 h-11 rounded-xl bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-900 flex items-center justify-center text-sky-600 dark:text-sky-400">
+              <!-- Ko-fi Heart / Cup Icon -->
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M23.881 8.948c-.773-4.085-4.859-4.593-4.859-4.593H.723c-.604 0-.679.798-.679.798s-.082 7.324-.022 11.822c.164 2.424 2.586 2.672 2.586 2.672s8.267-.023 11.966-.049c2.438-.426 2.683-2.566 2.658-3.734 4.352.24 7.422-2.831 6.649-6.916zm-11.022 5.04c-1.688 1.583-4.708 3.513-4.708 3.513s-3.02-1.93-4.708-3.513c-1.89-1.774-2.128-3.923-.524-5.352 1.636-1.458 4.301-.849 5.232 1.054.931-1.903 3.596-2.512 5.232-1.054 1.604 1.429 1.366 3.578-.524 5.352zm6.758-2.618c-.463 1.527-1.83 2.155-2.822 2.29.349-2.079.349-4.228 0-6.307.992.135 2.359.763 2.822 2.29.412 1.359.412 2.668 0 4.017-.137.45-.403 1.137-.992 1.427-.589.29-1.285.29-1.874 0z"/>
+              </svg>
+            </div>
+            <span class="text-[10px] font-semibold tracking-wide uppercase px-2 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 border border-sky-200 dark:border-sky-800/60">
+              {donationConfig.kofi.recommendedType}
+            </span>
+          </div>
+
+          <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white mb-1">
+            {donationConfig.kofi.name}
+          </h2>
+          <p class="text-xs font-medium text-sky-600 dark:text-sky-400 mb-2.5">
+            {donationConfig.kofi.tagline}
+          </p>
+          <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-5">
+            {donationConfig.kofi.description}
+          </p>
+
+          <div class="space-y-2 mb-6">
+            {donationConfig.kofi.features.map(feature => (
+              <div class="flex items-start gap-2 text-xs text-slate-700 dark:text-slate-300">
+                <svg class="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <span>{feature}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div class="text-[11px] text-slate-400 dark:text-slate-500 mb-2.5">
+            Accepted: {donationConfig.kofi.methods.join(' • ')}
+          </div>
+          <a
+            href={donationConfig.kofi.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-bold text-xs sm:text-sm bg-[#13C3FF] hover:bg-[#0eb0e8] text-white transition-colors shadow-sm group"
+          >
+            <span class="group-hover:scale-110 transition-transform">💙</span>
+            <span>{donationConfig.kofi.ctaText}</span>
+            <span class="text-xs opacity-75">↗</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Option 3: GitHub Sponsors -->
+      <div class="relative flex flex-col justify-between rounded-2xl bg-white dark:bg-slate-900 border-2 border-slate-200 dark:border-slate-800 p-6 shadow-sm hover:shadow-md hover:border-pink-500/40 dark:hover:border-pink-500/40 transition-all duration-200">
+        <div>
+          <div class="flex items-start justify-between gap-3 mb-4">
+            <div class="w-11 h-11 rounded-xl bg-pink-50 dark:bg-pink-950/40 border border-pink-200 dark:border-pink-900 flex items-center justify-center text-pink-600 dark:text-pink-400">
+              <!-- GitHub Heart Icon -->
+              <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+              </svg>
+            </div>
+            <span class="text-[10px] font-semibold tracking-wide uppercase px-2 py-0.5 rounded-full bg-pink-100 dark:bg-pink-950/60 text-pink-700 dark:text-pink-300 border border-pink-200 dark:border-pink-800/60">
+              {donationConfig.githubSponsors.recommendedType}
+            </span>
+          </div>
+
+          <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white mb-1">
+            {donationConfig.githubSponsors.name}
+          </h2>
+          <p class="text-xs font-medium text-pink-600 dark:text-pink-400 mb-2.5">
+            {donationConfig.githubSponsors.tagline}
+          </p>
+          <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed mb-5">
+            {donationConfig.githubSponsors.description}
+          </p>
+
+          <div class="space-y-2 mb-6">
+            {donationConfig.githubSponsors.features.map(feature => (
+              <div class="flex items-start gap-2 text-xs text-slate-700 dark:text-slate-300">
+                <svg class="w-3.5 h-3.5 text-emerald-500 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7"></path>
+                </svg>
+                <span>{feature}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div>
+          <div class="text-[11px] text-slate-400 dark:text-slate-500 mb-2.5">
+            Accepted: {donationConfig.githubSponsors.methods.join(' • ')}
+          </div>
+          <a
+            href={donationConfig.githubSponsors.url}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="w-full inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl font-semibold text-xs sm:text-sm bg-slate-900 hover:bg-slate-800 text-white dark:bg-white dark:hover:bg-slate-100 dark:text-slate-900 transition-colors shadow-sm group"
+          >
+            <svg class="w-3.5 h-3.5 text-pink-500 group-hover:scale-110 transition-transform" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+            </svg>
+            <span>{donationConfig.githubSponsors.ctaText}</span>
+            <span class="text-xs opacity-60">↗</span>
+          </a>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Transparency Section: How Funds Are Used -->
+    <section class="mb-14 sm:mb-18">
+      <div class="text-center max-w-xl mx-auto mb-8">
+        <h2 class="font-serif font-bold text-2xl text-slate-900 dark:text-white mb-2">
+          Where Your Donations Go
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+          We believe in complete transparency. Every dollar contributed goes directly into sustaining and advancing this public archive.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div class="p-5 sm:p-6 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+          <div class="w-8 h-8 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center font-bold mb-3 text-sm">
+            01
+          </div>
+          <h3 class="font-serif font-bold text-base text-slate-900 dark:text-white mb-2">
+            Cloud & Server Infrastructure
+          </h3>
+          <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+            Fast edge hosting on Cloudflare, database storage, SSL, domain registration, and high-availability static content delivery across global points of presence.
+          </p>
+        </div>
+
+        <div class="p-5 sm:p-6 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+          <div class="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center font-bold mb-3 text-sm">
+            02
+          </div>
+          <h3 class="font-serif font-bold text-base text-slate-900 dark:text-white mb-2">
+            Automated Pipelines & NLP
+          </h3>
+          <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+            Compute resources for automated daily sync scripts, NLP text analysis, readability indexing, OCR clean-up on 19th-century orders, and search token indexing.
+          </p>
+        </div>
+
+        <div class="p-5 sm:p-6 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800">
+          <div class="w-8 h-8 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 flex items-center justify-center font-bold mb-3 text-sm">
+            03
+          </div>
+          <h3 class="font-serif font-bold text-base text-slate-900 dark:text-white mb-2">
+            Free Open Civic Research
+          </h3>
+          <p class="text-xs text-slate-600 dark:text-slate-400 leading-relaxed">
+            Guaranteeing the entire archive, REST API endpoints, full-text search, and citation tools remain 100% free with no paywalls, accounts, or surveillance ads.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Frequently Asked Questions -->
+    <section class="mb-14 sm:mb-18 border-t border-slate-200 dark:border-slate-800 pt-10">
+      <h2 class="font-serif font-bold text-xl sm:text-2xl text-slate-900 dark:text-white mb-6 text-center">
+        Frequently Asked Questions
+      </h2>
+
+      <div class="space-y-4 max-w-3xl mx-auto">
+        <div class="p-4 sm:p-5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+          <h3 class="font-semibold text-sm text-slate-900 dark:text-white mb-1.5">
+            Are donations tax-deductible?
+          </h3>
+          <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+            No. The Executive Orders Archive is an independent, developer-maintained civic technology and open-source software project. We are not a 501(c)(3) non-profit organization, so contributions are not tax-deductible.
+          </p>
+        </div>
+
+        <div class="p-4 sm:p-5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+          <h3 class="font-semibold text-sm text-slate-900 dark:text-white mb-1.5">
+            Which donation platform should I choose?
+          </h3>
+          <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+            All three options go to the same project! Use <strong>Buy Me a Coffee</strong> or <strong>Ko-fi</strong> for quick one-off tips without needing an account (both support Apple Pay, Google Pay, and cards). Use <strong>GitHub Sponsors</strong> if you already have a GitHub account and want recurring open-source sponsorship badges.
+          </p>
+        </div>
+
+        <div class="p-4 sm:p-5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+          <h3 class="font-semibold text-sm text-slate-900 dark:text-white mb-1.5">
+            Can I contribute if I cannot donate financially?
+          </h3>
+          <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+            Absolutely! Non-monetary support is immensely valuable. You can star and share the repository on GitHub, report typos or transcription errors on historical orders, suggest new analytical visualizations, or cite the archive in your research.
+          </p>
+        </div>
+
+        <div class="p-4 sm:p-5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+          <h3 class="font-semibold text-sm text-slate-900 dark:text-white mb-1.5">
+            How do I cancel or modify a recurring donation?
+          </h3>
+          <p class="text-xs sm:text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
+            If you support via GitHub Sponsors, you can adjust or cancel your sponsorship anytime in your GitHub account under <em>Settings &rarr; Billing and plans &rarr; Sponsors</em>. For Buy Me a Coffee or Ko-fi recurring memberships, you can manage them directly inside your payment receipt email or account dashboard.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Non-Monetary / Community Support Banner -->
+    <div class="rounded-2xl bg-gradient-to-r from-slate-900 to-blue-950 text-white p-6 sm:p-8 text-center border border-blue-900">
+      <h3 class="font-serif font-bold text-lg sm:text-xl text-amber-300 mb-2">
+        Open Source & Community Driven
+      </h3>
+      <p class="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto mb-5 leading-relaxed">
+        The complete codebase, data harvesting scripts, and database schema are available on GitHub under the open-source license.
+      </p>
+      <div class="flex flex-wrap items-center justify-center gap-3">
+        <a
+          href="https://github.com/alinuxfan/executive-orders-archive"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors"
+        >
+          <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" clip-rule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/></svg>
+          <span>Star on GitHub</span>
+        </a>
+        <a
+          href="/about"
+          class="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-semibold bg-white/10 hover:bg-white/20 border border-white/20 text-white transition-colors"
+        >
+          <span>Learn About Methodology &rarr;</span>
+        </a>
+      </div>
+    </div>
+
+  </div>
+</Layout>

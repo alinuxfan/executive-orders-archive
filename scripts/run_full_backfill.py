@@ -143,17 +143,12 @@ def fetch_ucsb_doc_safe(item_meta):
         if pres_a:
             president_name = pres_a.get_text().strip()
         else:
-            lines = author_div.get_text().strip().split("\n")
-            if lines and lines[0]:
-                president_name = lines[0].strip()
+            first_line = author_div.get_text().strip().split("\n")[0]
+            if first_line:
+                president_name = first_line.strip()
 
-    body_div = (
-        soup.find("div", class_="field-docs-content") or 
-        soup.find("div", class_="field-body") or 
-        soup.find("div", class_="node-content")
-    )
+    body_div = soup.find("div", class_="field-docs-content") or soup.find("div", class_="node-content")
     clean_text = clean_text_from_html(str(body_div)) if body_div else ""
-
     item_meta["president_name"] = president_name
     item_meta["full_text"] = clean_text
     return item_meta
@@ -169,9 +164,11 @@ def run_backfill(start_page=33, max_pages=109):
     cursor = conn.cursor()
     cursor.execute("SELECT id FROM orders WHERE word_count > 0")
     existing_ids = {row[0] for row in cursor.fetchall()}
+    cursor.execute("SELECT eo_number FROM orders WHERE eo_number IS NOT NULL AND source = 'federal_register'")
+    existing_fr_eos = {row[0] for row in cursor.fetchall()}
     conn.close()
 
-    logging.info(f"Loaded {len(existing_ids)} existing orders with full text.")
+    logging.info(f"Loaded {len(existing_ids)} existing orders with full text, {len(existing_fr_eos)} authoritative Federal Register EOs.")
     update_progress("running", f"page_{start_page}", 0, current_page=start_page, total_pages=max_pages)
 
     session = requests.Session()
@@ -215,6 +212,11 @@ def run_backfill(start_page=33, max_pages=109):
 
             title = a_tag.get_text().strip()
             eo_num = extract_eo_number(title)
+            
+            # Deduplication guard: skip historical duplicate if Federal Register is already authoritative for this EO
+            if eo_num and eo_num in existing_fr_eos:
+                continue
+
             date_span = row.find("span", class_="date-display-single")
             signing_date = parse_date(date_span.get_text()) if date_span else None
 
@@ -274,36 +276,33 @@ def run_backfill(start_page=33, max_pages=109):
                         "summary_plain_english": summary_data["summary_plain_english"],
                         "key_directives_json": json.dumps(summary_data["key_directives"]),
                         "who_it_affects_json": json.dumps(summary_data["who_it_affects"]),
-                        "tone_tag": summary_data["tone_tag"],
-                        "raw_metadata_json": json.dumps({"title": title, "url": item["relative_url"]})
+                        "tone_tag": const_metrics["tone_tag"],
+                        "raw_metadata_json": json.dumps({"title": title, "url": item["relative_url"], "date": s_date})
                     }
+
                     upsert_order(record)
                     existing_ids.add(item["id"])
                     total_processed += 1
-                except Exception as item_e:
-                    logging.warning(f"Error saving item {item.get('id')}: {item_e}")
+                except Exception as e:
+                    logging.error(f"Error enriching record {item['id']}: {e}\n{traceback.format_exc()}")
 
-        logging.info(f"Page {page}/{max_pages}: {len(to_fetch)} new orders saved (Session total: {total_processed}).")
+        logging.info(f"Page {page}/{max_pages} complete. Processed {len(to_fetch)} new orders (Total this run: {total_processed}).")
         update_progress("running", f"page_{page}", total_processed, current_page=page, total_pages=max_pages)
-        sys.stdout.flush()
+        time.sleep(0.5)
 
-        # Periodically export fresh site data every 100 new orders
-        if total_processed > 0 and total_processed % 100 == 0:
-            logging.info("Flushing real-time datasets to site_orders.json and stats.json...")
-            export_stats_json()
-            export_all()
-
-        time.sleep(0.3)
-
-    logging.info("Archive backfill complete! Generating final static site export...")
+    update_progress("completed", "complete", total_processed, current_page=max_pages, total_pages=max_pages)
+    logging.info(f"Backfill finished! Total new orders processed: {total_processed}")
+    
+    # Export stats and site data after backfill
+    logging.info("Exporting stats and site datasets...")
     export_stats_json()
     export_all()
-    update_progress("completed", "finished", total_processed, current_page=max_pages, total_pages=max_pages)
-    logging.info("All executive orders successfully backfilled!")
+    logging.info("Site datasets refreshed.")
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--start-page", type=int, default=33)
-    parser.add_argument("--max-pages", type=int, default=109)
+    parser = argparse.ArgumentParser(description="Run Full Executive Orders Backfill (Pages 33-109)")
+    parser.add_argument("--start-page", type=int, default=33, help="Start page (default 33)")
+    parser.add_argument("--max-pages", type=int, default=109, help="Max pages (default 109)")
     args = parser.parse_args()
+
     run_backfill(start_page=args.start_page, max_pages=args.max_pages)

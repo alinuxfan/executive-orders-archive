@@ -6,12 +6,12 @@ if str(_SCRIPTS_DIR) not in sys.path:
 import datetime
 import json
 import os
-import sys
 from pathlib import Path
 import requests
 
 from db import init_db, upsert_order, get_connection, get_order, log_field_changes
 from metrics import clean_text_from_html, compute_metrics
+from topics import classify_topics
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT_DIR / "data"
@@ -163,11 +163,26 @@ def sync_orders(days_lookback=30):
 
         president_data = item.get("president") or {}
         eo_num = item.get("executive_order_number")
+        parsed_eo_num = int(eo_num) if eo_num else None
+        title = item.get("title") or "Untitled Executive Order"
+
+        # Deduplication guards:
+        # If this order already existed under presidency_project or an older uncorrected FR publication,
+        # prune the obsolete record so Federal Register remains the single authoritative source.
+        if parsed_eo_num:
+            conn = get_connection()
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM orders WHERE eo_number = ? AND source = 'presidency_project'", (parsed_eo_num,))
+            cursor.execute("DELETE FROM orders WHERE eo_number = ? AND source = 'federal_register' AND id != ?", (parsed_eo_num, order_id))
+            conn.commit()
+            conn.close()
+
+        topics = classify_topics(title, body_text)
 
         record = {
             "id": order_id,
-            "eo_number": int(eo_num) if eo_num else None,
-            "title": item.get("title") or "Untitled Executive Order",
+            "eo_number": parsed_eo_num,
+            "title": title,
             "president_name": president_data.get("name") or "Unknown",
             "president_slug": president_data.get("identifier"),
             "signing_date": item.get("signing_date"),
@@ -189,6 +204,7 @@ def sync_orders(days_lookback=30):
             "key_directives_json": None,
             "who_it_affects_json": None,
             "tone_tag": None,
+            "topic_tags_json": json.dumps(topics),
             "raw_metadata_json": json.dumps(item)
         }
 

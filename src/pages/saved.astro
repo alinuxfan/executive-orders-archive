@@ -14,15 +14,38 @@ import Layout from '../layouts/Layout.astro';
       <span class="text-slate-800 dark:text-slate-200">Saved Orders</span>
     </nav>
 
-    <div class="mb-8">
-      <h1 class="font-serif font-extrabold text-3xl sm:text-4xl text-slate-900 dark:text-white">
-        Saved Executive Orders
-      </h1>
-      <p class="text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-2xl">
-        Your personal reading list. Saved orders are stored only in this browser (via
-        <code class="text-xs bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded font-mono">localStorage</code>) —
-        nothing is sent to a server, and clearing your browser data will clear this list.
-      </p>
+    <div class="flex flex-wrap items-end justify-between gap-4 mb-8">
+      <div>
+        <h1 class="font-serif font-extrabold text-3xl sm:text-4xl text-slate-900 dark:text-white">
+          Saved Executive Orders
+        </h1>
+        <p class="text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-2xl">
+          Your personal reading list. Saved orders are stored locally in your browser (via
+          <code class="text-xs bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded font-mono">localStorage</code>) —
+          nothing is sent to a server.
+        </p>
+      </div>
+
+      <div class="flex items-center gap-2" id="export-controls">
+        <button
+          id="export-json-btn"
+          type="button"
+          aria-label="Export saved orders as JSON"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+          <span>Export JSON</span>
+        </button>
+        <button
+          id="export-csv-btn"
+          type="button"
+          aria-label="Export saved orders as CSV"
+          class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+          <span>Export CSV</span>
+        </button>
+      </div>
     </div>
 
     <div id="saved-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
@@ -45,6 +68,11 @@ import Layout from '../layouts/Layout.astro';
     const grid = document.getElementById('saved-grid');
     const empty = document.getElementById('saved-empty');
     const loading = document.getElementById('saved-loading');
+    const exportJsonBtn = document.getElementById('export-json-btn');
+    const exportCsvBtn = document.getElementById('export-csv-btn');
+    const exportControls = document.getElementById('export-controls');
+
+    let currentSavedOrders = [];
 
     function renderCard(order) {
       let sentimentBadge = {
@@ -74,9 +102,7 @@ import Layout from '../layouts/Layout.astro';
       }
 
       const rawDate = order.date || order.signing_date;
-      const formattedDate = rawDate ? new Date(rawDate).toLocaleDateString("en-US", {
-        month: "short", day: "numeric", year: "numeric"
-      }) : "Undated";
+      const formattedDate = window.formatSigningDate ? window.formatSigningDate(rawDate) : (rawDate || "Undated");
 
       const num = order.num !== undefined ? order.num : order.eo_number;
       const eoBadge = num ?
@@ -130,27 +156,67 @@ import Layout from '../layouts/Layout.astro';
       const savedIds = window.EOBookmarks ? window.EOBookmarks.getAll() : [];
 
       if (savedIds.length === 0) {
+        currentSavedOrders = [];
         loading.classList.add('hidden');
         grid.innerHTML = '';
         empty.classList.remove('hidden');
+        if (exportControls) exportControls.classList.add('hidden');
         return;
       }
 
+      if (exportControls) exportControls.classList.remove('hidden');
+
+      // Check if we have compact metadata cached in localStorage for immediate 0ms rendering
+      const metaMap = window.EOBookmarks?.getMetadataMap ? window.EOBookmarks.getMetadataMap() : {};
+      const missingIds = savedIds.filter(id => !metaMap[id]);
+
+      if (missingIds.length === 0) {
+        // Instant local render!
+        currentSavedOrders = savedIds.map(id => metaMap[id]);
+        loading.classList.add('hidden');
+        empty.classList.add('hidden');
+        grid.innerHTML = currentSavedOrders.map(renderCard).join('');
+        window.EOBookmarks?.refreshAllButtons();
+        return;
+      }
+
+      // If any metadata is missing, backfill from search_index.json
       try {
         const res = await fetch('/search_index.json');
         const allOrders = await res.json();
-        const savedSet = new Set(savedIds);
-        const savedOrders = allOrders.filter(o => savedSet.has(o.id));
-        // Preserve save order (most recently saved first)
-        savedOrders.sort((a, b) => savedIds.indexOf(b.id) - savedIds.indexOf(a.id));
+        const byId = new Map(allOrders.map(o => [o.id, o]));
+
+        currentSavedOrders = [];
+        for (const id of savedIds) {
+          let item = metaMap[id];
+          if (!item && byId.has(id)) {
+            const raw = byId.get(id);
+            item = {
+              id: raw.id,
+              num: raw.num !== undefined ? raw.num : raw.eo_number,
+              title: raw.title,
+              pres: raw.pres || raw.president_name,
+              slug: raw.slug || raw.president_slug,
+              date: raw.date || raw.signing_date,
+              words: raw.words || raw.word_count || 0,
+              time: raw.time || raw.reading_time_minutes || 1,
+              val: raw.val || raw.sentiment_valence,
+              comp: raw.comp !== undefined ? raw.comp : (raw.sentiment_compound || 0),
+              tag: raw.tag || raw.tone_tag,
+              snip: raw.snip || raw.snippet
+            };
+            window.EOBookmarks?.saveMetadata?.(id, item);
+          }
+          if (item) currentSavedOrders.push(item);
+        }
 
         loading.classList.add('hidden');
-        if (savedOrders.length === 0) {
+        if (currentSavedOrders.length === 0) {
           grid.innerHTML = '';
           empty.classList.remove('hidden');
         } else {
           empty.classList.add('hidden');
-          grid.innerHTML = savedOrders.map(renderCard).join('');
+          grid.innerHTML = currentSavedOrders.map(renderCard).join('');
           window.EOBookmarks?.refreshAllButtons();
         }
       } catch (e) {
@@ -159,13 +225,58 @@ import Layout from '../layouts/Layout.astro';
       }
     }
 
+    // Export Handlers
+    function downloadFile(content, fileName, mimeType) {
+      const blob = new Blob([content], { type: mimeType });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }, 100);
+    }
+
+    exportJsonBtn?.addEventListener('click', () => {
+      if (!currentSavedOrders.length) return;
+      const dataStr = JSON.stringify(currentSavedOrders, null, 2);
+      downloadFile(dataStr, 'saved-executive-orders.json', 'application/json');
+    });
+
+    exportCsvBtn?.addEventListener('click', () => {
+      if (!currentSavedOrders.length) return;
+      const headers = ['id', 'eo_number', 'title', 'president', 'signing_date', 'word_count', 'reading_time_minutes', 'constitutional_alignment', 'url'];
+      const rows = currentSavedOrders.map(o => {
+        const url = `${window.location.origin}/orders/${o.id}`;
+        const fields = [
+          o.id,
+          o.num || '',
+          `"${(o.title || '').replace(/"/g, '""')}"`,
+          `"${(o.pres || '').replace(/"/g, '""')}"`,
+          o.date || '',
+          o.words || 0,
+          o.time || 1,
+          `"${(o.val || '').replace(/"/g, '""')}"`,
+          url
+        ];
+        return fields.join(',');
+      });
+      const csvContent = [headers.join(','), ...rows].join('\n');
+      downloadFile(csvContent, 'saved-executive-orders.csv', 'text/csv');
+    });
+
     // Re-render live when an order is unsaved from this page (or saved elsewhere in another tab)
     document.addEventListener('eo-bookmarks-changed', (e) => {
       const card = grid.querySelector(`[data-saved-card="${e.detail.id}"]`);
       if (card && !e.detail.saved) {
         card.remove();
+        currentSavedOrders = currentSavedOrders.filter(o => o.id !== e.detail.id);
         if (grid.children.length === 0) {
           empty.classList.remove('hidden');
+          if (exportControls) exportControls.classList.add('hidden');
         }
       }
     });

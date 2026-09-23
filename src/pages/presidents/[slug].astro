@@ -117,7 +117,17 @@ const breadcrumbJsonLd = {
         <span>/</span>
         <span class="text-slate-800 dark:text-slate-200">{president.name}</span>
       </nav>
-      <ShareButtons url={`/presidents/${president.slug}`} title={`${president.name} - Executive Orders`} />
+      <ShareButtons 
+        url={`/presidents/${president.slug}`} 
+        title={`${president.name} - Executive Orders`}
+        presidentName={president.name}
+        presidentStats={{
+          multiplier: washingtonMultiplier.toFixed(1),
+          zone1Pct: pZone1Pct,
+          zone3Pct: pZone3Pct,
+          totalOrders: totalOrders
+        }}
+      />
     </div>
 
     <!-- President Profile Header Banner -->

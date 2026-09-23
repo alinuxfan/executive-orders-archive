@@ -2,146 +2,291 @@
 interface Props {
   url: string;
   title: string;
+  shareText?: string;
+  twitterText?: string;
+  // Executive Order context
+  eoNumber?: string | number | null;
+  presidentName?: string;
+  signingDate?: string;
+  youngstownZone?: number;
+  youngstownName?: string;
+  constitutionalValence?: string;
+  sentimentCompound?: number;
+  // President profile context
+  presidentStats?: {
+    multiplier?: string | number;
+    zone1Pct?: string | number;
+    zone3Pct?: string | number;
+    totalOrders?: number;
+  };
 }
 
-const { url, title } = Astro.props;
+const {
+  url,
+  title,
+  shareText: customShareText,
+  twitterText: customTwitterText,
+  eoNumber,
+  presidentName,
+  signingDate,
+  youngstownZone,
+  youngstownName,
+  constitutionalValence,
+  sentimentCompound,
+  presidentStats
+} = Astro.props;
 
 const canonicalUrl = new URL(url, Astro.site).toString();
-const encodedUrl = encodeURIComponent(canonicalUrl);
-const encodedTitle = encodeURIComponent(title);
 
-const twitterHref = `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTitle}`;
+// Format date cleanly if present
+let formattedDate = "";
+if (signingDate) {
+  try {
+    const parts = signingDate.split("-").map(Number);
+    if (parts.length === 3 && !parts.some(isNaN)) {
+      const dt = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+      formattedDate = dt.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric", timeZone: "UTC" });
+    }
+  } catch (e) {}
+}
+
+// Build rich constitutional share text
+let computedShareText = customShareText || "";
+let computedTwitterText = customTwitterText || "";
+
+if (!computedShareText) {
+  if (youngstownZone !== undefined || constitutionalValence) {
+    // Executive Order specific text
+    const eoLabel = eoNumber ? `Executive Order ${eoNumber}` : `Presidential Order`;
+    const scoreStr = sentimentCompound !== undefined ? ` (${sentimentCompound >= 0 ? '+' : ''}${sentimentCompound.toFixed(2)})` : '';
+    
+    const lines = [
+      `${eoLabel}: "${title}"`,
+      presidentName ? `Signed by ${presidentName}${formattedDate ? ` (${formattedDate})` : ''}` : '',
+      '',
+      `⚖️ Constitutional Alignment:`,
+      youngstownName ? `• Separation of Powers: ${youngstownName}` : '',
+      constitutionalValence ? `• Constitutional Valence: ${constitutionalValence}${scoreStr}` : '',
+      '',
+      `Explore historical context & constitutional scoring:`
+    ].filter(Boolean);
+    computedShareText = lines.join('\n');
+
+    // Concise tweet text (<240 chars to ensure room for t.co link)
+    const shortTitle = title.length > 55 ? title.substring(0, 52).trim() + '...' : title;
+    const zoneShort = youngstownZone ? `Zone ${youngstownZone}` : '';
+    const valenceShort = constitutionalValence ? `${constitutionalValence}${scoreStr}` : '';
+    const alignShort = [zoneShort, valenceShort].filter(Boolean).join(' • ');
+
+    computedTwitterText = `${eoNumber ? `EO ${eoNumber}` : 'Order'}${presidentName ? ` (${presidentName})` : ''}: "${shortTitle}"\n⚖️ Alignment: ${alignShort}`;
+  } else if (presidentStats) {
+    // President profile specific text
+    const lines = [
+      `${presidentName || title} — Executive Orders Constitutional Profile`,
+      presidentStats.totalOrders ? `Tracked ${presidentStats.totalOrders} executive orders` : '',
+      '',
+      `⚖️ Constitutional Analysis:`,
+      presidentStats.zone1Pct ? `• Separation of Powers: ${presidentStats.zone1Pct}% Zone 1 (Statutory Authorization)` : '',
+      presidentStats.zone3Pct ? `• Constitutional Friction: ${presidentStats.zone3Pct}% Zone 3 (Lowest Ebb)` : '',
+      presidentStats.multiplier ? `• Power Inflation: ${presidentStats.multiplier}× Washington Baseline` : '',
+      '',
+      `Explore the full presidential record on Executive Orders Archive:`
+    ].filter(Boolean);
+    computedShareText = lines.join('\n');
+
+    computedTwitterText = `${presidentName || title} — Executive Orders Profile\n⚖️ Alignment: ${presidentStats.zone1Pct || '0'}% Zone 1 (Statutory)\n📈 Power Inflation: ${presidentStats.multiplier || '1'}× Washington Baseline`;
+  } else {
+    computedShareText = `${title}\n\nExplore full constitutional analysis on Executive Orders Archive:`;
+    computedTwitterText = title;
+  }
+}
+
+if (!computedTwitterText) {
+  computedTwitterText = computedShareText.split('\n')[0] || title;
+}
+
+const encodedUrl = encodeURIComponent(canonicalUrl);
+const encodedTwitterText = encodeURIComponent(computedTwitterText);
+const encodedBlueskyText = encodeURIComponent(`${computedTwitterText}\n${canonicalUrl}`);
+
+const twitterHref = `https://twitter.com/intent/tweet?url=${encodedUrl}&text=${encodedTwitterText}`;
+const blueskyHref = `https://bsky.app/intent/compose?text=${encodedBlueskyText}`;
 const facebookHref = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
 const linkedinHref = `https://www.linkedin.com/sharing/share-offsite/?url=${encodedUrl}`;
 ---
 
-<div class="flex items-center gap-2" data-share-buttons data-share-url={canonicalUrl} data-share-title={title}>
-  <span class="text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mr-1">Share</span>
-
-  <a
-    href={twitterHref}
-    target="_blank"
-    rel="noopener noreferrer"
-    aria-label="Share on X (Twitter)"
-    title="Share on X"
-    class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
+<div
+  class="relative inline-flex items-center gap-1.5 sm:gap-2"
+  data-share-buttons
+  data-share-url={canonicalUrl}
+  data-share-title={title}
+  data-share-text={computedShareText}
+  data-twitter-text={computedTwitterText}
+>
+  <!-- Floating feedback toast -->
+  <div
+    data-share-toast
+    class="hidden absolute -top-9 left-1/2 -translate-x-1/2 px-2.5 py-1 text-[11px] font-medium text-white bg-slate-900 dark:bg-slate-100 dark:text-slate-900 rounded-md shadow-lg pointer-events-none whitespace-nowrap z-50 transition-all duration-150"
   >
-    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-  </a>
-
-  <a
-    href={facebookHref}
-    target="_blank"
-    rel="noopener noreferrer"
-    aria-label="Share on Facebook"
-    title="Share on Facebook"
-    class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
-  >
-    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M22 12.06C22 6.505 17.523 2 12 2S2 6.505 2 12.06c0 5.02 3.657 9.184 8.438 9.94v-7.03H7.898v-2.91h2.54V9.845c0-2.507 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562v1.877h2.773l-.443 2.91h-2.33V22c4.78-.756 8.437-4.92 8.437-9.94z"/></svg>
-  </a>
-
-  <div class="relative inline-flex">
-    <button
-      type="button"
-      data-share-instagram
-      aria-label="Share on Instagram"
-      title="Share on Instagram"
-      class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
-    >
-      <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/></svg>
-    </button>
-    <div
-      data-ig-tooltip
-      class="hidden absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2.5 py-1 text-xs font-medium text-white bg-slate-900 dark:bg-slate-100 dark:text-slate-900 rounded shadow-md pointer-events-none whitespace-nowrap transition-opacity z-30"
-    >
-      Link copied! Opening Instagram...
-      <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900 dark:border-t-slate-100"></div>
-    </div>
+    <span data-share-toast-text>Link copied!</span>
+    <div class="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900 dark:border-t-slate-100"></div>
   </div>
 
-  <a
-    href={linkedinHref}
-    target="_blank"
-    rel="noopener noreferrer"
-    aria-label="Share on LinkedIn"
-    title="Share on LinkedIn"
-    class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
-  >
-    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 11.001-4.124 2.062 2.062 0 01-.001 4.124zM7.114 20.452H3.56V9h3.554v11.452z"/></svg>
-  </a>
-
+  <!-- Primary Universal Share Button (Web Share API on mobile / Rich clipboard on desktop) -->
   <button
     type="button"
-    data-copy-share-link
-    aria-label="Copy link"
-    title="Copy link"
-    class="p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
+    data-native-share
+    class="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-amber-50 dark:bg-amber-950/40 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-800 dark:text-amber-300 border border-amber-300/80 dark:border-amber-800/80 text-xs font-semibold shadow-xs transition-colors"
+    aria-label="Share with constitutional alignment"
+    title="Share order with constitutional analysis"
   >
-    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap=\"round\" stroke-linejoin=\"round\" stroke-width=\"2\" d=\"M13.828 10.172a4 4 0 010 5.656l-3 3a4 4 0 01-5.656-5.656l1.5-1.5M10.172 13.828a4 4 0 010-5.656l3-3a4 4 0 015.656 5.656l-1.5 1.5\"></path></svg>
+    <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+    </svg>
+    <span>Share</span>
   </button>
+
+  <!-- Direct Platform Links -->
+  <div class="flex items-center gap-1">
+    <!-- X (Twitter) -->
+    <a
+      href={twitterHref}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Share on X (Twitter) with constitutional alignment"
+      title="Share on X with constitutional alignment"
+      class="p-1.5 sm:p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
+    >
+      <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+      </svg>
+    </a>
+
+    <!-- Bluesky -->
+    <a
+      href={blueskyHref}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Share on Bluesky with constitutional analysis"
+      title="Share on Bluesky"
+      class="p-1.5 sm:p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
+    >
+      <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M12 10.8c-1.087-2.114-4.046-6.053-6.798-7.995C2.566.944 1.561 1.266.902 1.865.137 2.56 0 3.683 0 4.737c0 4.542 2.766 8.922 6.556 10.976-1.583-.414-3.32-.23-4.708.57-1.12.645-1.547 1.87-1.173 3.018.428 1.312 1.874 2.19 3.278 2.19 2.502 0 4.67-1.517 7.047-5.066 2.377 3.55 4.545 5.066 7.047 5.066 1.404 0 2.85-.878 3.278-2.19.374-1.148-.053-2.373-1.173-3.018-1.388-.8-3.125-.984-4.708-.57 3.79-2.054 6.556-6.434 6.556-10.976 0-1.054-.137-2.177-.902-2.872-.659-.599-1.664-.921-4.3 1.057-2.752 1.942-5.711 5.88-6.798 7.995z"/>
+      </svg>
+    </a>
+
+    <!-- LinkedIn -->
+    <a
+      href={linkedinHref}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Share on LinkedIn"
+      title="Share on LinkedIn"
+      class="p-1.5 sm:p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors hidden sm:inline-flex"
+    >
+      <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M20.447 20.452h-3.554v-5.569c0-1.328-.027-3.037-1.852-3.037-1.853 0-2.136 1.445-2.136 2.939v5.667H9.351V9h3.414v1.561h.046c.477-.9 1.637-1.85 3.37-1.85 3.601 0 4.267 2.37 4.267 5.455v6.286zM5.337 7.433a2.062 2.062 0 11.001-4.124 2.062 2.062 0 01-.001 4.124zM7.114 20.452H3.56V9h3.554v11.452z"/>
+      </svg>
+    </a>
+
+    <!-- Facebook -->
+    <a
+      href={facebookHref}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="Share on Facebook"
+      title="Share on Facebook"
+      class="p-1.5 sm:p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors hidden sm:inline-flex"
+    >
+      <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M22 12.06C22 6.505 17.523 2 12 2S2 6.505 2 12.06c0 5.02 3.657 9.184 8.438 9.94v-7.03H7.898v-2.91h2.54V9.845c0-2.507 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562v1.877h2.773l-.443 2.91h-2.33V22c4.78-.756 8.437-4.92 8.437-9.94z"/>
+      </svg>
+    </a>
+
+    <!-- Copy Link Button -->
+    <button
+      type="button"
+      data-copy-share-link
+      aria-label="Copy link to clipboard"
+      title="Copy link"
+      class="p-1.5 sm:p-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
+    >
+      <svg class="w-3.5 h-3.5 sm:w-4 sm:h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 010 5.656l-3 3a4 4 0 01-5.656-5.656l1.5-1.5M10.172 13.828a4 4 0 010-5.656l3-3a4 4 0 015.656 5.656l-1.5 1.5"></path>
+      </svg>
+    </button>
+  </div>
 </div>
 
 <script>
   document.querySelectorAll('[data-share-buttons]').forEach((container) => {
+    const nativeBtn = container.querySelector('[data-native-share]');
     const copyBtn = container.querySelector('[data-copy-share-link]');
-    const igBtn = container.querySelector('[data-share-instagram]');
-    const igTooltip = container.querySelector('[data-ig-tooltip]');
+    const toast = container.querySelector('[data-share-toast]');
+    const toastText = container.querySelector('[data-share-toast-text]');
+
     const url = container.getAttribute('data-share-url') || window.location.href;
     const title = container.getAttribute('data-share-title') || document.title;
+    const shareText = container.getAttribute('data-share-text') || title;
 
+    let toastTimer: ReturnType<typeof setTimeout> | undefined;
+
+    function showToast(message: string) {
+      if (!toast || !toastText) return;
+      toastText.textContent = message;
+      toast.classList.remove('hidden');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 2500);
+    }
+
+    // Native Share / Rich Copy Trigger
+    nativeBtn?.addEventListener('click', async () => {
+      // Check if native Web Share is available
+      if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
+        try {
+          await navigator.share({
+            title: title,
+            text: shareText,
+            url: url
+          });
+          return;
+        } catch (err: any) {
+          // If user cancels or dismisses share sheet, do nothing
+          if (err?.name === 'AbortError') return;
+        }
+      }
+
+      // Desktop / fallback: Copy full constitutional summary + URL to clipboard
+      try {
+        const fullClip = `${shareText}\n\n${url}`;
+        await navigator.clipboard.writeText(fullClip);
+        showToast('Constitutional summary & link copied!');
+      } catch (e) {
+        showToast('Failed to copy');
+      }
+    });
+
+    // Copy Clean URL Link
     copyBtn?.addEventListener('click', async () => {
       try {
         await navigator.clipboard.writeText(url);
+        showToast('Link copied to clipboard!');
+
         const svg = copyBtn.querySelector('svg');
         if (svg) {
           const original = svg.outerHTML;
-          svg.outerHTML = '<svg class="w-4 h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
+          svg.outerHTML = '<svg class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 dark:text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>';
           setTimeout(() => {
             const currentSvg = copyBtn.querySelector('svg');
             if (currentSvg) currentSvg.outerHTML = original;
           }, 1500);
         }
       } catch (e) {
-        console.error('Failed to copy link:', e);
+        showToast('Failed to copy link');
       }
-    });
-
-    let igTimeout: ReturnType<typeof setTimeout> | undefined;
-
-    igBtn?.addEventListener('click', async () => {
-      const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
-        (navigator.maxTouchPoints > 1 && window.innerWidth < 768);
-
-      if (isMobile && navigator.share) {
-        try {
-          await navigator.share({
-            title: title,
-            url: url,
-          });
-          return;
-        } catch (err: any) {
-          if (err?.name === 'AbortError') {
-            return;
-          }
-        }
-      }
-
-      // Desktop or fallback: copy link to clipboard, show feedback tooltip, and open Instagram
-      try {
-        navigator.clipboard.writeText(url);
-      } catch (e) {
-        console.error('Failed to copy link for Instagram:', e);
-      }
-
-      if (igTooltip) {
-        igTooltip.classList.remove('hidden');
-        clearTimeout(igTimeout);
-        igTimeout = setTimeout(() => {
-          igTooltip.classList.add('hidden');
-        }, 2500);
-      }
-
-      window.open('https://www.instagram.com/', '_blank', 'noopener,noreferrer');
     });
   });
 </script>

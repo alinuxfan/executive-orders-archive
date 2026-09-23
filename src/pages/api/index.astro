@@ -16,7 +16,10 @@ const exampleOrder = {
   title: "Executive Order — Example Title",
   president_name: "…",
   signing_date: "2026-01-15",
-  sentiment: { compound: 0.12, positive: 0.2, negative: 0.05, neutral: 0.75, valence: "Constitutional Fidelity" },
+  word_count: 842,
+  reading_time_minutes: 4,
+  sentiment_valence: "Constitutional Fidelity",
+  sentiment_compound: 0.12,
   tone_tag: "Art. II §3: Faithful Execution of Statutory Law",
   topics: ["Energy & Environment", "Economy & Finance"],
   url: "https://executiveordersarchive.org/orders/fr-2026-19335"
@@ -55,31 +58,33 @@ const exampleOrder = {
         </div>
         <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
           Bulk listing of every order: id, EO number, title, president, dates, word count, sentiment,
-          tone tag, and topic tags. No full document text — use the per-order endpoint for that.
-        </p>
-      </div>
-
-      <div class="mb-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5">
-        <div class="flex flex-wrap items-center gap-2 mb-2">
-          <span class="font-mono text-xs font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-900">GET</span>
-          <code class="text-sm font-mono text-slate-800 dark:text-slate-200">/api/orders/{'{id}'}.json</code>
-        </div>
-        <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed mb-2">
-          Full detail for a single order — full document text, plain-English summary, key directives,
-          affected entities, and all metrics. <code class="text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded font-mono">{'{id}'}</code>
-          is the same slug used in this site's own <code class="text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded font-mono">/orders/{'{id}'}</code> URLs
-          (and appears in every <code class="text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded font-mono">id</code> field in the bulk listing above).
-        </p>
-        <p class="text-xs text-slate-500 dark:text-slate-400">
-          Example: <a href="/api/orders/fr-2026-19335.json" class="text-blue-600 dark:text-blue-400 hover:underline font-mono">/api/orders/fr-2026-19335.json</a>
+          tone tag, and topic tags. No full document text — full text, plain-English summaries, key
+          directives, and affected entities are on each order's own page (see below).
         </p>
       </div>
     </section>
 
     <section class="mb-10">
+      <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white mb-3">Full order detail</h2>
+      <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed mb-2">
+        There's no standalone per-order JSON endpoint — with 11,000+ orders, statically pre-rendering
+        one JSON file per order doubled this site's file count for no benefit over the page that
+        already exists. Full detail (document text, plain-English summary, key directives, affected
+        entities, all metrics) lives on each order's page at
+        <code class="text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded font-mono">/orders/{'{id}'}</code>,
+        where <code class="text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded font-mono">{'{id}'}</code>
+        is the same slug that appears in every <code class="text-xs bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded font-mono">id</code> field
+        in the bulk listing above.
+      </p>
+      <p class="text-xs text-slate-500 dark:text-slate-400">
+        Example: <a href="/orders/fr-2026-19335" class="text-blue-600 dark:text-blue-400 hover:underline font-mono">/orders/fr-2026-19335</a>
+      </p>
+    </section>
+
+    <section class="mb-10">
       <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white mb-3">Example response</h2>
       <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed mb-3">
-        Shape of a single order from the per-order endpoint (truncated):
+        Shape of a single order from the bulk listing (truncated):
       </p>
       <pre class="text-xs font-mono bg-slate-950 text-slate-200 rounded-xl p-4 overflow-x-auto">{JSON.stringify(exampleOrder, null, 2)}</pre>
     </section>

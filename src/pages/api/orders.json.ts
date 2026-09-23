@@ -35,7 +35,6 @@ export const GET: APIRoute = () => {
     generated_at: new Date().toISOString(),
     count: orders.length,
     license: 'Public Domain (U.S. Government Work). See https://executiveordersarchive.org/api for terms.',
-    detail_endpoint: 'https://executiveordersarchive.org/api/orders/{id}.json',
     orders
   };
 

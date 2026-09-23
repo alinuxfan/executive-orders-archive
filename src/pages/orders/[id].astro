@@ -4,7 +4,7 @@ import CitationBox from '../../components/CitationBox.astro';
 import ShareButtons from '../../components/ShareButtons.astro';
 import OrderCard from '../../components/OrderCard.astro';
 import { generateOrderSummary } from '../../lib/summary';
-import { getRelatedOrders } from '../../lib/relatedOrders';
+import { getRelatedOrders, getReferencedByLater } from '../../lib/relatedOrders';
 import { resolvePortraitSlug } from '../../lib/portraits';
 import rawOrders from '../../../data/site_orders.json';
 
@@ -104,6 +104,17 @@ const legislationJsonLd = {
 // Related Orders: cross-referenced EO numbers mentioned in the text, plus same-president orders
 // signed closest in time, as a fallback / supplement.
 const { related: relatedOrders, referencedCount } = getRelatedOrders(order);
+const referencedByLater = getReferencedByLater(order);
+
+function relationBadgeClasses(relation: string): string {
+  if (relation === 'Revokes' || relation === 'Rescinds' || relation === 'Supersedes') {
+    return 'bg-rose-600 text-white border-rose-700';
+  }
+  if (relation === 'Amends') {
+    return 'bg-amber-500 text-white border-amber-600';
+  }
+  return 'bg-slate-600 text-white border-slate-700';
+}
 
 const breadcrumbJsonLd = {
   "@context": "https://schema.org",
@@ -126,7 +137,7 @@ const breadcrumbJsonLd = {
   <div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
     
     <!-- Breadcrumb -->
-    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6 print:hidden">
       <nav class="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-mono">
         <a href="/" class="hover:underline">Home</a>
         <span>/</span>
@@ -135,6 +146,15 @@ const breadcrumbJsonLd = {
         <span class="text-slate-800 dark:text-slate-200 truncate max-w-xs">{order.id}</span>
       </nav>
       <div class="flex items-center gap-3">
+        <button
+          type="button"
+          onclick="window.print()"
+          aria-label="Print or save this order as a PDF"
+          class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold transition-colors"
+        >
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a1 1 0 001-1v-5H8v5a1 1 0 001 1zm8-12V5a1 1 0 00-1-1H8a1 1 0 00-1 1v4h10z"></path></svg>
+          <span>Print / PDF</span>
+        </button>
         <button
           type="button"
           data-bookmark-btn={order.id}
@@ -316,9 +336,9 @@ const breadcrumbJsonLd = {
 
         <div class="flex items-center gap-2">
           {order.source_url ? (
-            <a 
-              href={order.source_url} 
-              target="_blank" 
+            <a
+              href={order.source_url}
+              target="_blank"
               rel="noopener noreferrer"
               class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 transition-colors"
             >
@@ -328,15 +348,199 @@ const breadcrumbJsonLd = {
         </div>
       </div>
 
+      <!-- Accessibility Toolbar: text size + read-aloud, for the Post-Graduate-level
+           legal text this page itself flags via the Flesch-Kincaid metric above -->
+      <div class="print:hidden flex flex-wrap items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-100 dark:border-slate-800/80">
+        <div class="flex items-center gap-2">
+          <span class="text-[11px] font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mr-1">Text Size</span>
+          <button
+            type="button"
+            id="text-size-decrease"
+            aria-label="Decrease text size"
+            class="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold transition-colors"
+          >A&minus;</button>
+          <button
+            type="button"
+            id="text-size-increase"
+            aria-label="Increase text size"
+            class="w-7 h-7 flex items-center justify-center rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold transition-colors"
+          >A+</button>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button
+            type="button"
+            id="read-aloud-btn"
+            aria-label="Read this order aloud"
+            class="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 text-xs font-semibold transition-colors"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M7 9v6h4l5 5V4l-5 5H7z"></path></svg>
+            <span id="read-aloud-label">Read Aloud</span>
+          </button>
+          <button
+            type="button"
+            id="read-aloud-stop-btn"
+            aria-label="Stop reading"
+            class="hidden p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
+          >
+            <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 24 24"><rect x="6" y="6" width="12" height="12" rx="1"></rect></svg>
+          </button>
+        </div>
+      </div>
+
       <!-- Legal Text Rendering -->
-      <div class="prose dark:prose-invert max-w-none font-serif text-slate-800 dark:text-slate-200 text-sm sm:text-base leading-loose whitespace-pre-line prose-legal">
+      <div id="order-full-text" class="prose dark:prose-invert max-w-none font-serif text-slate-800 dark:text-slate-200 text-sm sm:text-base leading-loose whitespace-pre-line prose-legal">
         {order.full_text || "Full document text is being harvested and will be displayed shortly."}
       </div>
     </article>
 
+    <script>
+      (function () {
+        const textEl = document.getElementById('order-full-text');
+        const decreaseBtn = document.getElementById('text-size-decrease');
+        const increaseBtn = document.getElementById('text-size-increase');
+        const SIZES_PX = [14, 16, 18, 20, 24, 28];
+        const STORAGE_KEY = 'eo-text-size-index';
+
+        function applyTextSize(index) {
+          if (textEl) textEl.style.fontSize = `${SIZES_PX[index]}px`;
+        }
+
+        function getStoredIndex() {
+          const raw = localStorage.getItem(STORAGE_KEY);
+          const parsed = raw !== null ? parseInt(raw, 10) : 2;
+          return Number.isFinite(parsed) ? Math.min(Math.max(parsed, 0), SIZES_PX.length - 1) : 2;
+        }
+
+        let sizeIndex = getStoredIndex();
+        applyTextSize(sizeIndex);
+
+        decreaseBtn?.addEventListener('click', () => {
+          sizeIndex = Math.max(0, sizeIndex - 1);
+          localStorage.setItem(STORAGE_KEY, String(sizeIndex));
+          applyTextSize(sizeIndex);
+        });
+        increaseBtn?.addEventListener('click', () => {
+          sizeIndex = Math.min(SIZES_PX.length - 1, sizeIndex + 1);
+          localStorage.setItem(STORAGE_KEY, String(sizeIndex));
+          applyTextSize(sizeIndex);
+        });
+
+        // Read Aloud — chunked into sentence groups since Chrome silently
+        // truncates/drops very long single SpeechSynthesisUtterance instances.
+        const speakBtn = document.getElementById('read-aloud-btn');
+        const speakLabel = document.getElementById('read-aloud-label');
+        const stopBtn = document.getElementById('read-aloud-stop-btn');
+        const supportsSpeech = typeof window !== 'undefined' && 'speechSynthesis' in window;
+
+        if (!supportsSpeech && speakBtn) {
+          speakBtn.setAttribute('disabled', 'true');
+          speakBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        }
+
+        let queue: string[] = [];
+        let queueIndex = 0;
+        let isPaused = false;
+
+        function chunkText(text: string, maxLen = 900): string[] {
+          const sentences = text.replace(/\s+/g, ' ').trim().split(/(?<=[.!?])\s+/);
+          const chunks: string[] = [];
+          let current = '';
+          for (const s of sentences) {
+            if (current && (current.length + s.length + 1) > maxLen) {
+              chunks.push(current.trim());
+              current = s;
+            } else {
+              current = current ? `${current} ${s}` : s;
+            }
+          }
+          if (current) chunks.push(current.trim());
+          return chunks;
+        }
+
+        function setSpeakingUI(active: boolean) {
+          if (speakLabel) speakLabel.textContent = active ? 'Pause' : 'Read Aloud';
+          if (stopBtn) stopBtn.classList.toggle('hidden', !active && !isPaused);
+        }
+
+        function speakNext() {
+          if (queueIndex >= queue.length) {
+            setSpeakingUI(false);
+            queueIndex = 0;
+            return;
+          }
+          const utterance = new SpeechSynthesisUtterance(queue[queueIndex]);
+          utterance.onend = () => {
+            queueIndex += 1;
+            speakNext();
+          };
+          utterance.onerror = () => setSpeakingUI(false);
+          window.speechSynthesis.speak(utterance);
+        }
+
+        speakBtn?.addEventListener('click', () => {
+          if (!supportsSpeech) return;
+
+          if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+            window.speechSynthesis.pause();
+            isPaused = true;
+            if (speakLabel) speakLabel.textContent = 'Resume';
+            return;
+          }
+          if (isPaused) {
+            window.speechSynthesis.resume();
+            isPaused = false;
+            if (speakLabel) speakLabel.textContent = 'Pause';
+            return;
+          }
+
+          const fullText = textEl?.textContent || '';
+          queue = chunkText(fullText);
+          queueIndex = 0;
+          setSpeakingUI(true);
+          speakNext();
+        });
+
+        stopBtn?.addEventListener('click', () => {
+          if (!supportsSpeech) return;
+          window.speechSynthesis.cancel();
+          queue = [];
+          queueIndex = 0;
+          isPaused = false;
+          setSpeakingUI(false);
+        });
+
+        window.addEventListener('beforeunload', () => {
+          if (supportsSpeech) window.speechSynthesis.cancel();
+        });
+      })();
+    </script>
+
+    <!-- Referenced By Later Orders (reverse of the forward cross-references below) -->
+    {referencedByLater.length > 0 && (
+      <section class="mt-8 print:hidden">
+        <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white mb-1">
+          Referenced By Later Executive Orders
+        </h2>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">
+          These later orders cite Executive Order {order.eo_number} by number in their text. Detected automatically from document text — always confirm current legal effect against the official Federal Register record.
+        </p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {referencedByLater.map(o => (
+            <div class="relative">
+              <span class={`absolute top-3 right-3 z-10 text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full border ${relationBadgeClasses(o.relation)}`}>
+                {o.relation}
+              </span>
+              <OrderCard order={o} />
+            </div>
+          ))}
+        </div>
+      </section>
+    )}
+
     <!-- Related Orders -->
     {relatedOrders.length > 0 && (
-      <section class="mt-8">
+      <section class="mt-8 print:hidden">
         <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white mb-1">
           Related Executive Orders
         </h2>

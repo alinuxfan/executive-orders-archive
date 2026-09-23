@@ -5,6 +5,27 @@ import orders from '../../data/site_orders_summary.json';
 const totalIndexed = orders.length;
 // Pass first 24 orders as initial preview before search is triggered
 const initialOrders = orders.slice(0, 24);
+
+// Keep in sync with TOPIC_PATTERNS / UNCATEGORIZED_TOPIC in scripts/topics.py
+const TOPIC_OPTIONS = [
+  "Agriculture",
+  "Civil Rights & Liberties",
+  "Criminal Justice & Law Enforcement",
+  "Economy & Finance",
+  "Education",
+  "Energy & Environment",
+  "Foreign Policy & Diplomacy",
+  "Government Operations & Civil Service",
+  "Healthcare & Public Health",
+  "Housing",
+  "Immigration & Border Security",
+  "Infrastructure & Transportation",
+  "Labor & Employment",
+  "National Security & Defense",
+  "Technology & Cybersecurity",
+  "Trade & Tariffs",
+  "Uncategorized",
+];
 ---
 
 <Layout 
@@ -51,9 +72,34 @@ const initialOrders = orders.slice(0, 24);
     </div>
 
     <!-- Match Status -->
-    <div class="flex items-center justify-between text-xs text-slate-500 mb-6 pb-2 border-b border-slate-200 dark:border-slate-800">
+    <div class="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 mb-6 pb-2 border-b border-slate-200 dark:border-slate-800">
       <span id="search-status">Showing recent executive orders</span>
-      <span class="font-mono" id="total-count">{totalIndexed.toLocaleString()} total orders indexed</span>
+      <div class="flex items-center gap-3">
+        <label for="topic-select" class="sr-only">Topic</label>
+        <select
+          id="topic-select"
+          class="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-300"
+        >
+          <option value="">All Topics</option>
+          {TOPIC_OPTIONS.map(topic => (
+            <option value={topic}>{topic}</option>
+          ))}
+        </select>
+        <label for="sort-select" class="sr-only">Sort By</label>
+        <select
+          id="sort-select"
+          class="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-300"
+        >
+          <option value="relevance">Sort: Relevance</option>
+          <option value="newest">Newest First</option>
+          <option value="oldest">Oldest First</option>
+          <option value="longest">Longest (Word Count)</option>
+          <option value="shortest">Shortest (Word Count)</option>
+          <option value="friction">Most Constitutional Friction</option>
+          <option value="fidelity">Most Constitutional Fidelity</option>
+        </select>
+        <span class="font-mono" id="total-count">{totalIndexed.toLocaleString()} total orders indexed</span>
+      </div>
     </div>
 
     <!-- Search Results Container -->
@@ -86,11 +132,60 @@ const initialOrders = orders.slice(0, 24);
     const loadMoreContainer = document.getElementById('load-more-container');
     const loadMoreBtn = document.getElementById('load-more-btn');
     const suggestBtns = document.querySelectorAll('.suggest-btn');
+    const sortSelect = document.getElementById('sort-select');
+    const topicSelect = document.getElementById('topic-select');
 
     let allOrders = null;
     let currentMatches = [];
     let displayedCount = 0;
     const PAGE_SIZE = 40;
+
+    function getTopics(item) {
+      if (Array.isArray(item.topics)) return item.topics;
+      if (item.topic_tags_json) {
+        try { return JSON.parse(item.topic_tags_json); } catch (e) { return []; }
+      }
+      return [];
+    }
+
+    function sortItems(list, sortMode) {
+      if (!sortMode || sortMode === 'relevance') return list;
+      const sorted = [...list];
+      const getComp = o => (o.comp !== undefined ? o.comp : (o.sentiment_compound || 0));
+      const getWords = o => (o.words !== undefined ? o.words : (o.word_count || 0));
+      const getDate = o => new Date(o.date || o.signing_date || 0).getTime();
+      switch (sortMode) {
+        case 'oldest':
+          sorted.sort((a, b) => getDate(a) - getDate(b));
+          break;
+        case 'longest':
+          sorted.sort((a, b) => getWords(b) - getWords(a));
+          break;
+        case 'shortest':
+          sorted.sort((a, b) => getWords(a) - getWords(b));
+          break;
+        case 'friction':
+          sorted.sort((a, b) => getComp(a) - getComp(b));
+          break;
+        case 'fidelity':
+          sorted.sort((a, b) => getComp(b) - getComp(a));
+          break;
+        case 'newest':
+          sorted.sort((a, b) => getDate(b) - getDate(a));
+          break;
+      }
+      return sorted;
+    }
+
+    function syncUrl(query) {
+      const params = new URLSearchParams();
+      if (query) params.set('q', query);
+      if (topicSelect?.value) params.set('topic', topicSelect.value);
+      if (sortSelect?.value && sortSelect.value !== 'relevance') params.set('sort', sortSelect.value);
+      const qs = params.toString();
+      const newUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
+      window.history.replaceState(null, '', newUrl);
+    }
 
     function renderCard(order) {
       let sentimentBadge = {
@@ -220,25 +315,33 @@ const initialOrders = orders.slice(0, 24);
       return allOrders;
     }
 
-    async function performSearch(query) {
+    async function performSearch(query, opts = {}) {
       const q = (query || '').toLowerCase().trim();
       const dataset = await loadIndex();
+      const sortMode = sortSelect?.value || 'relevance';
+      const topic = topicSelect?.value || '';
 
       if (!q) {
-        currentMatches = dataset.slice(0, 40);
-        status.textContent = 'Showing recent executive orders';
+        currentMatches = topic ? dataset.filter(order => getTopics(order).includes(topic)) : dataset.slice(0, 40);
+        currentMatches = sortItems(currentMatches, sortMode === 'relevance' ? 'newest' : sortMode);
+        status.textContent = topic ? `Showing orders tagged "${topic}"` : 'Showing recent executive orders';
         displayMatches(true);
+        if (!opts.skipUrlSync) syncUrl(query);
         return;
       }
 
       const terms = q.split(/\s+/).filter(Boolean);
       currentMatches = dataset.filter(order => {
-        const hay = `${order.title} ${order.pres || order.president_name} ${order.num || order.eo_number || ''} ${order.snip || order.snippet || ''} ${order.tag || ''}`.toLowerCase();
-        return terms.every(term => hay.includes(term));
+        const hay = `${order.title} ${order.pres || order.president_name} ${order.num || order.eo_number || ''} ${order.snip || order.snippet || ''} ${order.tag || ''} ${order.kw || ''}`.toLowerCase();
+        const matchQ = terms.every(term => hay.includes(term));
+        const matchTopic = !topic || getTopics(order).includes(topic);
+        return matchQ && matchTopic;
       });
+      currentMatches = sortItems(currentMatches, sortMode);
 
       status.textContent = `Found ${currentMatches.length.toLocaleString()} match${currentMatches.length === 1 ? '' : 'es'} for "${query}"`;
       displayMatches(true);
+      if (!opts.skipUrlSync) syncUrl(query);
     }
 
     // Initialize with preview
@@ -251,9 +354,13 @@ const initialOrders = orders.slice(0, 24);
     // Check URL parameters
     const urlParams = new URLSearchParams(window.location.search);
     const initialQuery = urlParams.get('q');
-    if (initialQuery && input) {
-      input.value = initialQuery;
-      performSearch(initialQuery);
+    const initialSort = urlParams.get('sort');
+    const initialTopic = urlParams.get('topic');
+    if (initialSort && sortSelect) sortSelect.value = initialSort;
+    if (initialTopic && topicSelect) topicSelect.value = initialTopic;
+    if ((initialQuery || initialTopic) && input) {
+      input.value = initialQuery || '';
+      performSearch(initialQuery || '', { skipUrlSync: true });
     }
 
     let debounceTimer;
@@ -262,6 +369,14 @@ const initialOrders = orders.slice(0, 24);
       debounceTimer = setTimeout(() => {
         performSearch(e.target.value);
       }, 150);
+    });
+
+    sortSelect?.addEventListener('change', () => {
+      performSearch(input?.value || '');
+    });
+
+    topicSelect?.addEventListener('change', () => {
+      performSearch(input?.value || '');
     });
 
     suggestBtns.forEach(btn => {

@@ -16,10 +16,11 @@ def export_all():
 
     # Fetch all orders
     cursor.execute("""
-        SELECT id, eo_number, title, president_name, president_slug, signing_date, publication_date, 
-               source, source_url, word_count, char_count, reading_time_minutes, flesch_kincaid_grade, 
+        SELECT id, eo_number, title, president_name, president_slug, signing_date, publication_date,
+               source, source_url, pdf_url, word_count, char_count, reading_time_minutes, flesch_kincaid_grade,
                sentiment_compound, sentiment_pos, sentiment_neg, sentiment_neu, sentiment_valence,
-               summary_plain_english, key_directives_json, who_it_affects_json, tone_tag, full_text
+               summary_plain_english, key_directives_json, who_it_affects_json, tone_tag,
+               topic_tags_json, full_text
         FROM orders 
         ORDER BY signing_date DESC, id DESC
     """)

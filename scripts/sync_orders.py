@@ -10,7 +10,7 @@ import sys
 from pathlib import Path
 import requests
 
-from db import init_db, upsert_order, get_connection
+from db import init_db, upsert_order, get_connection, get_order, log_field_changes
 from metrics import clean_text_from_html, compute_metrics
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
@@ -192,7 +192,12 @@ def sync_orders(days_lookback=30):
             "raw_metadata_json": json.dumps(item)
         }
 
+        existing = get_order(order_id)
         upsert_order(record)
+        changes = log_field_changes(order_id, existing, record)
+        if changes:
+            changed_fields = ", ".join(c[1] for c in changes)
+            print(f"  Detected changes for {order_id}: {changed_fields}")
         new_or_updated += 1
 
     # Export stats JSON

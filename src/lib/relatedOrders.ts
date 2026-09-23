@@ -1,8 +1,62 @@
 import summaryOrders from '../../data/site_orders_summary.json';
+// Only site_orders.json carries full_text (site_orders_summary.json only has a
+// truncated snippet) — needed here to scan every order's body for EO-number
+// mentions when building the reverse reference index below.
+import fullOrders from '../../data/site_orders.json';
 
 // Cached once per build process (module singleton), not rebuilt per generated page.
 let eoNumberMap: Map<number, any> | null = null;
 let presidentOrdersMap: Map<string, any[]> | null = null;
+let reverseReferenceMap: Map<number, any[]> | null = null;
+
+const EO_REF_RE = /Executive Order\s*(?:No\.?)?\s*(\d{4,5})/gi;
+
+// Regex-based reference detection can't reliably determine legal effect, so
+// this only upgrades the label when explicit language appears near the
+// citation — otherwise it falls back to the neutral "References".
+function detectRelation(text: string, matchIndex: number, matchLength: number): string {
+  const windowStart = Math.max(0, matchIndex - 140);
+  const windowEnd = Math.min(text.length, matchIndex + matchLength + 40);
+  const context = text.slice(windowStart, windowEnd).toLowerCase();
+  if (/\brevok/.test(context)) return 'Revokes';
+  if (/\brescind/.test(context)) return 'Rescinds';
+  if (/\bsupersed/.test(context)) return 'Supersedes';
+  if (/\bamend/.test(context)) return 'Amends';
+  return 'References';
+}
+
+// Reverse of getEoNumberMap's forward lookup: for every EO number mentioned
+// anywhere in the corpus, which (citing order, relation) pairs reference it.
+// fullOrders is exported newest-first (signing_date DESC), so each bucket
+// ends up newest-citation-first with no extra sort needed.
+function getReverseReferenceMap(): Map<number, any[]> {
+  if (!reverseReferenceMap) {
+    reverseReferenceMap = new Map();
+    const summaryById = new Map((summaryOrders as any[]).map(o => [o.id, o]));
+    for (const fo of fullOrders as any[]) {
+      if (!fo.full_text) continue;
+      const citing = summaryById.get(fo.id);
+      if (!citing) continue;
+      const seenNumbers = new Set<number>();
+      for (const m of fo.full_text.matchAll(EO_REF_RE)) {
+        const n = parseInt(m[1], 10);
+        if (!n || n === fo.eo_number || seenNumbers.has(n)) continue;
+        seenNumbers.add(n);
+        const relation = detectRelation(fo.full_text, m.index ?? 0, m[0].length);
+        const list = reverseReferenceMap.get(n) || [];
+        list.push({ ...citing, relation });
+        reverseReferenceMap.set(n, list);
+      }
+    }
+  }
+  return reverseReferenceMap;
+}
+
+export function getReferencedByLater(order: { eo_number?: number | null }, limit = 6) {
+  if (!order.eo_number) return [];
+  const map = getReverseReferenceMap();
+  return (map.get(order.eo_number) || []).slice(0, limit);
+}
 
 function getEoNumberMap(): Map<number, any> {
   if (!eoNumberMap) {

@@ -14,3 +14,21 @@
 .prose-legal p {
   margin-bottom: 1.25rem;
 }
+
+/* Print stylesheet: force a plain black-on-white layout regardless of the
+   active color theme (dark: utility classes don't respond to print media on
+   their own since they key off a .dark ancestor class, not a media query). */
+@media print {
+  body {
+    background: #ffffff !important;
+  }
+  * {
+    color: #111827 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+  a {
+    text-decoration: underline;
+  }
+}

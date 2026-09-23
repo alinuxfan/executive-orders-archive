@@ -1,4 +1,5 @@
 ---
+import '../styles/global.css';
 import syncStatus from '../../data/stats.json';
 
 interface Props {
@@ -37,6 +38,8 @@ const isDefaultImage = image === "/og-default.png";
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#0B2545" />
     <meta name="generator" content={Astro.generator} />
     <title>{pageTitle}</title>
     <meta name="description" content={description} />
@@ -89,7 +92,7 @@ const isDefaultImage = image === "/og-default.png";
     <script src="/bookmarks.js" is:inline></script>
 
     <!-- Top Sync Banner -->
-    <div class="bg-flag-blue text-slate-200 text-xs py-1.5 px-4 text-center border-b border-blue-900 flex justify-center items-center gap-2">
+    <div class="bg-flag-blue text-slate-200 text-xs py-1.5 px-4 text-center border-b border-blue-900 flex justify-center items-center gap-2 print:hidden">
       <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
       <span>Automated Sync Active • Database updated as of <strong>{lastSyncDate}</strong></span>
       <span class="opacity-40">•</span>
@@ -97,7 +100,7 @@ const isDefaultImage = image === "/og-default.png";
     </div>
 
     <!-- Main Navigation Header -->
-    <header class="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors">
+    <header class="sticky top-0 z-40 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800 transition-colors print:hidden">
       <div class="max-w-7xl mx-auto px-4 lg:px-8 h-16 flex items-center justify-between gap-2">
 
         <!-- Brand Logo -->
@@ -164,7 +167,7 @@ const isDefaultImage = image === "/og-default.png";
     </main>
 
     <!-- Global Footer -->
-    <footer class="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-12 text-sm">
+    <footer class="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-12 text-sm print:hidden">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-4 gap-8">
         
         <div class="md:col-span-1 space-y-3">
@@ -207,6 +210,7 @@ const isDefaultImage = image === "/og-default.png";
             <li><a href="/analytics" class="hover:underline">Sentiment & Length Graphs</a></li>
             <li><a href="/search" class="hover:underline">Full-Text Search</a></li>
             <li><a href="/saved" class="hover:underline">Saved Orders</a></li>
+            <li><a href="/api" class="hover:underline">Developer API</a></li>
             <li><a href="/about" class="hover:underline">About & Methodology</a></li>
           </ul>
         </div>

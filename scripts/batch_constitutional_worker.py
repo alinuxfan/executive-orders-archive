@@ -15,6 +15,7 @@ if str(SCRIPTS_DIR) not in sys.path:
 
 from db import init_db, get_connection
 from constitutional_engine import analyze_constitutional_sentiment, generate_statesman_summary
+from topics import classify_topics
 from export_site_data import export_all
 from sync_orders import export_stats_json
 
@@ -52,9 +53,13 @@ def process_single_order(row: tuple) -> tuple:
         metrics=sentiment
     )
 
+    # 3. Classify into the controlled topic/category taxonomy
+    topic_tags = classify_topics(f"{title or ''} {text}")
+
     # Return tuple for DB update:
     # (sentiment_compound, sentiment_pos, sentiment_neg, sentiment_neu, sentiment_valence,
-    #  summary_plain_english, key_directives_json, who_it_affects_json, tone_tag, id)
+    #  summary_plain_english, key_directives_json, who_it_affects_json, tone_tag,
+    #  topic_tags_json, id)
     return (
         sentiment["sentiment_compound"],
         sentiment["sentiment_pos"],
@@ -65,6 +70,7 @@ def process_single_order(row: tuple) -> tuple:
         json.dumps(summary_data["key_directives"]),
         json.dumps(summary_data["who_it_affects"]),
         summary_data["tone_tag"],
+        json.dumps(topic_tags),
         order_id
     )
 
@@ -83,7 +89,10 @@ def run_batch_worker(batch_size=300, workers=4, limit=None, force=False):
     if force:
         where_clause = "WHERE full_text IS NOT NULL AND length(full_text) > 0"
     else:
-        where_clause = "WHERE (summary_plain_english IS NULL OR length(summary_plain_english) = 0) AND full_text IS NOT NULL AND length(full_text) > 0"
+        where_clause = (
+            "WHERE (summary_plain_english IS NULL OR length(summary_plain_english) = 0 "
+            "OR topic_tags_json IS NULL) AND full_text IS NOT NULL AND length(full_text) > 0"
+        )
 
     count_query = f"SELECT COUNT(*) FROM orders {where_clause}"
     cursor.execute(count_query)
@@ -123,7 +132,8 @@ def run_batch_worker(batch_size=300, workers=4, limit=None, force=False):
             summary_plain_english = ?,
             key_directives_json = ?,
             who_it_affects_json = ?,
-            tone_tag = ?
+            tone_tag = ?,
+            topic_tags_json = ?
         WHERE id = ?
     """
 

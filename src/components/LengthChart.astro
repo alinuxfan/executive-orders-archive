@@ -10,8 +10,10 @@ interface Props {
 
 const { presidents } = Astro.props;
 
-// Filter to presidents with orders and sort chronologically or by word count
-const validPresidents = presidents.filter(p => p.orderCount > 0);
+// Filter to presidents with orders, ranked by average word count (highest first)
+const validPresidents = presidents
+  .filter(p => p.orderCount > 0)
+  .sort((a, b) => b.avgWordCount - a.avgWordCount);
 const maxWords = Math.max(...validPresidents.map(p => p.avgWordCount), 1500);
 ---
 

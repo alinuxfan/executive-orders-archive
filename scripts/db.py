@@ -51,7 +51,8 @@ def init_db():
         key_directives_json TEXT,         -- JSON array of strings
         who_it_affects_json TEXT,         -- JSON array of strings
         tone_tag TEXT,                    -- e.g. 'Regulatory', 'Emergency', 'Directive'
-        
+        topic_tags_json TEXT,              -- JSON array of controlled taxonomy topics (scripts/topics.py)
+
         raw_metadata_json TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -61,7 +62,31 @@ def init_db():
     CREATE INDEX IF NOT EXISTS idx_orders_president ON orders(president_slug);
     CREATE INDEX IF NOT EXISTS idx_orders_date ON orders(signing_date);
     CREATE INDEX IF NOT EXISTS idx_orders_source ON orders(source);
+
+    -- Field-level diff log: records what changed when a resync touches an
+    -- order that already existed (e.g. Federal Register corrects a title or
+    -- republishes body text). Populated by sync_orders.py, not by the
+    -- constitutional enrichment worker.
+    CREATE TABLE IF NOT EXISTS order_change_log (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        order_id TEXT NOT NULL,
+        field TEXT NOT NULL,
+        old_value TEXT,
+        new_value TEXT,
+        changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_change_log_order ON order_change_log(order_id);
+    CREATE INDEX IF NOT EXISTS idx_change_log_time ON order_change_log(changed_at);
     """)
+
+    # CREATE TABLE IF NOT EXISTS doesn't retroactively add columns to a
+    # pre-existing table, so newly introduced columns need an explicit
+    # idempotent migration here.
+    cursor.execute("PRAGMA table_info(orders)")
+    existing_columns = {row[1] for row in cursor.fetchall()}
+    if "topic_tags_json" not in existing_columns:
+        cursor.execute("ALTER TABLE orders ADD COLUMN topic_tags_json TEXT")
 
     conn.commit()
     conn.close()
@@ -77,7 +102,7 @@ def upsert_order(order_dict):
         "flesch_kincaid_grade", "sentiment_compound", "sentiment_pos",
         "sentiment_neg", "sentiment_neu", "sentiment_valence",
         "summary_plain_english", "key_directives_json", "who_it_affects_json",
-        "tone_tag", "raw_metadata_json"
+        "tone_tag", "topic_tags_json", "raw_metadata_json"
     ]
 
     # These fields are populated by the constitutional batch worker, not by the
@@ -88,7 +113,8 @@ def upsert_order(order_dict):
     # is used as the signal that this order has already been constitutionally
     # evaluated and its sentiment/summary fields should be left alone.
     protected_null_coalesce_fields = [
-        "summary_plain_english", "key_directives_json", "who_it_affects_json", "tone_tag"
+        "summary_plain_english", "key_directives_json", "who_it_affects_json", "tone_tag",
+        "topic_tags_json"
     ]
     protected_if_evaluated_fields = [
         "sentiment_compound", "sentiment_pos", "sentiment_neg", "sentiment_neu", "sentiment_valence"
@@ -122,6 +148,58 @@ def upsert_order(order_dict):
     cursor.execute(sql, record)
     conn.commit()
     conn.close()
+
+def get_order(order_id):
+    """Fetch the current row for an order, or None if it doesn't exist yet.
+    Used by sync_orders.py to snapshot pre-upsert state for diffing."""
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM orders WHERE id = ?", (order_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+# Fields worth flagging when they change on a resync of an already-known
+# order — i.e. plausible Federal Register corrections, not routine
+# enrichment (those are separately protected in upsert_order above).
+TRACKED_DIFF_FIELDS = [
+    "title", "eo_number", "president_name", "signing_date",
+    "publication_date", "source_url", "pdf_url"
+]
+
+def log_field_changes(order_id, old_record, new_record):
+    """Diffs old vs. new field values for an existing order and records any
+    changes in order_change_log. No-op for brand-new orders (nothing to diff
+    against). full_text is tracked by length delta only — the values can be
+    tens of thousands of characters, so storing full before/after text isn't
+    practical here."""
+    if old_record is None:
+        return
+
+    changes = []
+    for field in TRACKED_DIFF_FIELDS:
+        old_val = old_record.get(field)
+        new_val = new_record.get(field)
+        if new_val is not None and old_val != new_val:
+            changes.append((order_id, field, str(old_val) if old_val is not None else None, str(new_val)))
+
+    old_text = old_record.get("full_text") or ""
+    new_text = new_record.get("full_text") or ""
+    if new_text and old_text != new_text:
+        changes.append((order_id, "full_text", f"{len(old_text)} chars", f"{len(new_text)} chars"))
+
+    if not changes:
+        return
+
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.executemany(
+        "INSERT INTO order_change_log (order_id, field, old_value, new_value) VALUES (?, ?, ?, ?)",
+        changes
+    )
+    conn.commit()
+    conn.close()
+    return changes
 
 if __name__ == "__main__":
     init_db()

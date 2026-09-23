@@ -15,6 +15,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      issues: write
 
     steps:
       - name: Check out repository
@@ -68,4 +69,47 @@ jobs:
             echo "New executive orders detected! Committing changes..."
             git commit -m "chore(data): auto-sync latest executive orders"
             git push
+          fi
+
+      - name: Alert if a data file is approaching GitHub's 100MB limit
+        if: always()
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # Advisory only: never fails the job, even if the threshold is crossed
+          # or the gh calls below hit an error. The sync/commit/push above has
+          # already succeeded by the time this step runs.
+          THRESHOLD_BYTES=$((90 * 1024 * 1024))
+          OVER=""
+          for f in data/orders.sqlite data/site_orders.json data/site_orders_summary.json public/search_index.json; do
+            if [ -f "$f" ]; then
+              SIZE=$(stat -c%s "$f")
+              SIZE_MB=$((SIZE / 1024 / 1024))
+              echo "$f: ${SIZE_MB}MB"
+              if [ "$SIZE" -ge "$THRESHOLD_BYTES" ]; then
+                OVER="${OVER}- \`$f\`: ${SIZE_MB}MB\n"
+              fi
+            fi
+          done
+
+          if [ -z "$OVER" ]; then
+            echo "All tracked data files are under the 90MB alert threshold."
+            exit 0
+          fi
+
+          gh label create data-size-alert \
+            --color B60205 \
+            --description "A tracked data file is approaching GitHub's 100MB per-file limit" \
+            --repo "$GITHUB_REPOSITORY" 2>/dev/null || true
+
+          EXISTING=$(gh issue list --repo "$GITHUB_REPOSITORY" --label data-size-alert --state open --json number --jq '.[0].number')
+          if [ -z "$EXISTING" ]; then
+            gh issue create --repo "$GITHUB_REPOSITORY" \
+              --title "Data file approaching GitHub's 100MB limit" \
+              --label data-size-alert \
+              --body "$(printf 'One or more tracked data files crossed the 90MB alert threshold, approaching GitHub'"'"'s 100MB hard per-file limit:\n\n%b\nSee AGENTS.md for the data pipeline layout. Options: trim/VACUUM the affected file(s), or move generated artifacts (site_orders*.json, search_index.json) out of git entirely (e.g. Cloudflare R2) before a push gets rejected.\n' "$OVER")"
+            echo "Opened new data-size-alert issue."
+          else
+            echo "data-size-alert issue #$EXISTING is already open; not creating a duplicate."
           fi

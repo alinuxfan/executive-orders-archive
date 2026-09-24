@@ -13,9 +13,12 @@ const breadcrumbJsonLd = {
 const exampleOrder = {
   id: "fr-2026-19335",
   eo_number: 14428,
+  eo_suffix: null,
   title: "Executive Order — Example Title",
   president_name: "…",
   signing_date: "2026-01-15",
+  fr_citation: "91 FR 2150",
+  legal_status: "Amended",
   word_count: 842,
   reading_time_minutes: 4,
   sentiment_valence: "Constitutional Fidelity",
@@ -58,7 +61,8 @@ const exampleOrder = {
         </div>
         <p class="text-sm text-slate-600 dark:text-slate-400 leading-relaxed">
           Bulk listing of every order: id, EO number, title, president, dates, word count, sentiment,
-          tone tag, and topic tags. No full document text — full text, plain-English summaries, key
+          tone tag, topic tags, Federal Register citation, and legal status (`legal_status`: Revoked,
+          Superseded, Amended, etc., or null when no action is recorded). No full document text — full text, plain-English summaries, key
           directives, and affected entities are on each order's own page (see below).
         </p>
       </div>

@@ -140,3 +140,81 @@ export function generateOrderSummary(order: {
              order.sentiment_valence === "Positive" ? "Progress / Expansion" : "Administrative Routine"
   };
 }
+
+const META_DESCRIPTION_MAX = 160;
+
+function presidentSurname(name: string): string {
+  const cleaned = (name || "").replace(/\(.*?\)/g, "").replace(/,?\s+(Jr|Sr)\.?$/i, "").trim();
+  const parts = cleaned.split(/\s+/);
+  if (parts.length >= 2 && /^(van|von|de)$/i.test(parts[parts.length - 2])) {
+    return parts.slice(-2).join(" ");
+  }
+  return parts[parts.length - 1] || "The President";
+}
+
+function truncateAtWord(text: string, max: number): string {
+  if (text.length <= max) return text;
+  const cut = text.slice(0, max - 1);
+  return cut.slice(0, cut.lastIndexOf(" ")).replace(/[\s,;:—–-]+$/, "") + "…";
+}
+
+/**
+ * Compact, keyword-dense <meta name="description"> for an order page (~140-160 chars).
+ * Leads with the president, year, EO number, and title; fills the remaining
+ * space with the order's own operative text (what it actually does), falling
+ * back to a scope phrase and topic tags when no operative text is available.
+ */
+export function buildOrderMetaDescription(order: {
+  title: string;
+  eo_number?: string | number | null;
+  president_name: string;
+  signing_date?: string | null;
+  word_count?: number | null;
+  topic_tags?: string[];
+  status?: string | null;
+  operative_text?: string;
+}): string {
+  const surname = presidentSurname(order.president_name);
+  const possessive = surname.endsWith("s") ? `${surname}'` : `${surname}'s`;
+  const cleanTitle = (order.title || "")
+    .replace(/^Executive Order\s*(\d+(?:-[A-Z])?)?\s*[—–-]?\s*/i, "")
+    .trim()
+    .replace(/\.$/, "");
+  const year = order.signing_date ? order.signing_date.slice(0, 4) : "";
+  const label = order.eo_number ? `Executive Order ${order.eo_number}` : "Executive Order";
+  // A revoked/superseded order is the single most useful fact for searchers.
+  const statusNote = order.status === "Revoked" || order.status === "Superseded" ? ` (${order.status.toLowerCase()})` : "";
+  const lead = `${possessive} ${year ? `${year} ` : ""}${label}${statusNote}${cleanTitle ? `: ${cleanTitle}` : ""}`;
+
+  if (lead.length >= META_DESCRIPTION_MAX - 20) {
+    return truncateAtWord(lead, META_DESCRIPTION_MAX);
+  }
+
+  const fits = (text: string) => text.length <= META_DESCRIPTION_MAX;
+  const operative = (order.operative_text || "").replace(/\s+/g, " ").trim();
+  // Only worth using if a meaningful chunk (not just a few words) fits.
+  if (operative && META_DESCRIPTION_MAX - lead.length - 2 >= 45) {
+    return truncateAtWord(`${lead}. ${operative}`, META_DESCRIPTION_MAX);
+  }
+
+  const words = order.word_count || 0;
+  const scopes = words > 2000
+    ? ["mandating enforcement, procedural standards, and agency compliance benchmarks", "mandating agency enforcement and compliance"]
+    : words < 250
+      ? ["issuing focused commands to department leadership", "directing department leadership"]
+      : ["delegating enforcement duties and setting agency guidelines", "delegating agency enforcement duties"];
+
+  // Append each clause only if it fits whole, so descriptions never end mid-phrase.
+  let description = scopes.map((scope) => `${lead}, ${scope}.`).find(fits) ?? `${lead}.`;
+  const topics = (order.topic_tags || []).filter((t) => t && t !== "Uncategorized");
+  for (let n = topics.length; n > 0; n--) {
+    const withTopics = `${description} Topics: ${topics.slice(0, n).join(", ")}.`;
+    if (fits(withTopics)) {
+      description = withTopics;
+      break;
+    }
+  }
+  const withAnalysis = `${description} Full text and constitutional analysis.`;
+  if (description.length < 120 && fits(withAnalysis)) description = withAnalysis;
+  return truncateAtWord(description, META_DESCRIPTION_MAX);
+}

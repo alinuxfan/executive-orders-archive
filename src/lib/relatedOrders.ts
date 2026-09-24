@@ -52,8 +52,9 @@ function getReverseReferenceMap(): Map<number, any[]> {
   return reverseReferenceMap;
 }
 
-export function getReferencedByLater(order: { eo_number?: number | null }, limit = 6) {
-  if (!order.eo_number) return [];
+export function getReferencedByLater(order: { eo_number?: number | null; eo_suffix?: string | null }, limit = 6) {
+  // Citations of "Executive Order 11359" refer to the unsuffixed order, not 11359-A.
+  if (!order.eo_number || order.eo_suffix) return [];
   const map = getReverseReferenceMap();
   return (map.get(order.eo_number) || []).slice(0, limit);
 }
@@ -62,7 +63,9 @@ function getEoNumberMap(): Map<number, any> {
   if (!eoNumberMap) {
     eoNumberMap = new Map();
     for (const o of summaryOrders as any[]) {
-      if (o.eo_number) eoNumberMap.set(o.eo_number, o);
+      // "-A" orders share their number with an unsuffixed order; citations
+      // by number mean the unsuffixed one.
+      if (o.eo_number && !o.eo_suffix) eoNumberMap.set(o.eo_number, o);
     }
   }
   return eoNumberMap;

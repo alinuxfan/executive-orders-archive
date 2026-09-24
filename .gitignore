@@ -26,3 +26,6 @@ data/backfill_progress.json
 # Python
 __pycache__/
 *.pyc
+
+# Local state for scripts/llm_summarize.py batch runs
+data/llm_batch_state.json

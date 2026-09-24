@@ -25,6 +25,12 @@ const { president } = Astro.props;
 const presOrders = allOrders.filter(o => resolvePortraitSlug(o.slug || o.president_slug) === president.slug);
 
 const totalOrders = presOrders.length;
+// Rendering every order as a card made the largest pages enormous (FDR's 3,700
+// orders were 17 MB of HTML). Show the most recent batch here and link to the
+// filterable /orders view for the rest.
+const PREVIEW_COUNT = 30;
+const previewOrders = presOrders.slice(0, PREVIEW_COUNT);
+const allOrdersUrl = `/orders?president=${encodeURIComponent(president.slug)}`;
 const totalWords = presOrders.reduce((sum, o) => sum + (o.words !== undefined ? o.words : (o.word_count || 0)), 0);
 const avgWords = totalOrders > 0 ? Math.round(totalWords / totalOrders) : 0;
 const avgReadingTime = totalOrders > 0 ? Math.round(presOrders.reduce((sum, o) => sum + (o.time !== undefined ? o.time : (o.reading_time_minutes || 0)), 0) / totalOrders) : 0;
@@ -267,20 +273,35 @@ const breadcrumbJsonLd = {
     <!-- Orders Section -->
     <div>
       <h2 class="font-serif font-bold text-2xl text-slate-900 dark:text-white mb-6">
-        Executive Orders Issued ({totalOrders})
+        Executive Orders Issued ({totalOrders.toLocaleString()}){totalOrders > PREVIEW_COUNT && <span class="block sm:inline text-sm font-sans font-normal text-slate-500 dark:text-slate-400 sm:ml-2">showing the {PREVIEW_COUNT} most recent</span>}
       </h2>
 
       {totalOrders > 0 ? (
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {presOrders.map(order => (
-            <OrderCard order={order} />
-          ))}
-        </div>
+        <>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {previewOrders.map(order => (
+              <OrderCard order={order} />
+            ))}
+          </div>
+          {totalOrders > PREVIEW_COUNT && (
+            <div class="text-center mt-8">
+              <a
+                href={allOrdersUrl}
+                class="inline-flex items-center gap-2 px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-white dark:bg-slate-700 dark:hover:bg-slate-600 rounded-xl text-sm font-semibold shadow transition-colors"
+              >
+                Browse all {totalOrders.toLocaleString()} orders by {president.name} &rarr;
+              </a>
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-2">Search, filter by topic or legal status, and sort the full list.</p>
+            </div>
+          )}
+        </>
       ) : (
         <div class="bg-white dark:bg-slate-900 rounded-2xl p-10 border border-slate-200 dark:border-slate-800 text-center">
-          <p class="text-slate-500 dark:text-slate-400 text-sm max-w-md mx-auto leading-relaxed">
-            Historical orders for this presidency are currently queued in the background ingest pipeline. Run the historical harvester to load all records from the National Archives and UCSB.
+          <p class="text-slate-600 dark:text-slate-300 text-sm max-w-md mx-auto leading-relaxed">
+            No executive orders by {president.name} are recorded in this archive. Numbered executive orders only began in the early 1900s,
+            and few earlier presidential directives were preserved as executive orders.
           </p>
+          <a href="/orders" class="inline-block mt-4 text-sm text-blue-600 dark:text-blue-400 hover:underline">Browse all executive orders &rarr;</a>
         </div>
       )}
     </div>

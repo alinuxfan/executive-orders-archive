@@ -1,0 +1,36 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout
+  title="Page Not Found | Executive Orders Archive"
+  description="The page you requested could not be found. Search every United States presidential executive order by keyword, president, or EO number."
+>
+  <div class="max-w-2xl mx-auto px-4 sm:px-6 py-20 text-center">
+    <div class="text-5xl font-serif font-black text-amber-500 mb-4">404</div>
+    <h1 class="font-serif font-extrabold text-3xl text-slate-900 dark:text-white mb-3">Page not found</h1>
+    <p class="text-slate-600 dark:text-slate-400 mb-8">
+      This page doesn't exist or may have moved. If you followed a link to an order, try searching for it by title or EO number.
+    </p>
+
+    <form action="/search" method="get" class="flex flex-col sm:flex-row gap-2 max-w-md mx-auto mb-8" role="search">
+      <label for="notfound-search" class="sr-only">Search orders</label>
+      <input
+        id="notfound-search"
+        name="q"
+        type="search"
+        placeholder="e.g. 14430, tariffs, Lincoln"
+        class="flex-1 px-4 py-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+      <button type="submit" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-sm font-semibold shadow transition-colors">
+        Search
+      </button>
+    </form>
+
+    <div class="flex flex-wrap justify-center gap-3 text-sm">
+      <a href="/" class="px-4 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200">Home</a>
+      <a href="/orders" class="px-4 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200">All Orders</a>
+      <a href="/presidents" class="px-4 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200">Presidents</a>
+    </div>
+  </div>
+</Layout>

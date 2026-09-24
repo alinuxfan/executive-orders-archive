@@ -33,6 +33,43 @@ def get_latest_order_info():
     conn.close()
     return latest_signing, latest_pub, total_count
 
+FR_DOCUMENTS_URL = "https://www.federalregister.gov/api/v1/documents.json"
+FR_FIELDS = [
+    "document_number", "title", "executive_order_number",
+    "signing_date", "publication_date", "president",
+    "body_html_url", "html_url", "pdf_url",
+    "citation", "executive_order_notes"
+]
+
+def normalize_eo_notes(notes):
+    if not notes:
+        return None
+    lines = [line.strip() for line in str(notes).replace("\r\n", "\n").split("\n")]
+    return "\n".join(line for line in lines if line) or None
+
+def fetch_fr_executive_orders(extra_conditions=None, fields=None):
+    """Fetches every matching executive order from the Federal Register API,
+    following next_page_url so windows with more results than one page (e.g.
+    the burst of orders around an inauguration) aren't silently truncated."""
+    params = {
+        "conditions[type][]": "PRESDOCU",
+        "conditions[presidential_document_type][]": "executive_order",
+        "order": "newest",
+        "per_page": 1000,
+        "fields[]": fields or FR_FIELDS,
+        **(extra_conditions or {}),
+    }
+    results = []
+    url = FR_DOCUMENTS_URL
+    while url:
+        resp = requests.get(url, params=params, headers=HEADERS, timeout=30)
+        resp.raise_for_status()
+        data = resp.json()
+        results.extend(data.get("results", []))
+        url = data.get("next_page_url")
+        params = None  # next_page_url already carries the full query string
+    return results
+
 def fetch_body_text(body_url):
     if not body_url:
         return ""
@@ -132,33 +169,32 @@ def sync_orders(days_lookback=30):
 
     print(f"Querying Federal Register for executive orders published on or after: {since_date}")
 
-    base_url = "https://www.federalregister.gov/api/v1/documents.json"
-    fields = [
-        "document_number", "title", "executive_order_number",
-        "signing_date", "publication_date", "president",
-        "body_html_url", "html_url", "pdf_url"
-    ]
-    params = {
-        "conditions[type][]": "PRESDOCU",
-        "conditions[presidential_document_type][]": "executive_order",
-        "conditions[publication_date][gte]": since_date,
-        "order": "newest",
-        "per_page": 50,
-        "fields[]": fields
-    }
-
-    resp = requests.get(base_url, params=params, headers=HEADERS, timeout=20)
-    resp.raise_for_status()
-    data = resp.json()
-
-    results = data.get("results", [])
+    results = fetch_fr_executive_orders({"conditions[publication_date][gte]": since_date})
     print(f"Federal Register returned {len(results)} candidate documents in window.")
 
     new_or_updated = 0
     for item in results:
         doc_num = item.get("document_number")
+        if not item.get("executive_order_number"):
+            # The executive_order document type also returns errata ("Correction")
+            # and a few misfiled memoranda/notices, none of which carry an EO number.
+            print(f"  Skipping un-numbered document {doc_num}: {item.get('title')}")
+            continue
         order_id = f"fr-{doc_num}"
+        existing = get_order(order_id)
         body_text = fetch_body_text(item.get("body_html_url"))
+        if not body_text:
+            if existing and existing.get("full_text"):
+                # Transient fetch failure on an order we already have: keep the
+                # stored text (and recompute metrics from it) rather than
+                # overwriting it with an empty body.
+                print(f"  Body fetch failed for {order_id}; keeping previously stored text.")
+                body_text = existing["full_text"]
+            else:
+                # Brand-new order with no text yet: skip it this run. It stays
+                # inside the lookback window, so the next sync retries it.
+                print(f"  Body fetch failed for new order {order_id}; will retry next sync.")
+                continue
         metrics = compute_metrics(body_text)
 
         president_data = item.get("president") or {}
@@ -177,7 +213,7 @@ def sync_orders(days_lookback=30):
             conn.commit()
             conn.close()
 
-        topics = classify_topics(title, body_text)
+        topics = classify_topics(f"{title} {body_text}")
 
         record = {
             "id": order_id,
@@ -205,10 +241,11 @@ def sync_orders(days_lookback=30):
             "who_it_affects_json": None,
             "tone_tag": None,
             "topic_tags_json": json.dumps(topics),
+            "fr_citation": item.get("citation"),
+            "eo_notes": normalize_eo_notes(item.get("executive_order_notes")),
             "raw_metadata_json": json.dumps(item)
         }
 
-        existing = get_order(order_id)
         upsert_order(record)
         changes = log_field_changes(order_id, existing, record)
         if changes:

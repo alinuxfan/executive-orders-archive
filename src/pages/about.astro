@@ -51,7 +51,7 @@ const breadcrumbJsonLd = {
     <section class="mb-10">
       <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white mb-3">Data sources</h2>
       <ul class="space-y-2 text-sm text-slate-700 dark:text-slate-300 list-disc pl-5">
-        <li><a href="https://www.federalregister.gov" target="_blank" rel="noopener" class="text-blue-600 dark:text-blue-400 hover:underline">Federal Register API</a> — official presidential documents from 1994 to present.</li>
+        <li><a href="https://www.federalregister.gov" target="_blank" rel="noopener" class="text-blue-600 dark:text-blue-400 hover:underline">Federal Register API</a> — official presidential documents from 1994 to present, including Federal Register citations and the disposition notes ("Revoked by", "Amended by") behind each order's legal status. Orders before 1994 show a status only when a later order recorded revoking or amending them.</li>
         <li><a href="https://www.presidency.ucsb.edu" target="_blank" rel="noopener" class="text-blue-600 dark:text-blue-400 hover:underline">The American Presidency Project (UCSB)</a> — historical executive orders from 1789–1993.</li>
         <li><a href="https://www.archives.gov" target="_blank" rel="noopener" class="text-blue-600 dark:text-blue-400 hover:underline">National Archives (NARA)</a> — supplementary historical records.</li>
         <li><a href="https://commons.wikimedia.org" target="_blank" rel="noopener" class="text-blue-600 dark:text-blue-400 hover:underline">Wikimedia Commons</a> — public-domain presidential portraits.</li>
@@ -73,7 +73,7 @@ const breadcrumbJsonLd = {
       </p>
     </section>
 
-    <section class="mb-10">
+    <section id="constitutional-sentiment" class="mb-10 scroll-mt-24">
       <h2 class="font-serif font-bold text-xl text-slate-900 dark:text-white mb-3">
         The "constitutional sentiment" score
       </h2>
@@ -118,9 +118,11 @@ const breadcrumbJsonLd = {
         page — rather than relying on the label alone.
       </p>
       <p class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-        The "Framers' Constitutional Analysis" callouts and plain-English summaries on each order page
-        are generated the same way: template-based text assembled from the same pattern matches, not
-        original scholarly commentary.
+        The "Framers' Constitutional Analysis" callouts on each order page are generated the same way:
+        template-based text assembled from the same pattern matches, not original scholarly
+        commentary. Plain-English summaries and key directives quote the order's own operative
+        sentences (skipping the standard "By the authority vested in me…" preamble), using section
+        headings as directive titles where the order has them.
       </p>
     </section>
 

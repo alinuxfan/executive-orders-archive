@@ -3,9 +3,11 @@ interface Props {
   order: {
     id: string;
     eo_number?: number | null;
+    eo_suffix?: string | null;
     title: string;
     president_name: string;
     signing_date?: string;
+    fr_citation?: string | null;
   };
 }
 
@@ -17,28 +19,51 @@ const monthName = dateObj ? dateObj.toLocaleString('en-US', { month: 'short', ti
 const fullMonthName = dateObj ? dateObj.toLocaleString('en-US', { month: 'long', timeZone: 'UTC' }) : '';
 const day = dateObj ? dateObj.getUTCDate() : '';
 
+// Bluebook T12 month abbreviations
+const BLUEBOOK_MONTHS = ['Jan.', 'Feb.', 'Mar.', 'Apr.', 'May', 'June', 'July', 'Aug.', 'Sept.', 'Oct.', 'Nov.', 'Dec.'];
+const bluebookDate = dateObj ? `${BLUEBOOK_MONTHS[dateObj.getUTCMonth()]} ${day}, ${year}` : 'n.d.';
+// Bluebook rule 6.2(a): numbers of five or more digits take commas; four-digit numbers don't.
+const bluebookNumber = (n: number | string) => {
+  const digits = String(n);
+  return digits.length >= 5 ? Number(digits).toLocaleString('en-US') : digits;
+};
+
+const eoNumberLabel = order.eo_number ? `${order.eo_number}${order.eo_suffix ? `-${order.eo_suffix}` : ''}` : '';
+const bluebookEo = order.eo_number ? `${bluebookNumber(order.eo_number)}${order.eo_suffix ? `-${order.eo_suffix}` : ''}` : '';
+
+// "91 FR 60501" -> volume 91, page 60501
+const frMatch = (order.fr_citation || '').match(/^(\d+)\s*FR\s*(\d+)$/);
+const bluebookReporter = frMatch ? `${frMatch[1]} Fed. Reg. ${bluebookNumber(frMatch[2])}` : '';
+
 const canonicalUrl = `https://executiveordersarchive.org/orders/${order.id}`;
+// Unnumbered orders: title without the redundant "Executive Order —" prefix.
+const untitledTitle = order.title.replace(/^Executive Order\s*[—–-]?\s*/i, '').trim();
 
-// Bluebook Citation (Standard Legal)
-const bluebookCitation = order.eo_number 
-  ? `Exec. Order No. ${order.eo_number}, ${order.president_name} (${monthName} ${day}, ${year}). Available at ${canonicalUrl}.`
-  : `Exec. Order, "${order.title}," ${order.president_name} (${monthName} ${day}, ${year}). Available at ${canonicalUrl}.`;
+// Bluebook (rule 14.7): Exec. Order No. 14,431, 91 Fed. Reg. 60,501 (Sept. 18, 2026).
+// Orders without a Federal Register citation (pre-1936 or unpublished) cite the date and an online source.
+const bluebookCitation = order.eo_number
+  ? bluebookReporter
+    ? `Exec. Order No. ${bluebookEo}, ${bluebookReporter} (${bluebookDate}).`
+    : `Exec. Order No. ${bluebookEo} (${bluebookDate}), ${canonicalUrl}.`
+  : `Exec. Order${untitledTitle ? `, ${untitledTitle}` : ''} (${bluebookDate}), ${canonicalUrl}.`;
 
-// APA 7th Edition
+// APA 7th Edition (legal materials follow Bluebook form)
 const apaCitation = order.eo_number
-  ? `U.S. President (${order.president_name}). (${year}, ${fullMonthName} ${day}). Executive Order ${order.eo_number}: ${order.title}. Executive Orders Archive. ${canonicalUrl}`
+  ? bluebookReporter
+    ? `Exec. Order No. ${order.eo_number}${order.eo_suffix ? `-${order.eo_suffix}` : ''}, ${frMatch?.[1]} Fed. Reg. ${frMatch?.[2]} (${year}). ${canonicalUrl}`
+    : `U.S. President (${order.president_name}). (${year}, ${fullMonthName} ${day}). Executive Order ${eoNumberLabel}: ${order.title}. Executive Orders Archive. ${canonicalUrl}`
   : `U.S. President (${order.president_name}). (${year}, ${fullMonthName} ${day}). ${order.title} [Executive Order]. Executive Orders Archive. ${canonicalUrl}`;
 
 // Chicago 17th Edition
 const chicagoCitation = order.eo_number
-  ? `U.S. President. Executive Order ${order.eo_number}, "${order.title}." ${fullMonthName} ${day}, ${year}. Executive Orders Archive. ${canonicalUrl}.`
+  ? `U.S. President. Executive Order ${eoNumberLabel}, "${order.title}." ${fullMonthName} ${day}, ${year}.${frMatch ? ` ${frMatch[1]} Fed. Reg. ${frMatch[2]}.` : ''} ${canonicalUrl}.`
   : `U.S. President. "${order.title}." Executive Order signed by ${order.president_name}, ${fullMonthName} ${day}, ${year}. Executive Orders Archive. ${canonicalUrl}.`;
 
 // BibTeX
 const bibtexKey = `eo_${order.id.replace(/[^a-zA-Z0-9_]/g, '_')}`;
 const bibtexCitation = `@misc{${bibtexKey},
   author       = {{${order.president_name}}},
-  title        = {{${order.eo_number ? `Executive Order ${order.eo_number}: ` : ''}${order.title}}},
+  title        = {{${order.eo_number ? `Executive Order ${eoNumberLabel}: ` : ''}${order.title}}},
   year         = {${year}},
   month        = {${monthName.toLowerCase()}},
   day          = {${day}},

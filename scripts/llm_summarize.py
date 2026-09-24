@@ -2,14 +2,19 @@
 and affected-entity list with Claude-written ones, via the Message Batches
 API (50% of standard token prices, results within ~1 hour, 24h max).
 
-Not run by the sync GitHub Action. New orders still get the free extractive
-summary from batch_constitutional_worker.py; run this afterwards to upgrade
-them. The existing "Constitutional Assessment:" paragraph is kept, and
-hand-curated orders (manually_curated = 1) are never touched.
+Not run by the sync GitHub Action (but see .github/workflows/sync-orders.yml
+for an optional step that summarizes new orders only). New orders still get
+the free extractive summary from batch_constitutional_worker.py; run this
+afterwards to upgrade them. The existing "Constitutional Assessment:"
+paragraph is kept, and hand-curated orders (manually_curated = 1) are never
+touched.
+
+Supported models: claude-opus-5 (default, $5-25 per 1M tokens via Batches),
+claude-sonnet-5 ($2-10), or claude-haiku-4-5 ($1-5, no thinking/effort).
 
     pip install anthropic          # plus credentials: ANTHROPIC_API_KEY or `ant auth login`
     PYTHONPATH=scripts python scripts/llm_summarize.py --dry-run            # count + token estimate, no API calls
-    PYTHONPATH=scripts python scripts/llm_summarize.py --limit 25           # submit a small batch and wait
+    PYTHONPATH=scripts python scripts/llm_summarize.py --model claude-haiku-4-5 --limit 25  # small test
     PYTHONPATH=scripts python scripts/llm_summarize.py --resume msgbatch_…  # collect a batch submitted earlier
     PYTHONPATH=scripts python scripts/export_site_data.py && PYTHONPATH=scripts python scripts/build_search_index.py
 """
@@ -87,14 +92,18 @@ def user_prompt(order):
 
 
 def build_params(order, model, effort):
-    return {
+    params = {
         "model": model,
         "max_tokens": 16000,
         "system": SYSTEM_PROMPT,
-        "thinking": {"type": "adaptive"},
-        "output_config": {"effort": effort, "format": {"type": "json_schema", "schema": OUTPUT_SCHEMA}},
+        "output_config": {"format": {"type": "json_schema", "schema": OUTPUT_SCHEMA}},
         "messages": [{"role": "user", "content": user_prompt(order)}],
     }
+    # Haiku 4.5 doesn't support thinking or effort parameters
+    if not model.startswith("claude-haiku"):
+        params["thinking"] = {"type": "adaptive"}
+        params["output_config"]["effort"] = effort
+    return params
 
 
 def submit(client, orders, model, effort):
@@ -185,8 +194,9 @@ def collect(client, batch_id, id_map, model):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--limit", type=int, default=None, help="Maximum number of orders to summarize (newest first)")
-    parser.add_argument("--model", default=DEFAULT_MODEL)
-    parser.add_argument("--effort", default="medium", choices=["low", "medium", "high", "xhigh", "max"])
+    parser.add_argument("--model", default=DEFAULT_MODEL, help="Claude model ID (opus-5, sonnet-5, or haiku-4-5)")
+    parser.add_argument("--effort", default="medium", choices=["low", "medium", "high", "xhigh", "max"],
+                        help="Thinking effort (ignored for Haiku)")
     parser.add_argument("--redo", action="store_true", help="Also regenerate orders that already have an LLM summary")
     parser.add_argument("--dry-run", action="store_true", help="Report what would be submitted; no API calls")
     parser.add_argument("--resume", metavar="BATCH_ID", help="Collect results for a previously submitted batch")

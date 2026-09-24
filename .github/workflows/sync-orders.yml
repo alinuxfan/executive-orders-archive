@@ -48,6 +48,25 @@ jobs:
         run: |
           PYTHONPATH=scripts python scripts/build_search_index.py
 
+      - name: Generate Claude-written summaries for new orders (optional, requires ANTHROPIC_API_KEY)
+        if: secrets.ANTHROPIC_API_KEY != ''
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          # Summarize only new orders (no --limit, no --redo) with Haiku for cost-efficiency.
+          # This re-exports and rebuilds the search index if any summaries were written.
+          PYTHONPATH=scripts python scripts/llm_summarize.py --model claude-haiku-4-5 --dry-run > /tmp/summary_estimate.txt 2>&1
+          ORDERS_TO_SUMMARIZE=$(grep "^[0-9]* orders selected" /tmp/summary_estimate.txt | awk '{print $1}')
+          if [ "$ORDERS_TO_SUMMARIZE" -gt 0 ]; then
+            echo "Summarizing $ORDERS_TO_SUMMARIZE new orders..."
+            PYTHONPATH=scripts python scripts/llm_summarize.py --model claude-haiku-4-5 || echo "Summarization failed; continuing (new orders already have extractive summaries)."
+            echo "Re-exporting and rebuilding index..."
+            PYTHONPATH=scripts python scripts/export_site_data.py
+            PYTHONPATH=scripts python scripts/build_search_index.py
+          else
+            echo "No new orders to summarize."
+          fi
+
       - name: Commit and push changes
         run: |
           git config --global user.name "github-actions[bot]"

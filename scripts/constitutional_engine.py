@@ -2,6 +2,8 @@ import re
 import json
 from typing import Dict, Any, List, Tuple
 
+from snippets import operative_text, operative_snippet, truncate_sentences, split_sentences
+
 """
 Constitutional Statesman Engine
 Evaluates Executive Orders strictly through the text, structure, and original principles 
@@ -166,41 +168,75 @@ def determine_constitutional_tone_tag(text_lower: str, compound: float) -> str:
     else:
         return "Art. II §1: Executive Discretion & Internal Operations"
 
-def extract_key_directives(text: str, title: str) -> List[Dict[str, str]]:
-    """Extracts 2 to 4 actionable operative mandates from the text."""
-    clean_text = re.sub(r"\s+", " ", text).strip()
-    sentences = re.split(r"(?<=[.!?])\s+", clean_text)
-    
-    candidates = []
-    action_verbs = r"\b(shall|hereby|directs|ordered|established|prohibited|amended|authorizes|revoked|requires|prioritize|redirecting)\b"
-    
-    for s in sentences:
-        s_clean = clean_directive_sentence(s)
-        if len(s_clean) < 35 or len(s_clean) > 400:
-            continue
-        if re.search(action_verbs, s_clean, re.IGNORECASE):
-            if not s_clean.lower().startswith("general provisions") and not s_clean.startswith("("):
-                # Capitalize first letter
-                s_clean = s_clean[0].upper() + s_clean[1:]
-                candidates.append(s_clean)
+_SECTION_RE = re.compile(r"(?:^|\s)(?:Sec\.|Section|SECTION)\s*(\d+)\s*\.\s*([A-Z][A-Za-z ,;&'/-]{2,80}?)\s*\.\s+(?=[A-Z(\"\u201c])")
+_ACTION_VERBS_RE = re.compile(
+    r"\b(shall|hereby|directs?|ordered|establish(?:ed|es)?|prohibit(?:ed|s)?|amended|authoriz(?:ed|es)|"
+    r"revoked|requires?|designated?|transferred|withdrawn|exempted|extended|delegated)\b",
+    re.IGNORECASE,
+)
 
+
+def _directive_candidate(sentence: str, strict: bool = False) -> str:
+    s_clean = clean_directive_sentence(sentence)
+    s_clean = re.sub(r"^\((?:[a-z]|[ivx]+|\d+)\)\s*", "", s_clean)
+    if len(s_clean) < 35 or len(s_clean) > 400:
+        return ""
+    if not _ACTION_VERBS_RE.search(s_clean):
+        return ""
+    if strict and not re.search(r"\b(shall|hereby|directs?)\b", s_clean, re.IGNORECASE):
+        return ""
+    if s_clean.lower().startswith(("general provisions", "by the authority", "by virtue of")) or s_clean.startswith("("):
+        return ""
+    return s_clean[0].upper() + s_clean[1:]
+
+
+def extract_key_directives(text: str, title: str) -> List[Dict[str, str]]:
+    """Extracts 2 to 4 actionable operative mandates from the text. Modern
+    orders are split by their "Sec. N. Heading." structure so each directive
+    gets its section heading as a title; older unsectioned orders fall back to
+    the first action-bearing sentences of the operative text."""
+    body = operative_text(text, title)
     directives = []
     seen = set()
-    for c in candidates:
-        norm = c[:45].lower()
-        if norm not in seen:
+
+    def add(title_text: str, description: str):
+        norm = description[:45].lower()
+        if description and norm not in seen:
             seen.add(norm)
-            directives.append({
-                "title": f"Directive {len(directives) + 1}",
-                "description": c
-            })
+            directives.append({"title": title_text, "description": description})
+
+    sections = list(_SECTION_RE.finditer(" " + body))
+    skip_headings = re.compile(r"general provisions|definitions|scope|severability|effective date", re.IGNORECASE)
+    for i, m in enumerate(sections):
+        heading = m.group(2).strip()
+        if skip_headings.search(heading):
+            continue
+        section_end = sections[i + 1].start() if i + 1 < len(sections) else len(body) + 1
+        section_text = (" " + body)[m.end():section_end]
+        for sentence in split_sentences(section_text)[:4]:
+            candidate = _directive_candidate(sentence)
+            if candidate:
+                add(heading, candidate)
+                break
         if len(directives) >= 4:
             break
+
+    if len(directives) < 2:
+        # Sectioned orders open with purpose/findings prose, where incidental
+        # verbs ("is transferred offshore") aren't directives; require an
+        # operative verb there.
+        for sentence in split_sentences(body):
+            candidate = _directive_candidate(sentence, strict=bool(sections))
+            if candidate:
+                add(f"Directive {len(directives) + 1}", candidate)
+            if len(directives) >= 4:
+                break
 
     if not directives:
         directives.append({
             "title": "Operative Mandate",
-            "description": f"Formal executive instruction issued by the President establishing official administrative policy on {title}."
+            "description": truncate_sentences(body, 300) if body else
+                f"Formal executive instruction issued by the President establishing official administrative policy on {title}."
         })
 
     return directives
@@ -232,6 +268,17 @@ def identify_affected_entities(text: str) -> List[str]:
         
     return entities[:5]
 
+_MONTHS = ["January", "February", "March", "April", "May", "June", "July",
+           "August", "September", "October", "November", "December"]
+
+
+def format_long_date(iso_date: str) -> str:
+    m = re.match(r"^(\d{4})-(\d{2})-(\d{2})", iso_date or "")
+    if not m:
+        return ""
+    return f"{_MONTHS[int(m.group(2)) - 1]} {int(m.group(3))}, {m.group(1)}"
+
+
 def generate_statesman_summary(
     title: str,
     president_name: str,
@@ -248,30 +295,20 @@ def generate_statesman_summary(
     - Impacted entities
     - Constitutional tone and sentiment
     """
-    clean_title = re.sub(r"^Executive Order\s*((\d+)\s*[—–-]\s*)?", "", title or "Executive Order", flags=re.IGNORECASE).strip()
-    if not clean_title:
-        clean_title = title or "Executive Decree"
+    clean_title = re.sub(r"^Executive Order\s*(\d+(?:-[A-Z])?)?\s*[—–-]?\s*", "", title or "", flags=re.IGNORECASE).strip()
 
-    # 1. Plain English Operative Action
-    operative_action = (
-        f"This executive order, signed by President {president_name} on {signing_date or 'an unrecorded date'}, "
-        f"establishes federal administrative policy concerning \"{clean_title}.\" "
-    )
-    if word_count > 2000:
-        operative_action += (
-            "It is an expansive, comprehensive regulatory directive mandating coordinated enforcement, "
-            "detailed procedural standards, and formal agency compliance benchmarks across multiple federal departments."
-        )
-    elif word_count < 250:
-        operative_action += (
-            "It is a direct, concise executive instruction delivering focused administrative or military commands "
-            "to department leadership."
-        )
+    # 1. Plain English Operative Action: who/when/what, then the order's own
+    # first operative sentences (enacting clause and headings stripped), so the
+    # summary says what this particular order does instead of generic filler.
+    signed_on = format_long_date(signing_date)
+    operative = operative_snippet(full_text, title, 420)
+    operative_action = f"Signed by President {president_name}{f' on {signed_on}' if signed_on else ''}, "
+    if clean_title:
+        operative_action += f"this order concerns {clean_title.rstrip('.')}."
     else:
-        operative_action += (
-            "It outlines operative directives for executive department officers, delegating enforcement responsibilities "
-            "and establishing official governance guidelines."
-        )
+        operative_action += "this order reads:" if operative else "this order carries no recorded title or text."
+    if operative:
+        operative_action += f" {operative}"
 
     # 2. The Early Statesman's Constitutional Verdict
     tone_tag = metrics["tone_tag"]

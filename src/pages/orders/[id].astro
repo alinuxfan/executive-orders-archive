@@ -6,11 +6,12 @@ import OrderCard from '../../components/OrderCard.astro';
 import FramersPerspective from '../../components/FramersPerspective.astro';
 import ConstitutionalFrictionScorecard from '../../components/ConstitutionalFrictionScorecard.astro';
 import FormattedDocumentText from '../../components/FormattedDocumentText.astro';
-import { generateOrderSummary, isGenericBoilerplate } from '../../lib/summary';
+import { generateOrderSummary, isGenericBoilerplate, buildOrderMetaDescription } from '../../lib/summary';
 import { getRelatedOrders, getReferencedByLater } from '../../lib/relatedOrders';
 import { resolvePortraitSlug } from '../../lib/portraits';
 import { formatSigningDate } from '../../lib/dates';
 import { getYoungstownClassification } from '../../lib/youngstown';
+import { readingLevelLabel, eoLabel, cleanOrderTitle, statusBadgeClasses, parseDisposition, relationLabel } from '../../lib/orderLabels';
 import rawOrders from '../../../data/site_orders.json';
 
 export async function getStaticPaths() {
@@ -104,12 +105,42 @@ if (order.sentiment_valence === "Constitutional Fidelity" || order.sentiment_val
   };
 }
 
+const orderLabel = eoLabel(order);
+const disposition = parseDisposition(order.disposition_json);
+const orderStatus = disposition?.status || null;
+const statusRelations = (disposition?.inbound || []).filter(r => r.relation !== 'continued');
+const outboundRelations = disposition?.outbound || [];
+
+// The generated summary opens "Signed by President X on <date>, this order
+// concerns <title>." followed by the order's own operative text; the meta
+// description reuses that operative text as its novel-keyword tail.
+const cleanTitle = cleanOrderTitle(order.title);
+const summaryLead = summaryParagraphs[0] || '';
+const leadSentenceEnd = cleanTitle ? summaryLead.indexOf(`${cleanTitle.replace(/\.$/, '')}.`) : -1;
+// LLM-written summaries (scripts/llm_summarize.py) lead directly with what the order does.
+const operativeText = summaryLead.startsWith('Signed by President')
+  ? (leadSentenceEnd !== -1 ? summaryLead.slice(leadSentenceEnd + cleanTitle.replace(/\.$/, '').length + 1).trim() : '')
+  : summaryLead;
+
+const metaDescription = buildOrderMetaDescription({
+  title: order.title,
+  eo_number: orderLabel || null,
+  status: orderStatus,
+  operative_text: operativeText,
+  president_name: order.president_name,
+  signing_date: order.signing_date,
+  word_count: order.word_count,
+  topic_tags: topicTags
+});
+
 const orderCanonicalUrl = new URL(`/orders/${order.id}`, Astro.site).toString();
 const portraitSlug = resolvePortraitSlug(order.president_slug);
 
 const compactMeta = JSON.stringify({
   id: order.id,
   num: order.eo_number,
+  sfx: order.eo_suffix || undefined,
+  st: orderStatus || undefined,
   title: order.title,
   pres: order.president_name,
   slug: order.president_slug,
@@ -127,7 +158,9 @@ const legislationJsonLd = {
   "@context": "https://schema.org",
   "@type": "Legislation",
   "name": order.title,
-  "legislationIdentifier": order.eo_number ? `EO ${order.eo_number}` : order.id,
+  "legislationIdentifier": orderLabel ? `EO ${orderLabel}` : order.id,
+  ...(order.fr_citation ? { "isPartOf": { "@type": "Periodical", "name": "Federal Register", "identifier": order.fr_citation } } : {}),
+  ...(orderStatus === 'Revoked' || orderStatus === 'Superseded' ? { "legislationLegalForce": "NotInForce" } : orderStatus && orderStatus.startsWith('Partially') ? { "legislationLegalForce": "PartiallyInForce" } : {}),
   "legislationType": order.eo_number ? "Executive Order" : "Presidential Order",
   "legislationDate": order.signing_date || undefined,
   "datePublished": order.signing_date || undefined,
@@ -136,7 +169,7 @@ const legislationJsonLd = {
     "@type": "Person",
     "name": order.president_name
   },
-  "description": summaryParagraphs[0] || order.title,
+  "description": metaDescription,
   "url": orderCanonicalUrl,
   "inLanguage": "en-US"
 };
@@ -169,7 +202,7 @@ const breadcrumbJsonLd = {
 
 <Layout 
   title={`${order.title} | Executive Orders Archive`}
-  description={summaryParagraphs[0] || `Read Executive Order by ${order.president_name} signed on ${formattedDate}. Full text, plain English translation, and constitutional analysis.`}
+  description={metaDescription}
   image={portraitSlug !== "default" ? `/portraits/${portraitSlug}.jpg` : "/og-default.png"}
   type="article"
   structuredData={[legislationJsonLd, breadcrumbJsonLd]}
@@ -184,7 +217,7 @@ const breadcrumbJsonLd = {
         <a href="/orders" class="hover:underline">Orders</a>
         <span>/</span>
         <span class="text-slate-800 dark:text-slate-200 font-mono">
-          {order.eo_number ? `EO ${order.eo_number}` : order.id}
+          {orderLabel ? `EO ${orderLabel}` : 'Order'}
         </span>
       </nav>
 
@@ -228,19 +261,27 @@ const breadcrumbJsonLd = {
     <!-- Document Header -->
     <header class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-8 mb-8 shadow-sm">
       <div class="flex flex-wrap items-center gap-2.5 mb-4">
-        {order.eo_number ? (
+        {orderLabel ? (
           <span class="font-mono text-sm font-bold px-2.5 py-1 rounded bg-blue-100 text-blue-900 dark:bg-blue-950 dark:text-blue-200 border border-blue-200 dark:border-blue-900">
-            Executive Order {order.eo_number}
+            Executive Order {orderLabel}
           </span>
         ) : (
           <span class="font-mono text-xs font-semibold px-2.5 py-1 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
             Presidential Order
           </span>
         )}
+        {orderStatus && (
+          <a href="#legal-status" class={`text-xs font-bold uppercase tracking-wide px-2.5 py-1 rounded border ${statusBadgeClasses(orderStatus)}`} title="Federal Register disposition status">
+            {orderStatus}
+          </a>
+        )}
         <span class={`text-xs font-semibold px-2.5 py-1 rounded-full border ${youngstown.badgeClass}`} title={youngstown.tagline}>
           {youngstown.icon} {youngstown.name}
         </span>
-        <span class={`text-xs font-semibold px-2.5 py-1 rounded-full border ${sentimentColor.bg} ${sentimentColor.text} ${sentimentColor.border}`}>
+        <span
+          class={`text-xs font-semibold px-2.5 py-1 rounded-full border ${sentimentColor.bg} ${sentimentColor.text} ${sentimentColor.border}`}
+          title="Automated keyword-pattern score from -1 to +1 (see About → methodology). It measures the wording of the text, not a legal judgment."
+        >
           {order.sentiment_valence} ({order.sentiment_compound >= 0 ? '+' : ''}{order.sentiment_compound.toFixed(2)})
         </span>
       </div>
@@ -269,8 +310,74 @@ const breadcrumbJsonLd = {
         <div class="font-mono">{formattedDate}</div>
         <span>•</span>
         <div>{order.reading_time_minutes} min read ({order.word_count.toLocaleString()} words)</div>
+        {order.fr_citation && (
+          <>
+            <span>•</span>
+            <div class="font-mono" title="Federal Register citation">{order.fr_citation.replace(' FR ', ' Fed. Reg. ')}</div>
+          </>
+        )}
       </div>
     </header>
+
+    <!-- Legal status from Federal Register disposition tables -->
+    {disposition && (statusRelations.length > 0 || outboundRelations.length > 0) && (
+      <section
+        id="legal-status"
+        class={`scroll-mt-24 rounded-2xl p-5 sm:p-6 mb-8 border shadow-sm ${orderStatus === 'Revoked' || orderStatus === 'Superseded' || orderStatus === 'Suspended'
+          ? 'bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-900/60'
+          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800'}`}
+      >
+        <div class="flex flex-wrap items-center gap-2 mb-3">
+          <h2 class="font-serif font-bold text-lg text-slate-900 dark:text-white">Legal Status & Amendment History</h2>
+          {orderStatus && (
+            <span class={`text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded border ${statusBadgeClasses(orderStatus)}`}>{orderStatus}</span>
+          )}
+        </div>
+        {orderStatus === 'Revoked' || orderStatus === 'Superseded' ? (
+          <p class="text-sm text-rose-900 dark:text-rose-200 mb-4">
+            This order is no longer in effect according to the Federal Register's executive order disposition tables.
+          </p>
+        ) : orderStatus === 'Reinstated' ? (
+          <p class="text-sm text-slate-700 dark:text-slate-300 mb-4">This order was revoked and later reinstated by a subsequent order.</p>
+        ) : null}
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4 text-sm">
+          {statusRelations.length > 0 && (
+            <div>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">Actions on this order</h3>
+              <ul class="space-y-1.5">
+                {statusRelations.map(rel => (
+                  <li class="text-slate-700 dark:text-slate-300">
+                    <span class="font-semibold">{relationLabel(rel, 'inbound')}</span>{' '}
+                    {rel.id ? <a href={`/orders/${rel.id}`} class="font-mono text-blue-600 dark:text-blue-400 hover:underline">EO {rel.eo}</a> : <span class="font-mono">EO {rel.eo}</span>}
+                    {rel.date && <span class="text-slate-500 dark:text-slate-400"> ({rel.date})</span>}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {outboundRelations.length > 0 && (
+            <div>
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">What this order changed</h3>
+              <ul class="space-y-1.5">
+                {outboundRelations.slice(0, 12).map(rel => (
+                  <li class="text-slate-700 dark:text-slate-300">
+                    <span class="font-semibold">{relationLabel(rel, 'outbound')}</span>{' '}
+                    {rel.id ? <a href={`/orders/${rel.id}`} class="font-mono text-blue-600 dark:text-blue-400 hover:underline">EO {rel.eo}</a> : <span class="font-mono">EO {rel.eo}</span>}
+                    {rel.date && <span class="text-slate-500 dark:text-slate-400"> ({rel.date})</span>}
+                  </li>
+                ))}
+                {outboundRelations.length > 12 && (
+                  <li class="text-xs text-slate-500 dark:text-slate-400">and {outboundRelations.length - 12} more</li>
+                )}
+              </ul>
+            </div>
+          )}
+        </div>
+        <p class="text-[11px] text-slate-500 dark:text-slate-400 mt-4">
+          Source: Office of the Federal Register executive order disposition notes. Orders before 1994 show only actions recorded by later orders.
+        </p>
+      </section>
+    )}
 
     <!-- Plain-English Translation & Constitutional Analysis Callout -->
     <section class="bg-amber-50/50 dark:bg-amber-950/20 border-2 border-amber-200/80 dark:border-amber-900/40 rounded-2xl p-6 sm:p-8 mb-8 shadow-sm">
@@ -402,15 +509,16 @@ const breadcrumbJsonLd = {
         <div class="text-2xl font-bold font-mono text-slate-900 dark:text-white">
           {order.flesch_kincaid_grade}
         </div>
-        <div class="text-[10px] text-slate-500 mt-1">Post-Grad reading level</div>
+        <div class="text-[10px] text-slate-500 mt-1">{readingLevelLabel(order.flesch_kincaid_grade)}</div>
       </div>
 
       <div class="bg-white dark:bg-slate-900 rounded-xl p-4 border border-slate-200 dark:border-slate-800 text-center">
-        <div class="text-[11px] text-slate-400 uppercase tracking-wider font-semibold mb-1">Constitutional Polarity</div>
+        <div class="text-[11px] text-slate-400 uppercase tracking-wider font-semibold mb-1" title="Automated keyword-pattern score from -1 to +1 (see About → methodology). It measures the wording of the text, not a legal judgment.">Language Tone Score</div>
         <div class="text-2xl font-bold font-mono text-slate-900 dark:text-white">
           {order.sentiment_compound >= 0 ? '+' : ''}{order.sentiment_compound.toFixed(2)}
         </div>
         <div class="text-[10px] text-slate-500 mt-1 font-mono uppercase">{order.sentiment_valence}</div>
+        <a href="/about#constitutional-sentiment" class="text-[10px] text-blue-600 dark:text-blue-400 hover:underline print:hidden">How is this scored?</a>
       </div>
 
     </section>

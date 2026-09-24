@@ -52,6 +52,10 @@ def init_db():
         who_it_affects_json TEXT,         -- JSON array of strings
         tone_tag TEXT,                    -- e.g. 'Regulatory', 'Emergency', 'Directive'
         topic_tags_json TEXT,              -- JSON array of controlled taxonomy topics (scripts/topics.py)
+        fr_citation TEXT,                 -- Federal Register citation, e.g. "91 FR 60501"
+        eo_notes TEXT,                    -- Federal Register disposition notes ("Revoked by: EO 14148, ...")
+        manually_curated INTEGER DEFAULT 0, -- 1 = summary/directives hand-written; batch worker must not regenerate
+        summary_model TEXT,               -- set when summary/directives came from scripts/llm_summarize.py (model ID)
 
         raw_metadata_json TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -85,8 +89,11 @@ def init_db():
     # idempotent migration here.
     cursor.execute("PRAGMA table_info(orders)")
     existing_columns = {row[1] for row in cursor.fetchall()}
-    if "topic_tags_json" not in existing_columns:
-        cursor.execute("ALTER TABLE orders ADD COLUMN topic_tags_json TEXT")
+    for column in ("topic_tags_json", "fr_citation", "eo_notes", "summary_model"):
+        if column not in existing_columns:
+            cursor.execute(f"ALTER TABLE orders ADD COLUMN {column} TEXT")
+    if "manually_curated" not in existing_columns:
+        cursor.execute("ALTER TABLE orders ADD COLUMN manually_curated INTEGER DEFAULT 0")
 
     conn.commit()
     conn.close()
@@ -102,7 +109,7 @@ def upsert_order(order_dict):
         "flesch_kincaid_grade", "sentiment_compound", "sentiment_pos",
         "sentiment_neg", "sentiment_neu", "sentiment_valence",
         "summary_plain_english", "key_directives_json", "who_it_affects_json",
-        "tone_tag", "topic_tags_json", "raw_metadata_json"
+        "tone_tag", "topic_tags_json", "fr_citation", "eo_notes", "raw_metadata_json"
     ]
 
     # These fields are populated by the constitutional batch worker, not by the
@@ -112,9 +119,12 @@ def upsert_order(order_dict):
     # tone_tag is only ever set by the batch worker, so "tone_tag already set"
     # is used as the signal that this order has already been constitutionally
     # evaluated and its sentiment/summary fields should be left alone.
+    # full_text and fr_citation/eo_notes aren't enriched, but a NULL from a failed
+    # body fetch or a sparse API response must not erase previously stored values
+    # either (sync_orders.py sends NULL rather than "" when the fetch fails).
     protected_null_coalesce_fields = [
         "summary_plain_english", "key_directives_json", "who_it_affects_json", "tone_tag",
-        "topic_tags_json"
+        "topic_tags_json", "full_text", "fr_citation", "eo_notes"
     ]
     protected_if_evaluated_fields = [
         "sentiment_compound", "sentiment_pos", "sentiment_neg", "sentiment_neu", "sentiment_valence"

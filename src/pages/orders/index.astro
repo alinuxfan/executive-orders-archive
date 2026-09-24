@@ -6,6 +6,7 @@ import { formatPresidentNumbersHash } from '../../lib/presidentNumbers';
 
 const totalOrders = orders.length;
 const initialOrders = orders.slice(0, 48);
+const presidentSlugsByName = Object.fromEntries(presidents.map(p => [p.name, p.slug]));
 
 const signingYears = orders
   .map(o => o.signing_date ? parseInt(o.signing_date.slice(0, 4), 10) : null)
@@ -82,7 +83,7 @@ const TOPIC_OPTIONS = [
           >
             <option value="">All Presidents</option>
             {presidents.map(p => (
-              <option value={p.name}>{p.name} ({formatPresidentNumbersHash(p.numbers)})</option>
+              <option value={p.slug}>{p.name} ({formatPresidentNumbersHash(p.numbers)})</option>
             ))}
           </select>
         </div>
@@ -153,8 +154,25 @@ const TOPIC_OPTIONS = [
           />
         </div>
 
+        <!-- Federal Register disposition status -->
+        <div>
+          <label for="status-select" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+            Legal Status
+          </label>
+          <select
+            id="status-select"
+            class="w-full px-3.5 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+          >
+            <option value="">Any Status</option>
+            <option value="revoked">Revoked / Superseded</option>
+            <option value="partial">Partially Revoked</option>
+            <option value="amended">Amended</option>
+            <option value="any">Any Recorded Change</option>
+          </select>
+        </div>
+
         <!-- Sort -->
-        <div class="col-span-2 sm:col-span-2">
+        <div>
           <label for="sort-select" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
             Sort By
           </label>
@@ -162,7 +180,8 @@ const TOPIC_OPTIONS = [
             id="sort-select"
             class="w-full px-3.5 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
           >
-            <option value="newest">Newest First</option>
+            <option value="relevance">Best Match (when searching)</option>
+            <option value="newest" selected>Newest First</option>
             <option value="oldest">Oldest First</option>
             <option value="longest">Longest (Word Count)</option>
             <option value="shortest">Shortest (Word Count)</option>
@@ -201,10 +220,11 @@ const TOPIC_OPTIONS = [
 
   </div>
 
-  <script is:inline define:vars={{ initialOrders, totalOrders }}>
+  <script is:inline define:vars={{ initialOrders, presidentSlugsByName }}>
     const searchInput = document.getElementById('order-search');
     const presSelect = document.getElementById('president-select');
     const sentSelect = document.getElementById('sentiment-select');
+    const statusSelect = document.getElementById('status-select');
     const yearFromInput = document.getElementById('year-from');
     const yearToInput = document.getElementById('year-to');
     const sortSelect = document.getElementById('sort-select');
@@ -215,6 +235,14 @@ const TOPIC_OPTIONS = [
     const ordersContainer = document.getElementById('orders-container');
     const loadMoreBtn = document.getElementById('load-more-orders');
     const loadMoreContainer = document.getElementById('load-more-container');
+    const EOSearch = window.EOSearch;
+
+    const STATUS_GROUPS = {
+      revoked: ['Revoked', 'Superseded', 'Suspended'],
+      partial: ['Partially revoked', 'Partially superseded'],
+      amended: ['Amended'],
+      any: null,
+    };
 
     function sortItems(list, sortMode) {
       const sorted = [...list];
@@ -222,6 +250,8 @@ const TOPIC_OPTIONS = [
       const getWords = o => (o.words !== undefined ? o.words : (o.word_count || 0));
       const getDateStr = o => (o.date || o.signing_date || '');
       switch (sortMode) {
+        case 'relevance':
+          return list; // already ranked by EOSearch.rankOrders
         case 'oldest':
           sorted.sort((a, b) => getDateStr(a).localeCompare(getDateStr(b)));
           break;
@@ -249,6 +279,7 @@ const TOPIC_OPTIONS = [
       if (searchInput?.value) params.set('q', searchInput.value);
       if (presSelect?.value) params.set('president', presSelect.value);
       if (sentSelect?.value) params.set('sentiment', sentSelect.value);
+      if (statusSelect?.value) params.set('status', statusSelect.value);
       if (topicSelect?.value) params.set('topic', topicSelect.value);
       if (yearFromInput?.value) params.set('from', yearFromInput.value);
       if (yearToInput?.value) params.set('to', yearToInput.value);
@@ -258,113 +289,13 @@ const TOPIC_OPTIONS = [
       window.history.replaceState(null, '', newUrl);
     }
 
-    let allOrders = null;
     let filteredOrders = [];
     let displayedCount = 0;
     let yearDebounceTimer;
+    let searchDebounceTimer;
+    let filterRun = 0;
+    let sortTouched = false;
     const BATCH_SIZE = 48;
-
-    function renderOrderCard(order) {
-      let sentimentBadge = {
-        label: "Constitutional Neutral",
-        bg: "bg-slate-100 dark:bg-slate-800",
-        text: "text-slate-700 dark:text-slate-300",
-        border: "border-slate-200 dark:border-slate-700"
-      };
-
-      const val = order.val || order.sentiment_valence;
-      const comp = order.comp !== undefined ? order.comp : (order.sentiment_compound || 0);
-
-      if (val === "Constitutional Fidelity" || val === "Positive") {
-        sentimentBadge = {
-          label: `Fidelity (${comp >= 0 ? '+' : ''}${comp.toFixed(2)})`,
-          bg: "bg-emerald-50 dark:bg-emerald-950/40",
-          text: "text-emerald-700 dark:text-emerald-300",
-          border: "border-emerald-200 dark:border-emerald-800"
-        };
-      } else if (val === "Constitutional Friction / Overreach" || val === "Urgent/Negative") {
-        sentimentBadge = {
-          label: `Friction (${comp.toFixed(2)})`,
-          bg: "bg-rose-50 dark:bg-rose-950/40",
-          text: "text-rose-700 dark:text-rose-300",
-          border: "border-rose-200 dark:border-rose-800"
-        };
-      }
-
-      const rawDate = order.date || order.signing_date;
-      const formattedDate = window.formatSigningDate ? window.formatSigningDate(rawDate) : (rawDate || "Undated");
-
-      const num = order.num !== undefined ? order.num : order.eo_number;
-      const eoBadge = num ? 
-        `<span class="font-mono text-xs font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-900">EO ${num}</span>` :
-        `<span class="font-mono text-[11px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">Order</span>`;
-
-      const presName = order.pres || order.president_name;
-      const slug = window.resolvePortraitSlug(order.slug || order.president_slug);
-      const readTime = order.time || order.reading_time_minutes || 1;
-      const wordCount = (order.words || order.word_count || 0).toLocaleString();
-      const toneTag = order.tag || order.tone_tag;
-      const snippet = order.snip || order.snippet;
-
-      const metaObj = {
-        id: order.id,
-        num: num,
-        title: order.title,
-        pres: presName,
-        slug: slug,
-        date: rawDate,
-        words: order.words || order.word_count || 0,
-        time: readTime,
-        val: val,
-        comp: comp,
-        tag: toneTag,
-        snip: snippet
-      };
-      const compactMeta = JSON.stringify(metaObj).replace(/'/g, "&apos;");
-
-      return `
-        <article class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-200 flex flex-col justify-between">
-          <div>
-            <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
-              <div class="flex items-center gap-2">
-                ${eoBadge}
-                <span class="text-xs font-mono text-slate-500 dark:text-slate-400">${formattedDate}</span>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <span class="text-[11px] font-medium px-2 py-0.5 rounded-full border ${sentimentBadge.bg} ${sentimentBadge.text} ${sentimentBadge.border}">
-                  ${sentimentBadge.label}
-                </span>
-                <button type="button" data-bookmark-btn="${order.id}" data-order-meta='${compactMeta}' aria-label="Save this order" aria-pressed="false" class="p-1 rounded-md text-slate-400 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-                  <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path></svg>
-                </button>
-              </div>
-            </div>
-            <h3 class="font-serif font-bold text-slate-900 dark:text-white text-base sm:text-lg mb-2 line-clamp-2 hover:text-blue-600 dark:hover:text-blue-400">
-              <a href="/orders/${order.id}">${order.title}</a>
-            </h3>
-            ${toneTag ? `
-              <div class="mb-3">
-                <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-900/60 font-medium">
-                  🏛️ ${toneTag}
-                </span>
-              </div>
-            ` : ''}
-            ${snippet ? `<p class="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed mb-4">${snippet}</p>` : ''}
-          </div>
-          <div class="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-            <div class="flex items-center gap-1.5 font-medium">
-              <img src="/portraits/${slug}.jpg" alt="" class="w-5 h-5 rounded-full object-cover border border-slate-300 dark:border-slate-600" onerror="this.style.display='none'\" />
-              <span class="text-slate-700 dark:text-slate-300 truncate max-w-[140px] sm:max-w-none">${presName}</span>
-            </div>
-            <div class="flex items-center gap-2 font-mono text-[11px]">
-              <span title="Estimated Reading Time">⏱ ${readTime}m</span>
-              <span class="opacity-40">•</span>
-              <span title="Word Count">${wordCount} words</span>
-            </div>
-          </div>
-        </article>
-      `;
-    }
 
     function appendBatch(reset = false) {
       if (reset) {
@@ -373,85 +304,55 @@ const TOPIC_OPTIONS = [
       }
       const slice = filteredOrders.slice(displayedCount, displayedCount + BATCH_SIZE);
       if (slice.length > 0) {
-        ordersContainer.innerHTML += slice.map(renderOrderCard).join('');
+        EOSearch.appendHtml(ordersContainer, slice.map(o => EOSearch.renderOrderCard(o, { showTag: true })).join(''));
         displayedCount += slice.length;
         window.EOBookmarks?.refreshAllButtons();
       }
-
-      if (displayedCount < filteredOrders.length) {
-        loadMoreContainer.classList.remove('hidden');
-      } else {
-        loadMoreContainer.classList.add('hidden');
-      }
-
-      if (filteredOrders.length === 0) {
-        noResults.classList.remove('hidden');
-      } else {
-        noResults.classList.add('hidden');
-      }
-    }
-
-    async function loadIndex() {
-      if (allOrders) return allOrders;
-      try {
-        const res = await fetch('/search_index.json');
-        allOrders = await res.json();
-        for (let i = 0; i < allOrders.length; i++) {
-          const o = allOrders[i];
-          const pres = o.pres || o.president_name || '';
-          const num = o.num !== undefined ? String(o.num) : String(o.eo_number || '');
-          const snip = o.snip || o.snippet || '';
-          const tag = o.tag || o.tone_tag || '';
-          const kw = o.kw || '';
-          o._hay = `${o.title || ''} ${num} ${snip} ${tag} ${kw}`.toLowerCase();
-          const rawDate = o.date || o.signing_date || '';
-          o._year = rawDate.length >= 4 ? parseInt(rawDate.slice(0, 4), 10) : null;
-          o._presLower = pres.toLowerCase();
-        }
-      } catch (e) {
-        console.error('Failed to load dataset:', e);
-        allOrders = initialOrders;
-      }
-      return allOrders;
-    }
-
-    function getTopics(item) {
-      if (Array.isArray(item.topics)) return item.topics;
-      if (item.topic_tags_json) {
-        try { return JSON.parse(item.topic_tags_json); } catch (e) { return []; }
-      }
-      return [];
+      loadMoreContainer.classList.toggle('hidden', displayedCount >= filteredOrders.length);
+      noResults.classList.toggle('hidden', filteredOrders.length !== 0);
     }
 
     async function applyFilters() {
-      const q = (searchInput?.value || '').toLowerCase().trim();
-      const pres = (presSelect?.value || '').toLowerCase();
+      const runId = ++filterRun;
+      const q = (searchInput?.value || '').trim();
+      const presSlug = presSelect?.value || '';
       const sent = sentSelect?.value || '';
+      const statusGroup = statusSelect?.value || '';
       const topic = topicSelect?.value || '';
       const yearFrom = yearFromInput?.value ? parseInt(yearFromInput.value, 10) : null;
       const yearTo = yearToInput?.value ? parseInt(yearToInput.value, 10) : null;
+
+      // Typing a query switches an untouched "Newest" sort to best-match ranking.
+      if (q && !sortTouched && sortSelect && sortSelect.value === 'newest') sortSelect.value = 'relevance';
+      if (!q && sortSelect?.value === 'relevance') sortSelect.value = 'newest';
       const sortMode = sortSelect?.value || 'newest';
-      const terms = q.split(/\s+/).filter(Boolean);
 
-      const dataset = await loadIndex();
+      let dataset;
+      try {
+        dataset = q ? await EOSearch.loadKeywords() : await EOSearch.loadIndex();
+      } catch (e) {
+        console.error('Failed to load dataset:', e);
+        if (counter) counter.textContent = 'Could not load the full archive index. Showing recent orders only.';
+        dataset = initialOrders;
+      }
+      if (runId !== filterRun) return; // a newer keystroke superseded this run
 
-      filteredOrders = dataset.filter(item => {
-        const itemPres = item._presLower !== undefined ? item._presLower : (item.pres || item.president_name || '').toLowerCase();
+      const allowedStatuses = statusGroup && statusGroup !== 'any' ? STATUS_GROUPS[statusGroup] : null;
+      const candidates = dataset.filter(item => {
         const itemVal = item.val || item.sentiment_valence || '';
-        const itemYear = item._year !== undefined ? item._year : (item.date || item.signing_date ? parseInt(String(item.date || item.signing_date).slice(0, 4), 10) : null);
-        const hay = item._hay || `${item.title} ${itemPres}`.toLowerCase();
-
-        const matchQ = terms.length === 0 || terms.every(term => hay.includes(term));
-        const matchPres = !pres || itemPres.includes(pres);
-        const matchSent = !sent || itemVal === sent;
-        const matchTopic = !topic || getTopics(item).includes(topic);
-        const matchYearFrom = yearFrom === null || (itemYear !== null && itemYear >= yearFrom);
-        const matchYearTo = yearTo === null || (itemYear !== null && itemYear <= yearTo);
-
-        return matchQ && matchPres && matchSent && matchTopic && matchYearFrom && matchYearTo;
+        const itemStatus = item.st || item.eo_status || '';
+        const itemYear = item._year !== undefined ? item._year : parseInt(String(item.date || item.signing_date || '').slice(0, 4), 10);
+        if (presSlug && window.resolvePortraitSlug(item.slug || item.president_slug) !== presSlug) return false;
+        if (sent && itemVal !== sent) return false;
+        if (statusGroup === 'any' && !itemStatus) return false;
+        if (allowedStatuses && !allowedStatuses.includes(itemStatus)) return false;
+        if (topic && !(item.topics || []).includes(topic)) return false;
+        if (yearFrom !== null && !(itemYear >= yearFrom)) return false;
+        if (yearTo !== null && !(itemYear <= yearTo)) return false;
+        return true;
       });
 
-      filteredOrders = sortItems(filteredOrders, sortMode);
+      filteredOrders = sortItems(q ? EOSearch.rankOrders(candidates, q) : candidates, sortMode);
 
       if (counter) counter.textContent = `Showing ${filteredOrders.length.toLocaleString()} matching orders`;
       appendBatch(true);
@@ -460,56 +361,60 @@ const TOPIC_OPTIONS = [
 
     // Hydrate from URL params (shareable/bookmarkable filtered views)
     const urlParams = new URLSearchParams(window.location.search);
-    const initialQ = urlParams.get('q');
-    const initialPres = urlParams.get('president');
-    const initialSent = urlParams.get('sentiment');
-    const initialTopic = urlParams.get('topic');
-    const initialFrom = urlParams.get('from');
-    const initialTo = urlParams.get('to');
     const initialSort = urlParams.get('sort');
+    let initialPres = urlParams.get('president');
+    // Older links used the president's display name instead of the slug.
+    if (initialPres && presidentSlugsByName[initialPres]) initialPres = presidentSlugsByName[initialPres];
+    const fields = [
+      [searchInput, urlParams.get('q')],
+      [presSelect, initialPres],
+      [sentSelect, urlParams.get('sentiment')],
+      [statusSelect, urlParams.get('status')],
+      [topicSelect, urlParams.get('topic')],
+      [yearFromInput, urlParams.get('from')],
+      [yearToInput, urlParams.get('to')],
+      [sortSelect, initialSort],
+    ];
     let hasUrlFilters = false;
+    for (const [el, value] of fields) {
+      if (el && value) { el.value = value; hasUrlFilters = true; }
+    }
+    if (initialSort) sortTouched = true;
 
-    if (initialQ && searchInput) { searchInput.value = initialQ; hasUrlFilters = true; }
-    if (initialPres && presSelect) { presSelect.value = initialPres; hasUrlFilters = true; }
-    if (initialSent && sentSelect) { sentSelect.value = initialSent; hasUrlFilters = true; }
-    if (initialTopic && topicSelect) { topicSelect.value = initialTopic; hasUrlFilters = true; }
-    if (initialFrom && yearFromInput) { yearFromInput.value = initialFrom; hasUrlFilters = true; }
-    if (initialTo && yearToInput) { yearToInput.value = initialTo; hasUrlFilters = true; }
-    if (initialSort && sortSelect) { sortSelect.value = initialSort; hasUrlFilters = true; }
-
-    // Initial hydration
     if (hasUrlFilters) {
       applyFilters();
     } else {
       filteredOrders = initialOrders;
       appendBatch(true);
     }
-    setTimeout(loadIndex, 500);
+    setTimeout(() => EOSearch.loadIndex().catch(() => {}), 500);
 
     searchInput?.addEventListener('input', () => {
-      applyFilters();
+      clearTimeout(searchDebounceTimer);
+      searchDebounceTimer = setTimeout(applyFilters, 150);
     });
     presSelect?.addEventListener('change', applyFilters);
     sentSelect?.addEventListener('change', applyFilters);
+    statusSelect?.addEventListener('change', applyFilters);
     topicSelect?.addEventListener('change', applyFilters);
-    yearFromInput?.addEventListener('input', () => {
-      clearTimeout(yearDebounceTimer);
-      yearDebounceTimer = setTimeout(applyFilters, 300);
+    for (const el of [yearFromInput, yearToInput]) {
+      el?.addEventListener('input', () => {
+        clearTimeout(yearDebounceTimer);
+        yearDebounceTimer = setTimeout(applyFilters, 300);
+      });
+    }
+    sortSelect?.addEventListener('change', () => {
+      sortTouched = true;
+      applyFilters();
     });
-    yearToInput?.addEventListener('input', () => {
-      clearTimeout(yearDebounceTimer);
-      yearDebounceTimer = setTimeout(applyFilters, 300);
-    });
-    sortSelect?.addEventListener('change', applyFilters);
 
     resetBtn?.addEventListener('click', () => {
-      if (searchInput) searchInput.value = '';
-      if (presSelect) presSelect.value = '';
-      if (sentSelect) sentSelect.value = '';
-      if (topicSelect) topicSelect.value = '';
-      if (yearFromInput) yearFromInput.value = '';
-      if (yearToInput) yearToInput.value = '';
+      for (const el of [searchInput, presSelect, sentSelect, statusSelect, topicSelect, yearFromInput, yearToInput]) {
+        if (el) el.value = '';
+      }
       if (sortSelect) sortSelect.value = 'newest';
+      sortTouched = false;
+      filterRun++;
       if (counter) counter.textContent = `Showing recent orders`;
       filteredOrders = initialOrders;
       appendBatch(true);
@@ -518,8 +423,12 @@ const TOPIC_OPTIONS = [
 
     loadMoreBtn?.addEventListener('click', async () => {
       if (filteredOrders === initialOrders) {
-        const dataset = await loadIndex();
-        filteredOrders = sortItems(dataset, sortSelect?.value || 'newest');
+        try {
+          const dataset = await EOSearch.loadIndex();
+          filteredOrders = sortItems(dataset, sortSelect?.value || 'newest');
+        } catch (e) {
+          console.error('Failed to load dataset:', e);
+        }
       }
       appendBatch(false);
     });

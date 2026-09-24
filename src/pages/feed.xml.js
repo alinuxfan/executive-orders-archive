@@ -13,8 +13,8 @@ export async function GET(context) {
     description: 'Real-time updates, plain-English summaries, and constitutional analysis of United States Presidential Executive Orders.',
     site: context.site || 'https://executiveordersarchive.org',
     items: sortedOrders.map(order => ({
-      title: order.eo_number ? `EO ${order.eo_number}: ${order.title}` : order.title,
-      pubDate: new Date(order.signing_date),
+      title: order.eo_number ? `EO ${order.eo_number}${order.eo_suffix ? `-${order.eo_suffix}` : ''}: ${order.title.replace(/^Executive Order\s*\d+(?:-[A-Z])?\s*[—–-]\s*/i, '')}` : order.title,
+      pubDate: new Date(`${order.signing_date}T12:00:00Z`),
       description: order.snippet || `Executive Order signed by ${order.president_name}.`,
       link: `/orders/${order.id}`,
       author: order.president_name,

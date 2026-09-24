@@ -44,7 +44,8 @@ data/site_orders*.json          public/search_index.json
 2. **Protected Enriched Fields (`scripts/db.py`)**:
    - `tone_tag`, `summary_plain_english`, `key_directives_json`, `who_it_affects_json`, and evaluated sentiment metrics are enriched by `batch_constitutional_worker.py`.
    - In `upsert_order()` within [`scripts/db.py`](file:///home/adam/git/executive_orders/scripts/db.py), these fields are protected from accidental overwrite during routine sync fetches using `COALESCE` and `CASE WHEN tone_tag IS NOT NULL`. **Do not bypass this protection.**
-3. **Execution Environment for Python**:
+3. **Hand-curated and LLM summaries**: Orders with `manually_curated = 1` (hand-written summary/directives) or a non-null `summary_model` (written by `scripts/llm_summarize.py`) are skipped by `batch_constitutional_worker.py`, even with `--force`. To hand-edit an order's summary, update SQLite and set `manually_curated = 1` — edits made directly to `site_orders.json` are wiped by the next export.
+4. **Execution Environment for Python**:
    - When running scripts, ensure `PYTHONPATH=scripts` is set so internal module imports (`from db import ...`, `from metrics import ...`) resolve properly:
      ```bash
      PYTHONPATH=scripts python scripts/<script_name>.py
@@ -80,7 +81,12 @@ data/site_orders*.json          public/search_index.json
 | [`scripts/constitutional_engine.py`](file:///home/adam/git/executive_orders/scripts/constitutional_engine.py) | Core NLP analyzer for readability, sentiment, and constitutional categorization. |
 | [`scripts/batch_constitutional_worker.py`](file:///home/adam/git/executive_orders/scripts/batch_constitutional_worker.py) | Batch runner processing un-enriched records in SQLite. |
 | [`scripts/export_site_data.py`](file:///home/adam/git/executive_orders/scripts/export_site_data.py) | Serializes SQLite data into JSON files consumed by Astro. |
-| [`scripts/build_search_index.py`](file:///home/adam/git/executive_orders/scripts/build_search_index.py) | Generates `public/search_index.json` for client search. |
+| [`scripts/build_search_index.py`](file:///home/adam/git/executive_orders/scripts/build_search_index.py) | Generates `public/search_index.json` (listing/filter index) and `public/search_keywords.json` (body keywords, lazily fetched once a query is typed). |
+| [`scripts/snippets.py`](file:///home/adam/git/executive_orders/scripts/snippets.py) | Strips boilerplate (FR page markers, enacting clause, signature block) to get an order's operative text; used for snippets, summaries, and directives. |
+| [`scripts/dispositions.py`](file:///home/adam/git/executive_orders/scripts/dispositions.py) | Parses Federal Register disposition notes (`eo_notes`) into revoked/amended status, exported as `eo_status` / `disposition_json`. |
+| [`scripts/backfill_fr_metadata.py`](file:///home/adam/git/executive_orders/scripts/backfill_fr_metadata.py) | Re-fetches FR citations and disposition notes for every order (sync only covers a 30-day window). |
+| [`scripts/llm_summarize.py`](file:///home/adam/git/executive_orders/scripts/llm_summarize.py) | Optional, paid: Claude-written summaries via the Message Batches API. Not run in CI. |
+| [`public/search-lib.js`](file:///home/adam/git/executive_orders/public/search-lib.js) | Shared client code for `/orders`, `/search`, `/saved`, `/timeline`: index loading, relevance ranking, escaped order-card template. |
 | [`src/components/ShareButtons.astro`](file:///home/adam/git/executive_orders/src/components/ShareButtons.astro) | Social share actions (X, Facebook, Instagram, LinkedIn, Copy Link). |
 | [`src/components/CitationBox.astro`](file:///home/adam/git/executive_orders/src/components/CitationBox.astro) | Bluebook/legal citation generator. |
 | [`src/pages/orders/[id].astro`](file:///home/adam/git/executive_orders/src/pages/orders/[id].astro) | Individual order detail template. |

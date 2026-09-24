@@ -2,11 +2,14 @@
 import { resolvePortraitSlug } from '../lib/portraits';
 import { formatSigningDate } from '../lib/dates';
 import { getYoungstownClassification } from '../lib/youngstown';
+import { readingLevelLabel, eoLabel, statusBadgeClasses } from '../lib/orderLabels';
 
 interface Props {
   order: {
     id: string;
     eo_number?: number | null;
+    eo_suffix?: string | null;
+    eo_status?: string | null;
     title: string;
     president_name: string;
     president_slug?: string;
@@ -49,11 +52,8 @@ if (order.sentiment_valence === "Constitutional Fidelity" || order.sentiment_val
   };
 }
 
-// Readability label
-let gradeLabel = "Grade " + order.flesch_kincaid_grade;
-if (order.flesch_kincaid_grade >= 16) gradeLabel = "Post-Graduate Legal";
-else if (order.flesch_kincaid_grade >= 13) gradeLabel = "College Level";
-else if (order.flesch_kincaid_grade >= 9) gradeLabel = "High School";
+const gradeLabel = readingLevelLabel(order.flesch_kincaid_grade);
+const label = eoLabel(order);
 
 // Date formatting (timezone safe)
 const formattedDate = formatSigningDate(order.signing_date);
@@ -70,6 +70,8 @@ const cleanSnippet = rawSnippet
 const compactMeta = JSON.stringify({
   id: order.id,
   num: order.eo_number,
+  sfx: order.eo_suffix || undefined,
+  st: order.eo_status || undefined,
   title: order.title,
   pres: order.president_name,
   slug: order.president_slug,
@@ -88,14 +90,19 @@ const compactMeta = JSON.stringify({
   <div>
     <!-- Top Metadata Badges -->
     <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
-      <div class="flex items-center gap-2">
-        {order.eo_number ? (
+      <div class="flex flex-wrap items-center gap-2">
+        {label ? (
           <span class="font-mono text-xs font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200 dark:border-blue-900">
-            EO {order.eo_number}
+            EO {label}
           </span>
         ) : (
           <span class="font-mono text-[11px] font-semibold px-2 py-0.5 rounded bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
             Order
+          </span>
+        )}
+        {order.eo_status && (
+          <span class={`text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded border ${statusBadgeClasses(order.eo_status)}`} title={`Federal Register disposition: ${order.eo_status}`}>
+            {order.eo_status}
           </span>
         )}
         <span class="text-xs font-mono text-slate-500 dark:text-slate-400">
@@ -154,6 +161,7 @@ const compactMeta = JSON.stringify({
       <img
         src={`/portraits/${portraitSlug}.jpg`}
         alt=""
+        loading="lazy"
         class="w-4 h-4 rounded-full object-cover border border-slate-200 dark:border-slate-700 flex-shrink-0"
         onerror="this.style.display='none'"
       />

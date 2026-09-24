@@ -49,7 +49,7 @@ def process_single_order(row):
     )
 
     # 3. Controlled Topic Classification
-    topic_tags = classify_topics(title or "", full_text or "")
+    topic_tags = classify_topics(f"{title or ''} {full_text or ''}")
     
     return (
         metrics["sentiment_compound"],
@@ -75,11 +75,16 @@ def run_batch_worker(batch_size=200, workers=4, limit=None, force=False):
     conn = get_connection()
     cursor = conn.cursor()
 
+    # Hand-curated orders (manually_curated = 1) are never regenerated, even with
+    # --force: their summary/directives were written by a person, and site JSON
+    # is re-exported from SQLite, so an overwrite here would be permanent.
     if force:
-        where_clause = "WHERE word_count > 0"
+        # LLM-written summaries (summary_model set) are likewise kept; re-run
+        # scripts/llm_summarize.py --redo to regenerate those.
+        where_clause = "WHERE word_count > 0 AND COALESCE(manually_curated, 0) = 0 AND summary_model IS NULL"
     else:
         # Process any order that lacks tone_tag OR summary_plain_english OR topic_tags_json
-        where_clause = "WHERE word_count > 0 AND (tone_tag IS NULL OR summary_plain_english IS NULL OR topic_tags_json IS NULL)"
+        where_clause = "WHERE word_count > 0 AND COALESCE(manually_curated, 0) = 0 AND (tone_tag IS NULL OR summary_plain_english IS NULL OR topic_tags_json IS NULL)"
 
     limit_clause = f"LIMIT {limit}" if limit else ""
 

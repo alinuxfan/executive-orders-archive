@@ -67,7 +67,7 @@ const oldestYear = oldestOrder?.signing_date ? oldestOrder.signing_date.slice(0,
       </div>
 
       <!-- Quick Date Selector -->
-      <div class="flex items-center gap-2 bg-slate-850/80 p-1.5 rounded-2xl border border-blue-700/50 backdrop-blur-sm self-stretch md:self-auto">
+      <div class="flex items-center gap-2 bg-slate-855/80 p-1.5 rounded-2xl border border-blue-700/50 backdrop-blur-sm self-stretch md:self-auto">
         <label for="history-date-picker" class="text-xs text-slate-300 font-medium pl-2 hidden sm:inline">Pick Date:</label>
         <input 
           type="date" 
@@ -168,6 +168,7 @@ const oldestYear = oldestOrder?.signing_date ? oldestOrder.signing_date.slice(0,
             signing_date: order.signing_date,
             sentiment_valence: order.sentiment_valence,
             sentiment_compound: order.sentiment_compound,
+            tone_tag: order.tone_tag,
             snippet: order.snippet
           });
 
@@ -334,6 +335,7 @@ const oldestYear = oldestOrder?.signing_date ? oldestOrder.signing_date.slice(0,
       signing_date: rawDate,
       sentiment_valence: val,
       sentiment_compound: order.comp !== undefined ? order.comp : order.sentiment_compound,
+      tone_tag: order.tag || order.tone_tag || '',
       snippet: snippet
     }).replace(/"/g, '&quot;');
 
@@ -402,7 +404,7 @@ const oldestYear = oldestOrder?.signing_date ? oldestOrder.signing_date.slice(0,
       });
 
     if (countBadge) {
-      countBadge.textContent = `Found ${matches.length} historic order${matches.length === 1 ? '' : 's'}`;\
+      countBadge.textContent = `Found ${matches.length} historic order${matches.length === 1 ? '' : 's'}`;
     }
 
     if (spanBadge) {
@@ -458,6 +460,7 @@ const oldestYear = oldestOrder?.signing_date ? oldestOrder.signing_date.slice(0,
           signing_date: m.date,
           sentiment_valence: m.val,
           sentiment_compound: m.comp,
+          tone_tag: m.tag || m.tone_tag || '',
           snippet: m.snip || ''
         }))
       }
@@ -478,7 +481,7 @@ const oldestYear = oldestOrder?.signing_date ? oldestOrder.signing_date.slice(0,
       tzBadge.textContent = tzAbbr ? `(${tzAbbr})` : `(${tzName})`;
       tzBadge.title = `Using your local timezone: ${tzName}`;
     }
-  } catch (e) {}
+  } catch (e) {}\
 
   // Sync date picker with user's local date
   if (picker) {

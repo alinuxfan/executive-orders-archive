@@ -12,6 +12,7 @@ interface Props {
   youngstownName?: string;
   constitutionalValence?: string;
   sentimentCompound?: number;
+  toneTag?: string;
   // President profile context
   presidentStats?: {
     multiplier?: string | number;
@@ -33,6 +34,7 @@ const {
   youngstownName,
   constitutionalValence,
   sentimentCompound,
+  toneTag,
   presidentStats
 } = Astro.props;
 
@@ -58,17 +60,28 @@ if (!computedShareText) {
   if (youngstownZone !== undefined || constitutionalValence) {
     // Executive Order specific text
     const eoLabel = eoNumber ? `Executive Order ${eoNumber}` : `Presidential Order`;
-    const scoreStr = sentimentCompound !== undefined ? ` (${sentimentCompound >= 0 ? '+' : ''}${sentimentCompound.toFixed(2)})` : '';
+    const scoreStr = sentimentCompound !== undefined && sentimentCompound !== null ? ` (${sentimentCompound >= 0 ? '+' : ''}${Number(sentimentCompound).toFixed(2)})` : '';
     
+    let overreachRisk = "";
+    if (youngstownZone === 1) {
+      overreachRisk = "Low (Statutory Execution)";
+    } else if (youngstownZone === 2) {
+      overreachRisk = "Moderate (Independent Executive Discretion)";
+    } else if (youngstownZone === 3) {
+      overreachRisk = "Elevated (Potential Executive Overreach)";
+    }
+
     const lines = [
       `${eoLabel}: "${title}"`,
       presidentName ? `Signed by ${presidentName}${formattedDate ? ` (${formattedDate})` : ''}` : '',
       '',
-      `⚖️ Constitutional Alignment:`,
+      `⚖️ Constitutional Alignment & Overreach Analysis:`,
       youngstownName ? `• Separation of Powers: ${youngstownName}` : '',
       constitutionalValence ? `• Constitutional Valence: ${constitutionalValence}${scoreStr}` : '',
+      overreachRisk ? `• Overreach Risk: ${overreachRisk}` : '',
+      toneTag ? `• Constitutional Scope: ${toneTag}` : '',
       '',
-      `Explore historical context & constitutional scoring:`
+      `🏛️ Read order & constitutional analysis:`
     ].filter(Boolean);
     computedShareText = lines.join('\n');
 
@@ -285,7 +298,7 @@ const linkedinHref = `https://www.linkedin.com/sharing/share-offsite/?url=${enco
           }, 1500);
         }
       } catch (e) {
-        showToast('Failed to copy link');
+        showToast('Failed to copy');
       }
     });
   });

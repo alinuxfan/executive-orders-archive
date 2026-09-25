@@ -2,7 +2,7 @@ import re
 import json
 from typing import Dict, Any, List, Tuple
 
-from snippets import operative_text, operative_snippet, truncate_sentences, split_sentences
+from snippets import operative_text, operative_snippet, truncate_sentences, split_sentences, is_boilerplate_directive
 
 """
 Constitutional Statesman Engine
@@ -60,7 +60,7 @@ def clean_directive_sentence(s: str) -> str:
     s = re.sub(r"^.*?by the authority vested in me[^:]*:\s*", "", s, flags=re.IGNORECASE)
     s = re.sub(r"^.*?\bit is hereby ordered:?\s*", "", s, flags=re.IGNORECASE)
     s = re.sub(r"^Section\s+\d+[\.\s]+(Purpose|Policy|General|Order)?[\.\s]*", "", s, flags=re.IGNORECASE)
-    s = re.sub(r"^[\),;\.\s]+", "", s).strip()
+    s = re.sub(r"^[\),;:\.\s]+", "", s).strip()
     return s
 
 def analyze_constitutional_sentiment(text: str, title: str = "") -> Dict[str, Any]:
@@ -170,23 +170,37 @@ def determine_constitutional_tone_tag(text_lower: str, compound: float) -> str:
 
 _SECTION_RE = re.compile(r"(?:^|\s)(?:Sec\.|Section|SECTION)\s*(\d+)\s*\.\s*([A-Z][A-Za-z ,;&'/-]{2,80}?)\s*\.\s+(?=[A-Z(\"\u201c])")
 _ACTION_VERBS_RE = re.compile(
-    r"\b(shall|hereby|directs?|ordered|establish(?:ed|es)?|prohibit(?:ed|s)?|amended|authoriz(?:ed|es)|"
-    r"revoked|requires?|designated?|transferred|withdrawn|exempted|extended|delegated)\b",
+    r"\b(shall|hereby|directs?|directing|ordered?|ordering|establish(?:es|ed|ing)?|"
+    r"prohibit(?:s|ed|ing)?|amend(?:s|ed|ing)?|authoriz(?:e|es|ed|ing)?|"
+    r"revok(?:e|es|ed|ing)?|requires?|requiring|designat(?:e|es|ed|ing)?|"
+    r"transfer(?:s|red|ring)?|withdraw(?:s|n|ing)?|withdrew|exempt(?:s|ed|ing)?|"
+    r"extend(?:s|ed|ing)?|delegat(?:e|es|ed|ing)?|suspend(?:s|ed|ing)?|"
+    r"prescrib(?:e|es|ed|ing)?|creat(?:e|es|ed|ing)?|approv(?:e|es|ed|ing)?|"
+    r"waiv(?:e|es|ed|ing)?|terminat(?:e|es|ed|ing)?|appoint(?:s|ed|ing)?|"
+    r"reinstat(?:e|es|ed|ing)?|restor(?:e|es|ed|ing)?|rescind(?:s|ed|ing)?|"
+    r"reorganiz(?:e|es|ed|ing)?|instruct(?:s|ed|ing)?|command(?:s|ed|ing)?|"
+    r"assign(?:s|ed|ing)?|allocat(?:e|es|ed|ing)?)\b",
     re.IGNORECASE,
 )
 
 
-def _directive_candidate(sentence: str, strict: bool = False) -> str:
+def _directive_candidate(sentence: str, strict: bool = False, max_len: int = 750) -> str:
     s_clean = clean_directive_sentence(sentence)
     s_clean = re.sub(r"^\((?:[a-z]|[ivx]+|\d+)\)\s*", "", s_clean)
-    if len(s_clean) < 35 or len(s_clean) > 400:
+    if is_boilerplate_directive(s_clean):
+        return ""
+    if len(s_clean) < 35:
         return ""
     if not _ACTION_VERBS_RE.search(s_clean):
         return ""
-    if strict and not re.search(r"\b(shall|hereby|directs?)\b", s_clean, re.IGNORECASE):
+    if strict and not re.search(r"\b(shall|hereby|directs?|directing|ordered?|suspend(?:s|ed|ing)?|prohibit(?:s|ed|ing)?)\b", s_clean, re.IGNORECASE):
         return ""
     if s_clean.lower().startswith(("general provisions", "by the authority", "by virtue of")) or s_clean.startswith("("):
         return ""
+    if len(s_clean) > max_len:
+        s_clean = truncate_sentences(s_clean, max_len)
+        if len(s_clean) < 35 or is_boilerplate_directive(s_clean):
+            return ""
     return s_clean[0].upper() + s_clean[1:]
 
 
@@ -201,15 +215,18 @@ def extract_key_directives(text: str, title: str) -> List[Dict[str, str]]:
 
     def add(title_text: str, description: str):
         norm = description[:45].lower()
-        if description and norm not in seen:
+        if description and norm not in seen and not is_boilerplate_directive(description):
             seen.add(norm)
             directives.append({"title": title_text, "description": description})
 
     sections = list(_SECTION_RE.finditer(" " + body))
-    skip_headings = re.compile(r"general provisions|definitions|scope|severability|effective date", re.IGNORECASE)
+    skip_headings = re.compile(
+        r"general provisions|definitions|scope|severability|effective date|effective dates|publication|judicial review|miscellaneous",
+        re.IGNORECASE
+    )
     for i, m in enumerate(sections):
         heading = m.group(2).strip()
-        if skip_headings.search(heading):
+        if skip_headings.search(heading) or is_boilerplate_directive(heading):
             continue
         section_end = sections[i + 1].start() if i + 1 < len(sections) else len(body) + 1
         section_text = (" " + body)[m.end():section_end]
@@ -221,11 +238,16 @@ def extract_key_directives(text: str, title: str) -> List[Dict[str, str]]:
         if len(directives) >= 4:
             break
 
+    # Truncate clean_body before any skipped heading so fallback never scans General Provisions / Effective Date
+    clean_body = body
+    for m in sections:
+        heading = m.group(2).strip()
+        if skip_headings.search(heading) or is_boilerplate_directive(heading):
+            clean_body = body[:m.start()].strip()
+            break
+
     if len(directives) < 2:
-        # Sectioned orders open with purpose/findings prose, where incidental
-        # verbs ("is transferred offshore") aren't directives; require an
-        # operative verb there.
-        for sentence in split_sentences(body):
+        for sentence in split_sentences(clean_body):
             candidate = _directive_candidate(sentence, strict=bool(sections))
             if candidate:
                 add(f"Directive {len(directives) + 1}", candidate)
@@ -233,10 +255,21 @@ def extract_key_directives(text: str, title: str) -> List[Dict[str, str]]:
                 break
 
     if not directives:
+        clean_title = re.sub(r"^Executive Order\s*\d*(?:-[A-Z])?\s*[\u2014\u2013-]?\s*", "", title or "", flags=re.IGNORECASE).strip()
+        if "(this executive order was not published)" in (text or "").lower():
+            desc = f"Executive order establishing administrative policy concerning {clean_title} (text unprinted in the official historical register)."
+        else:
+            body_sents = split_sentences(clean_body)
+            while body_sents and is_boilerplate_directive(body_sents[-1]):
+                body_sents.pop()
+            stripped_body = " ".join(body_sents).strip()
+            if stripped_body:
+                desc = truncate_sentences(stripped_body, 400)
+            else:
+                desc = f"Formal executive instruction establishing official administrative policy on {clean_title}."
         directives.append({
             "title": "Operative Mandate",
-            "description": truncate_sentences(body, 300) if body else
-                f"Formal executive instruction issued by the President establishing official administrative policy on {title}."
+            "description": desc
         })
 
     return directives
@@ -295,7 +328,7 @@ def generate_statesman_summary(
     - Impacted entities
     - Constitutional tone and sentiment
     """
-    clean_title = re.sub(r"^Executive Order\s*(\d+(?:-[A-Z])?)?\s*[—–-]?\s*", "", title or "", flags=re.IGNORECASE).strip()
+    clean_title = re.sub(r"^Executive Order\s*(\d+(?:-[A-Z])?)?\s*[\u2014\u2013-]?\s*", "", title or "", flags=re.IGNORECASE).strip()
 
     # 1. Plain English Operative Action: who/when/what, then the order's own
     # first operative sentences (enacting clause and headings stripped), so the

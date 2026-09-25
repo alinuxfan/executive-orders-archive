@@ -39,9 +39,9 @@ if (order.key_directives_json) {
   try {
     const parsed = JSON.parse(order.key_directives_json);
     if (Array.isArray(parsed) && parsed.length > 0) {
-      const isBoilerplate = parsed.every((d) => isGenericBoilerplate(d?.description) || isGenericBoilerplate(d?.title));
-      if (!isBoilerplate) {
-        directives = parsed;
+      const nonBoilerplate = parsed.filter((d) => !isGenericBoilerplate(d?.description) && !isGenericBoilerplate(d?.title));
+      if (nonBoilerplate.length > 0) {
+        directives = nonBoilerplate;
       }
     }
   } catch (e) {}

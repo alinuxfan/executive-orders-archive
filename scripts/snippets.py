@@ -1,8 +1,8 @@
 """Extracts the first operative sentence(s) of an executive order, skipping
 the parts every order shares: Federal Register page markers, the
-"Executive Order N of <date> <title>" header, "Whereas" recitals, the
-"By the authority vested in me ... it is hereby ordered:" enacting clause,
-and "Section 1. Purpose." headings. Used for listing/search/RSS snippets
+"Executive Order N of <date> <title>\" header, \"Whereas\" recitals, the
+"By the authority vested in me ... it is hereby ordered:\" enacting clause,
+and \"Section 1. Purpose.\" headings. Used for listing/search/RSS snippets
 and the extractive plain-English summary, where the boilerplate opening
 told readers nothing about what the order does.
 """
@@ -35,12 +35,42 @@ _HEREBY_RE = re.compile(r"\bhereby\b", re.IGNORECASE)
 _SECTION_HEADING_RE = re.compile(
     r"^\s*(?i:Section|Sec\.)\s*1(?:01)?\s*\.?\s*(?:[A-Z][A-Za-z ,;&'-]{0,80}?\.\s+(?![\d]))?"
 )
-_PART_HEADING_RE = re.compile(r"^\s*(?:Part|Subpart)\s+[IVX\d]+\s*(?:[.—-]+|--)?\s*[A-Z][A-Za-z ,'-]{0,60}?\s+(?=(?i:Section|Sec\.)\s*\d|[A-Z][a-z])")
+_PART_HEADING_RE = re.compile(r"^\s*(?:Part|Subpart)\s+[IVX\d]+\s*(?:[.\u2014-]+|--)?\s*[A-Z][A-Za-z ,'-]{0,60}?\s+(?=(?i:Section|Sec\.)\s*\d|[A-Z][a-z])")
 _ENUMERATOR_RE = re.compile(r"^\s*(?:\((?:a|1|i)\)|1\.(?=\s+[A-Z]))\s*")
+
+_BOILERPLATE_DIRECTIVE_RE = re.compile(
+    r"^(?:this|the)\s+(?:executive\s+)?order\s+shall\s+(?:take\s+effect|be\s+effective|become\s+effective)|"
+    r"^(?:this|the)\s+(?:executive\s+)?order\s+is\s+effective\b|"
+    r"^(?:this|the)\s+(?:suspension|amendment)\s+shall\s+take\s+effect\b|"
+    r"^(?:this|the)\s+(?:executive\s+)?order\s+shall\s+continue\s+in\s+full\s+force\s+and\s+effect\b|"
+    r"^(?:this|the)\s+(?:executive\s+)?order\s+shall\s+remain\s+in\s+(?:full\s+)?force\s+and\s+effect\b|"
+    r"^(?:this|the)\s+(?:executive\s+)?order\s+shall\s+be\s+implemented\s+consistent\s+with\s+applicable\s+law\b|"
+    r"^nothing\s+in\s+this\s+(?:executive\s+)?order\s+shall\s+be\s+construed\b|"
+    r"^(?:this|the)\s+(?:executive\s+)?order\s+is\s+not\s+intended\s+to,\s+and\s+does\s+not,\s+create\b|"
+    r"^(?:this|the)\s+(?:executive\s+)?order\s+shall\s+be\s+(?:published|transmitted)\b|"
+    r"^\(this\s+executive\s+order\s+was\s+not\s+published\)|"
+    r"^an\s+application\s+having\s+been\s+duly\s+made,\s+pursuant\s+to\b|"
+    r"^the\s+reservation\s+made\s+by\s+section\s+\d+\s+of\s+this\s+order\s+shall\s+remain\s+in\s+force\s+until\s+revoked\b|"
+    r"^the\s+provisions\s+of\s+this\s+order\s+shall\s+be\s+effective\b|"
+    r"^no\s+member\s+of\s+the\s+(?:said\s+)?board\s+shall\s+be\s+pecuniarily\b|"
+    r"^the\s+board\s+shall\s+report\s+its\s+findings\s+to\s+the\s+president\s+with\s+respect\s+to\s+the\s+(?:said\s+)?dispute\s+within\s+thirty\s+days\b|"
+    r"^judicial\s+review\b|"
+    r"^severability\b|"
+    r"^general\s+provisions\b|"
+    r"^prior\s+executive\s+orders?\s+(?:is|are)\s+hereby\s+revoked\b|"
+    r"^all\s+prior\s+executive\s+orders?\s+.*?\s+are\s+hereby\s+revoked\b",
+    re.IGNORECASE,
+)
+
+
+def is_boilerplate_directive(text: str) -> bool:
+    if not text:
+        return True
+    return bool(_BOILERPLATE_DIRECTIVE_RE.search(text.strip()))
 
 
 def _strip_title(text, title):
-    clean_title = re.sub(r"^Executive Order\s*\d*(?:-[A-Z])?\s*[—–-]?\s*", "", title or "", flags=re.IGNORECASE).strip()
+    clean_title = re.sub(r"^Executive Order\s*\d*(?:-[A-Z])?\s*[\u2014\u2013-]?\s*", "", title or "", flags=re.IGNORECASE).strip()
     if clean_title and len(clean_title) > 8:
         idx = text.lower().find(clean_title.lower()[:60])
         if 0 <= idx < 80:
@@ -58,10 +88,9 @@ def operative_text(full_text, title=""):
     if header:
         text = _strip_title(text[header.end():], title)
 
-    if text[:10].lower().startswith("whereas"):
-        now = _NOW_THEREFORE_RE.search(text[:4000])
-        if now:
-            text = text[now.end():].lstrip(" ,")
+    now = _NOW_THEREFORE_RE.search(text[:6000])
+    if now and (text[:50].lower().startswith(("whereas", "an application")) or "whereas" in text[:now.start()].lower() or "an application" in text[:now.start()].lower()):
+        text = text[now.end():].lstrip(" ,")
     head = text[:1500]
     enacting = _ENACTING_RE.search(head)
     if enacting and enacting.start() < 1200:
@@ -79,7 +108,7 @@ def operative_text(full_text, title=""):
     text = _PART_HEADING_RE.sub("", text, count=1)
     text = _SECTION_HEADING_RE.sub("", text, count=1)
     text = _ENUMERATOR_RE.sub("", text, count=1)
-    text = text.strip(" :;,-—")
+    text = text.strip(" :;,—")
     return text[:1].upper() + text[1:] if text else ""
 
 
@@ -89,7 +118,7 @@ _ABBREV_RE = re.compile(
     r"Ala|Ark|Okla|Mich|Minn|Wis|Pa|Va|Mex|Dak|Neb|Kans|Tenn|Ky|Md|Del|Conn|Mass|Oreg|Fed|Reg|Ex|Exec|"
     r"approx|viz|etc|[A-Z])\.(?=\s)"
 )
-_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+(?=[A-Z(\"“])")
+_SENTENCE_SPLIT_RE = re.compile(r"(?<=[.!?])\s+(?=[A-Z(\"\u201c])")
 
 
 def split_sentences(text):
@@ -115,4 +144,8 @@ def truncate_sentences(text, max_len):
 
 
 def operative_snippet(full_text, title="", max_len=280):
-    return truncate_sentences(operative_text(full_text, title), max_len)
+    op = operative_text(full_text, title)
+    sents = split_sentences(op)
+    while len(sents) > 1 and is_boilerplate_directive(sents[-1]):
+        sents.pop()
+    return truncate_sentences(" ".join(sents), max_len)

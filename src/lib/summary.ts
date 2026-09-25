@@ -12,11 +12,32 @@ export interface OrderSummary {
 
 export function isGenericBoilerplate(text: string | null | undefined): boolean {
   if (!text) return true;
-  return /establishing official administrative policy on:?\s*["“]?Executive Order["”]?/i.test(text) ||
-         /policy concerning ["“]Executive Order\.?["”]/i.test(text) ||
-         /establishing official administrative policy on:?\s*["“]?Presidential Order["”]?/i.test(text) ||
-         /policy concerning ["“]Presidential Order\.?["”]/i.test(text) ||
-         /establishing official administrative policy on Executive Order/i.test(text);
+  const t = text.trim();
+  return /establishing official administrative policy on:?\s*["“]?Executive Order["”]?/i.test(t) ||
+         /policy concerning ["“]Executive Order\.?["”]/i.test(t) ||
+         /establishing official administrative policy on:?\s*["“]?Presidential Order["”]?/i.test(t) ||
+         /policy concerning ["“]Presidential Order\.?["”]/i.test(t) ||
+         /establishing official administrative policy on Executive Order/i.test(t) ||
+         /^(?:this|the)\s+(?:executive\s+)?order\s+shall\s+(?:take\s+effect|be\s+effective|become\s+effective)/i.test(t) ||
+         /^(?:this|the)\s+(?:executive\s+)?order\s+is\s+effective\b/i.test(t) ||
+         /^(?:this|the)\s+(?:suspension|amendment)\s+shall\s+take\s+effect\b/i.test(t) ||
+         /^(?:this|the)\s+(?:executive\s+)?order\s+shall\s+continue\s+in\s+full\s+force\s+and\s+effect\b/i.test(t) ||
+         /^(?:this|the)\s+(?:executive\s+)?order\s+shall\s+remain\s+in\s+(?:full\s+)?force\s+and\s+effect\b/i.test(t) ||
+         /^(?:this|the)\s+(?:executive\s+)?order\s+shall\s+be\s+implemented\s+consistent\s+with\s+applicable\s+law\b/i.test(t) ||
+         /^nothing\s+in\s+this\s+(?:executive\s+)?order\s+shall\s+be\s+construed\b/i.test(t) ||
+         /^(?:this|the)\s+(?:executive\s+)?order\s+is\s+not\s+intended\s+to,\s+and\s+does\s+not,\s+create\b/i.test(t) ||
+         /^(?:this|the)\s+(?:executive\s+)?order\s+shall\s+be\s+(?:published|transmitted)\b/i.test(t) ||
+         /^\(this\s+executive\s+order\s+was\s+not\s+published\)/i.test(t) ||
+         /^an\s+application\s+having\s+been\s+duly\s+made,\s+pursuant\s+to\b/i.test(t) ||
+         /^the\s+reservation\s+made\s+by\s+section\s+\d+\s+of\s+this\s+order\s+shall\s+remain\s+in\s+force\s+until\s+revoked\b/i.test(t) ||
+         /^the\s+provisions\s+of\s+this\s+order\s+shall\s+be\s+effective\b/i.test(t) ||
+         /^no\s+member\s+of\s+the\s+(?:said\s+)?board\s+shall\s+be\s+pecuniarily\b/i.test(t) ||
+         /^the\s+board\s+shall\s+report\s+its\s+findings\s+to\s+the\s+president\s+with\s+respect\s+to\s+the\s+(?:said\s+)?dispute\s+within\s+thirty\s+days\b/i.test(t) ||
+         /^judicial\s+review\b/i.test(t) ||
+         /^severability\b/i.test(t) ||
+         /^general\s+provisions\b/i.test(t) ||
+         /^prior\s+executive\s+orders?\s+(?:is|are)\s+hereby\s+revoked\b/i.test(t) ||
+         /^all\s+prior\s+executive\s+orders?\s+.*?\s+are\s+hereby\s+revoked\b/i.test(t);
 }
 
 export function generateOrderSummary(order: {
@@ -69,16 +90,18 @@ export function generateOrderSummary(order: {
   if (affected.length === 0) affected.push("Federal Agencies & Affected Civilians");
 
   // Extract key operative clauses (splitting by periods, semicolons, and newlines)
-  const rawClauses = text.split(/(?<=[.!?;\n])\s+/);
+  const rawClauses = text.split(/(?<=[.!?;]|\n)\s+/);
   const operativeClauses = rawClauses
     .map(c => c.trim())
     .filter(s => 
-      /\b(hereby|directs?|shall|ordered|established|prohibited|amended|authorizes?|revoked|posession|seize|render their aid|obey.*commands|appointed|reinstated|withdrawn)\b/i.test(s) &&
+      /\b(hereby|directs?|shall|ordered?|establish(?:es|ed)?|prohibit(?:s|ed|ing)?|amend(?:s|ed)?|authoriz(?:es|ed)?|revok(?:es|ed)?|posession|seize|render their aid|obey.*commands|appoint(?:s|ed)?|reinstat(?:es|ed)?|withdrawn?|suspend(?:s|ed|ing)?|waiv(?:es|ed)?|prescrib(?:es|ed)?|creat(?:es|ed)?|approv(?:es|ed)?)\b/i.test(s) &&
       s.length > 25 &&
-      s.length < 500
+      s.length < 750 &&
+      !isGenericBoilerplate(s)
     );
 
   function getDirectiveTitle(clause: string, index: number): string {
+    if (/suspend/i.test(clause)) return "Suspension of Statutory Provisions";
     if (/military posession|take posession|seize|commandeer/i.test(clause)) return "Military Seizure & Operational Control";
     if (/render their aid|obey.*commands|directed to/i.test(clause)) return "Compulsory Civilian Obedience & Aid";
     if (/pursuant to the act|act of congress/i.test(clause)) return "Statutory Authority Execution";

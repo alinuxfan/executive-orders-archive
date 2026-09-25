@@ -98,7 +98,7 @@ const milestoneOrders = MILESTONE_DEFINITIONS.map(m => {
 
 // Initial JSON payload passed to inline script
 const initialDataJson = JSON.stringify({
-  todayOrders: todayOrders.slice(0, 50).map(o => ({
+  todayOrders: todayOrders.map(o => ({
     id: o.id,
     eo_number: o.eo_number,
     title: o.title,
@@ -1074,6 +1074,11 @@ const initialDataJson = JSON.stringify({
       updateDateContext(detail.dateInfo, detail.orders);
     }
   });
+
+  // Pick up initial state if ThisDayInHistory updated before modal listener was registered
+  if (window._currentThisDayState && window._currentThisDayState.dateInfo && window._currentThisDayState.orders) {
+    updateDateContext(window._currentThisDayState.dateInfo, window._currentThisDayState.orders);
+  }
 
   // Expose global controller
   window.EOQuickShare = {

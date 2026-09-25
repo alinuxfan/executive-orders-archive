@@ -571,23 +571,26 @@ const initialDataJson = JSON.stringify({
         const oldestYear = oldest?.signing_date ? oldest.signing_date.slice(0, 4) : '';
         const latestYear = latest?.signing_date ? latest.signing_date.slice(0, 4) : '';
 
-        const text = [
+        const summaryUrl = `${siteUrl}/#this-day-section`;
+        const bodyLines = [
           `📜 On This Day in Presidential History (${currentDate.monthName} ${currentDate.dayInt}):`,
           count > 0 ? `${count} Executive Order${count === 1 ? '' : 's'} signed across history${oldestYear && latestYear ? ` (${oldestYear} – ${latestYear})` : ''}.` : `Exploring executive actions signed on this calendar date.`,
           oldest ? `• Oldest: "${oldest.title.slice(0, 60)}" (${oldest.president_name}, ${oldestYear})` : '',
           latest ? `• Latest: "${latest.title.slice(0, 60)}" (${latest.president_name}, ${latestYear})` : '',
           '',
-          `Explore all decrees on Executive Orders Archive:`,
-          `${siteUrl}/#this-day-section`
-        ].filter(Boolean).join('\n');
+          `Explore all decrees on Executive Orders Archive:`
+        ].filter(Boolean);
 
+        const shareBody = bodyLines.join('\n');
+        const text = `${shareBody}\n${summaryUrl}`;
         const tweet = `On This Day in Presidential History (${currentDate.monthName} ${currentDate.dayInt}): ${count} historic Executive Orders spanning ${oldestYear}–${latestYear}.\n\nExplore:`;
 
         return {
           title: `This Day in Presidential History (${currentDate.monthName} ${currentDate.dayInt})`,
           text,
+          shareBody,
           tweetText: tweet,
-          url: `${siteUrl}/#this-day-section`
+          url: summaryUrl
         };
       }
 
@@ -596,6 +599,7 @@ const initialDataJson = JSON.stringify({
         return {
           title: `Executive Orders Archive`,
           text: `Explore presidential executive orders on Executive Orders Archive:\n${siteUrl}`,
+          shareBody: `Explore presidential executive orders on Executive Orders Archive:`,
           tweetText: `Explore presidential executive orders on Executive Orders Archive`,
           url: siteUrl
         };
@@ -611,15 +615,17 @@ const initialDataJson = JSON.stringify({
       else if (activeSubmode === 'oldest') prefix = `🏛️ Earliest on This Day (${currentDate.monthName} ${currentDate.dayInt}):`;
       else if (activeSubmode === 'random') prefix = `🎲 On This Day in Presidential History (${currentDate.monthName} ${currentDate.dayInt}):`;
 
-      const text = [
+      const bodyLines = [
         prefix,
         `${eoLabel}: "${order.title}"`,
         `Signed by ${order.president_name || order.pres}${year ? ` (${year})` : ''}`,
         '',
         `⚖️ Constitutional Alignment: ${valence}`,
-        `🏛️ Read order & constitutional analysis:`,
-        orderUrl
-      ].join('\n');
+        `🏛️ Read order & constitutional analysis:`
+      ];
+
+      const shareBody = bodyLines.join('\n');
+      const text = `${shareBody}\n${orderUrl}`;
 
       const shortTitle = order.title.length > 55 ? order.title.substring(0, 52).trim() + '...' : order.title;
       const tweetText = `${prefix}\n${order.eo_number ? `EO ${order.eo_number}` : 'Order'}: "${shortTitle}" (${order.president_name || order.pres}, ${year})\n⚖️ ${valence}`;
@@ -627,6 +633,7 @@ const initialDataJson = JSON.stringify({
       return {
         title: `${eoLabel}: ${order.title}`,
         text,
+        shareBody,
         tweetText,
         url: orderUrl
       };
@@ -635,25 +642,28 @@ const initialDataJson = JSON.stringify({
     if (activeTab === 'milestones') {
       const milestone = seedData.milestones?.[activeMilestoneIndex];
       const order = milestone?.order;
-      if (!order) return { title: 'Milestone', text: '', tweetText: '', url: siteUrl };
+      if (!order) return { title: 'Milestone', text: '', shareBody: '', tweetText: '', url: siteUrl };
 
       const orderUrl = `${siteUrl}/orders/${order.id}`;
       const year = order.signing_date ? order.signing_date.slice(0, 4) : '';
-      const text = [
+      const bodyLines = [
         `${milestone.badge}: ${milestone.shortLabel}`,
         `"${order.title}"`,
         `Signed by ${order.president_name}${year ? ` (${year})` : ''}`,
         `• ${milestone.description}`,
         '',
-        `Explore the full text & constitutional scoring on Executive Orders Archive:`,
-        orderUrl
-      ].join('\n');
+        `Explore the full text & constitutional scoring on Executive Orders Archive:`
+      ];
+
+      const shareBody = bodyLines.join('\n');
+      const text = `${shareBody}\n${orderUrl}`;
 
       const tweetText = `${milestone.badge}: "${order.title.slice(0, 60)}" (${order.president_name}, ${year})\n${milestone.description}`;
 
       return {
         title: `${milestone.shortLabel} — Executive Orders Archive`,
         text,
+        shareBody,
         tweetText,
         url: orderUrl
       };
@@ -661,28 +671,31 @@ const initialDataJson = JSON.stringify({
 
     // Archive Roulette
     const order = customOrder || seedData.rouletteSeed?.[0];
-    if (!order) return { title: 'Executive Order', text: '', tweetText: '', url: siteUrl };
+    if (!order) return { title: 'Executive Order', text: '', shareBody: '', tweetText: '', url: siteUrl };
 
     const orderUrl = `${siteUrl}/orders/${order.id}`;
     const year = order.signing_date ? order.signing_date.slice(0, 4) : '';
     const eoLabel = order.eo_number ? `EO ${order.eo_number}` : 'Order';
     const valence = order.sentiment_valence || order.val || 'Order';
 
-    const text = [
+    const bodyLines = [
       `🎲 Executive Orders Roulette (Archive Curiosity):`,
       `${eoLabel}: "${order.title}"`,
       `Signed by ${order.president_name || order.pres}${year ? ` (${year})` : ''}`,
       '',
       `⚖️ Constitutional Alignment: ${valence}`,
-      `Explore this executive action:`,
-      orderUrl
-    ].join('\n');
+      `Explore this executive action:`
+    ];
+
+    const shareBody = bodyLines.join('\n');
+    const text = `${shareBody}\n${orderUrl}`;
 
     const tweetText = `🎲 Archive Curiosity: ${eoLabel} "${order.title.slice(0, 55)}" (${order.president_name || order.pres}, ${year})\n⚖️ ${valence}`;
 
     return {
       title: `${eoLabel}: ${order.title}`,
       text,
+      shareBody,
       tweetText,
       url: orderUrl
     };
@@ -974,7 +987,7 @@ const initialDataJson = JSON.stringify({
       try {
         await navigator.share({
           title: payload.title,
-          text: payload.text,
+          text: payload.shareBody || payload.text,
           url: payload.url
         });
         return;
@@ -983,9 +996,9 @@ const initialDataJson = JSON.stringify({
       }
     }
 
-    // Fallback: copy to clipboard
+    // Fallback: copy to clipboard (contains exactly one link at the end)
     try {
-      await navigator.clipboard.writeText(`${payload.text}\n\n${payload.url}`);
+      await navigator.clipboard.writeText(payload.text);
       showToast('Summary and link copied to clipboard!');
     } catch (e) {
       showToast('Failed to copy');

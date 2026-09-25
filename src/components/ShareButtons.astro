@@ -247,9 +247,10 @@ const linkedinHref = `https://www.linkedin.com/sharing/share-offsite/?url=${enco
       // Check if native Web Share is available
       if (typeof navigator !== 'undefined' && typeof navigator.share === 'function') {
         try {
+          const textToShare = shareText.includes(url) ? shareText.replace(url, '').trimEnd() : shareText;
           await navigator.share({
             title: title,
-            text: shareText,
+            text: textToShare,
             url: url
           });
           return;
@@ -261,7 +262,7 @@ const linkedinHref = `https://www.linkedin.com/sharing/share-offsite/?url=${enco
 
       // Desktop / fallback: Copy full constitutional summary + URL to clipboard
       try {
-        const fullClip = `${shareText}\n\n${url}`;
+        const fullClip = shareText.includes(url) ? shareText : `${shareText}\n\n${url}`;
         await navigator.clipboard.writeText(fullClip);
         showToast('Constitutional summary & link copied!');
       } catch (e) {

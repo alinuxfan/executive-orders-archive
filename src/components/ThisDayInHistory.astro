@@ -382,9 +382,11 @@ const oldestYear = oldestOrder?.signing_date ? oldestOrder.signing_date.slice(0,
     if (parts.length < 3) return;
     const mm = parts[1];
     const dd = parts[2];
-    const targetMonthDay = `${mm}-${dd}`;
-    const monthName = monthNames[parseInt(mm, 10) - 1];
+    const monthIndex = parseInt(mm, 10) - 1;
     const dayInt = parseInt(dd, 10);
+    if (isNaN(monthIndex) || monthIndex < 0 || monthIndex > 11 || isNaN(dayInt) || dayInt < 1 || dayInt > 31) return;
+    const targetMonthDay = `${mm}-${dd}`;
+    const monthName = monthNames[monthIndex];
 
     if (headingDate) headingDate.textContent = `${monthName} ${dayInt}`;
     if (activeDateLabel) activeDateLabel.textContent = `${monthName} ${dayInt}`;
@@ -402,7 +404,7 @@ const oldestYear = oldestOrder?.signing_date ? oldestOrder.signing_date.slice(0,
       });
 
     if (countBadge) {
-      countBadge.textContent = `Found ${matches.length} historic order${matches.length === 1 ? '' : 's'}`;\
+      countBadge.textContent = `Found ${matches.length} historic order${matches.length === 1 ? '' : 's'}`;
     }
 
     if (spanBadge) {
@@ -441,26 +443,28 @@ const oldestYear = oldestOrder?.signing_date ? oldestOrder.signing_date.slice(0,
     }
 
     // Notify QuickShareModal of the updated date and matching orders
+    const dateDetail = {
+      dateInfo: {
+        monthName,
+        dayInt,
+        monthDay: targetMonthDay,
+        year: parts[0]
+      },
+      orders: matches.map(m => ({
+        id: m.id,
+        eo_number: m.num,
+        title: m.title,
+        president_name: m.pres,
+        president_slug: m.slug,
+        signing_date: m.date,
+        sentiment_valence: m.val,
+        sentiment_compound: m.comp,
+        snippet: m.snip || ''
+      }))
+    };
+    window._currentThisDayState = dateDetail;
     document.dispatchEvent(new CustomEvent('eo-this-day-updated', {
-      detail: {
-        dateInfo: {
-          monthName,
-          dayInt,
-          monthDay: targetMonthDay,
-          year: parts[0]
-        },
-        orders: matches.map(m => ({
-          id: m.id,
-          eo_number: m.num,
-          title: m.title,
-          president_name: m.pres,
-          president_slug: m.slug,
-          signing_date: m.date,
-          sentiment_valence: m.val,
-          sentiment_compound: m.comp,
-          snippet: m.snip || ''
-        }))
-      }
+      detail: dateDetail
     }));
   }
 
@@ -488,10 +492,15 @@ const oldestYear = oldestOrder?.signing_date ? oldestOrder.signing_date.slice(0,
   // If user's local month/day differs from server build date (e.g. UTC rollover or timezone difference),
   // immediately update the view for the user's timezone date
   if (userToday.monthDay !== serverMonthDay) {
+    if (shareLatestBtn) shareLatestBtn.classList.add('opacity-50');
+    if (shareOldestBtn) shareOldestBtn.classList.add('opacity-50');
     updateForDate(userToday.dateStr);
   }
 
   picker?.addEventListener('change', (e) => {
+    updateForDate(e.target.value);
+  });
+  picker?.addEventListener('input', (e) => {
     updateForDate(e.target.value);
   });
 

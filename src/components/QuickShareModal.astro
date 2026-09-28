@@ -1,6 +1,7 @@
 ---
 import rawOrders from '../../data/site_orders_summary.json';
 import { resolvePortraitSlug } from '../lib/portraits';
+import { getYoungstownClassification } from '../lib/youngstown';
 
 // Default to US Eastern Time at build time
 const now = new Date();
@@ -35,6 +36,8 @@ const todayOrders = rawOrders
 
 const latestOrder = todayOrders.length > 0 ? todayOrders[0] : null;
 const oldestOrder = todayOrders.length > 0 ? todayOrders[todayOrders.length - 1] : null;
+const initialLatestYst = latestOrder ? getYoungstownClassification(latestOrder) : null;
+const initialLatestYear = latestOrder?.signing_date ? latestOrder.signing_date.slice(0, 4) : '';
 
 // Curated milestone landmark orders
 const MILESTONE_DEFINITIONS = [
@@ -107,6 +110,7 @@ const initialDataJson = JSON.stringify({
     signing_date: o.signing_date,
     sentiment_valence: o.sentiment_valence,
     sentiment_compound: o.sentiment_compound,
+    tone_tag: o.tone_tag,
     snippet: o.snippet
   })),
   milestones: milestoneOrders.map(m => ({
@@ -122,6 +126,7 @@ const initialDataJson = JSON.stringify({
       signing_date: m.order.signing_date,
       sentiment_valence: m.order.sentiment_valence,
       sentiment_compound: m.order.sentiment_compound,
+      tone_tag: m.order.tone_tag,
       snippet: m.order.snippet
     }
   })),
@@ -137,6 +142,7 @@ const initialDataJson = JSON.stringify({
     signing_date: o.signing_date,
     sentiment_valence: o.sentiment_valence,
     sentiment_compound: o.sentiment_compound,
+    tone_tag: o.tone_tag,
     snippet: o.snippet
   })),
   dateInfo: {
@@ -332,10 +338,10 @@ const initialDataJson = JSON.stringify({
       <div id="preview-card-container" class="mt-4 rounded-2xl p-4 sm:p-5 border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-850/80 transition-all relative">
         <div class="flex items-center justify-between gap-2 mb-2">
           <span id="preview-category-badge" class="px-2 py-0.5 rounded-full font-mono text-[11px] font-bold bg-amber-400/15 text-amber-700 dark:text-amber-300 border border-amber-400/30">
-            ⚡ Latest on {currentMonthName} {dayNumber}
+            ⚡ Latest U.S. Executive Order ({initialLatestYear || 'Recent'})
           </span>
-          <span id="preview-score-badge" class="text-[10px] font-medium px-2 py-0.5 rounded-full border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300">
-            {latestOrder?.sentiment_valence || 'Order'}
+          <span id="preview-score-badge" class={`text-[10px] font-medium px-2 py-0.5 rounded-full border ${initialLatestYst?.zone === 1 ? 'text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40' : initialLatestYst?.zone === 3 ? 'text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40' : 'text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40'}`}>
+            {initialLatestYst ? `${initialLatestYst.shortName} • ${latestOrder?.sentiment_valence || 'Order'}` : (latestOrder?.sentiment_valence || 'Order')}
           </span>
         </div>
 
@@ -381,9 +387,9 @@ const initialDataJson = JSON.stringify({
         <div class="relative">
           <textarea
             id="share-text-output"
-            rows="4"
+            rows="8"
             readonly
-            class="w-full text-xs font-mono p-3 rounded-2xl bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none resize-none"
+            class="w-full text-xs font-mono p-3 rounded-2xl bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 focus:outline-none resize-none leading-relaxed"
           ></textarea>
         </div>
       </div>
@@ -554,9 +560,91 @@ const initialDataJson = JSON.stringify({
     return slug || 'default';
   }
 
-  function formatDate(dStr) {
-    if (window.formatSigningDate) return window.formatSigningDate(dStr);
-    return dStr || 'Historic';
+  function formatSigningDateClean(dateStr) {
+    if (!dateStr) return '';
+    try {
+      const parts = dateStr.slice(0, 10).split('-').map(Number);
+      if (parts.length === 3 && !parts.some(isNaN)) {
+        const dt = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2]));
+        return dt.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', timeZone: 'UTC' });
+      }
+      return dateStr.slice(0, 4);
+    } catch (e) {
+      return dateStr.slice(0, 4);
+    }
+  }
+
+  function formatScore(order) {
+    if (!order) return '';
+    const rawScore = order.sentiment_compound !== undefined ? order.sentiment_compound : (order.comp !== undefined ? order.comp : null);
+    if (rawScore === null || rawScore === undefined) return '';
+    const num = Number(rawScore);
+    if (isNaN(num)) return '';
+    return ` (${num >= 0 ? '+' : ''}${num.toFixed(2)})`;
+  }
+
+  function classifyYoungstown(order) {
+    if (!order) {
+      return {
+        zone: 2,
+        name: 'Zone 2: Zone of Twilight',
+        shortName: 'Zone 2 (Zone of Twilight)'
+      };
+    }
+
+    const valence = order.val || order.sentiment_valence || '';
+    const comp = order.comp !== undefined ? order.comp : (order.sentiment_compound !== undefined ? order.sentiment_compound : 0);
+    const toneTag = order.tag || order.tone_tag || '';
+    const title = (order.title || '').toLowerCase();
+
+    // Zone 3: Lowest Ebb / Severe Constitutional Friction / Incompatible with Congressional Will
+    const isZone3 = 
+      valence === 'Constitutional Friction / Overreach' ||
+      valence === 'Urgent/Negative' ||
+      comp <= -0.08 ||
+      toneTag.includes('Tension') ||
+      toneTag.includes('Scrutiny') ||
+      title.includes('habeas corpus') ||
+      title.includes('martial law') ||
+      title.includes('taking into military possession') ||
+      title.includes('confiscating and vesting');
+
+    if (isZone3) {
+      return {
+        zone: 3,
+        name: 'Zone 3: Lowest Ebb',
+        shortName: 'Zone 3 (Lowest Ebb)',
+        tagline: 'Incompatible with Expressed Will of Congress or High Friction'
+      };
+    }
+
+    // Zone 1: Maximum Authority / Statutory Execution
+    const isZone1 =
+      valence === 'Constitutional Fidelity' ||
+      valence === 'Positive' ||
+      comp >= 0.08 ||
+      toneTag.includes('Faithful Execution') ||
+      toneTag.includes('Delegated') ||
+      toneTag.includes('Intergovernmental Federalism') ||
+      title.includes('pursuant to') ||
+      title.includes('authorized by');
+
+    if (isZone1) {
+      return {
+        zone: 1,
+        name: 'Zone 1: Maximum Authority',
+        shortName: 'Zone 1 (Maximum Authority)',
+        tagline: 'Express or Implied Congressional Authorization'
+      };
+    }
+
+    // Zone 2: Zone of Twilight / Concurrent Authority / Congressional Silence
+    return {
+      zone: 2,
+      name: 'Zone 2: Zone of Twilight',
+      shortName: 'Zone 2 (Zone of Twilight)',
+      tagline: 'Concurrent Authority / Congressional Silence'
+    };
   }
 
   // Generate rich share text & tweet text
@@ -568,25 +656,61 @@ const initialDataJson = JSON.stringify({
         const count = activeDateOrders.length;
         const oldest = activeDateOrders.length > 0 ? activeDateOrders[activeDateOrders.length - 1] : null;
         const latest = activeDateOrders.length > 0 ? activeDateOrders[0] : null;
-        const oldestYear = oldest?.signing_date ? oldest.signing_date.slice(0, 4) : '';
-        const latestYear = latest?.signing_date ? latest.signing_date.slice(0, 4) : '';
+        const oldestYear = oldest?.signing_date ? oldest.signing_date.slice(0, 4) : (oldest?.date ? oldest.date.slice(0, 4) : '');
+        const latestYear = latest?.signing_date ? latest.signing_date.slice(0, 4) : (latest?.date ? latest.date.slice(0, 4) : '');
+
+        let zone1Count = 0;
+        let zone2Count = 0;
+        let zone3Count = 0;
+        let fidelityCount = 0;
+        let frictionCount = 0;
+        let neutralCount = 0;
+
+        activeDateOrders.forEach(o => {
+          const z = classifyYoungstown(o).zone;
+          if (z === 1) zone1Count++;
+          else if (z === 3) zone3Count++;
+          else zone2Count++;
+
+          const val = o.sentiment_valence || o.val || '';
+          if (val.includes('Fidelity') || val.includes('Positive')) fidelityCount++;
+          else if (val.includes('Friction') || val.includes('Urgent') || val.includes('Negative')) frictionCount++;
+          else neutralCount++;
+        });
 
         const summaryUrl = `${siteUrl}/#this-day-section`;
+        const prefixLine = `U.S. Executive Orders Daily Digest (${currentDate.monthName} ${currentDate.dayInt})`;
+
         const bodyLines = [
-          `📜 On This Day in Presidential History (${currentDate.monthName} ${currentDate.dayInt}):`,
-          count > 0 ? `${count} Executive Order${count === 1 ? '' : 's'} signed across history${oldestYear && latestYear ? ` (${oldestYear} – ${latestYear})` : ''}.` : `Exploring executive actions signed on this calendar date.`,
-          oldest ? `• Oldest: "${oldest.title.slice(0, 60)}" (${oldest.president_name}, ${oldestYear})` : '',
-          latest ? `• Latest: "${latest.title.slice(0, 60)}" (${latest.president_name}, ${latestYear})` : '',
+          prefixLine,
           '',
-          `Explore all decrees on Executive Orders Archive:`
-        ].filter(Boolean);
+          `On This Day in Presidential History:`,
+          count > 0 ? `• Total: ${count} U.S. Executive Order${count === 1 ? '' : 's'} signed across history${oldestYear && latestYear ? ` (${oldestYear} – ${latestYear})` : ''}` : `• Exploring executive actions signed on this calendar date.`
+        ];
+        if (oldest) {
+          bodyLines.push(`• Oldest: "${oldest.title}" (${oldest.president_name || oldest.pres}, ${oldestYear})`);
+        }
+        if (latest && latest.id !== oldest?.id) {
+          bodyLines.push(`• Latest: "${latest.title}" (${latest.president_name || latest.pres}, ${latestYear})`);
+        }
+        if (count > 0) {
+          bodyLines.push('');
+          bodyLines.push('⚖️ Constitutional Alignment Overview:');
+          bodyLines.push(`• Separation of Powers: ${zone1Count} Zone 1 (Statutory) • ${zone2Count} Zone 2 (Twilight) • ${zone3Count} Zone 3 (Friction)`);
+          const dominantValence = frictionCount > fidelityCount && frictionCount > neutralCount 
+            ? 'Constitutional Friction / Scrutiny' 
+            : (fidelityCount >= frictionCount && fidelityCount >= neutralCount ? 'Constitutional Fidelity' : 'Constitutional Neutral / Procedural');
+          bodyLines.push(`• Prevailing Valence: ${dominantValence} (${fidelityCount} Fidelity, ${frictionCount} Friction, ${neutralCount} Neutral)`);
+        }
+        bodyLines.push('');
+        bodyLines.push(`Explore historical context & constitutional scoring:`);
 
         const shareBody = bodyLines.join('\n');
         const text = `${shareBody}\n${summaryUrl}`;
-        const tweet = `On This Day in Presidential History (${currentDate.monthName} ${currentDate.dayInt}): ${count} historic Executive Orders spanning ${oldestYear}–${latestYear}.\n\nExplore:`;
+        const tweet = `${prefixLine}\nOn This Day: ${count} historic decrees spanning ${oldestYear}–${latestYear}.\n⚖️ Zones: ${zone1Count} Z1 • ${zone2Count} Z2 • ${zone3Count} Z3\nExplore historical context & constitutional scoring:`;
 
         return {
-          title: `This Day in Presidential History (${currentDate.monthName} ${currentDate.dayInt})`,
+          title: prefixLine,
           text,
           shareBody,
           tweetText: tweet,
@@ -605,30 +729,61 @@ const initialDataJson = JSON.stringify({
         };
       }
 
-      const year = order.signing_date ? order.signing_date.slice(0, 4) : '';
-      const eoLabel = order.eo_number ? `Executive Order ${order.eo_number}` : 'Presidential Order';
-      const valence = order.sentiment_valence || order.val || 'Order';
+      const year = order.signing_date ? order.signing_date.slice(0, 4) : (order.date ? order.date.slice(0, 4) : '');
+      const formattedDate = formatSigningDateClean(order.signing_date || order.date);
+      const eoLabel = (order.eo_number !== undefined && order.eo_number !== null) ? `U.S. Executive Order ${order.eo_number}` : (order.num ? `U.S. Executive Order ${order.num}` : 'U.S. Executive Order');
+      const presName = order.president_name || order.pres || '';
+      const valence = order.sentiment_valence || order.val || '';
+      const yst = classifyYoungstown(order);
+      const scoreStr = formatScore(order);
+      const toneTag = order.tone_tag || order.tag || '';
       const orderUrl = `${siteUrl}/orders/${order.id}`;
 
-      let prefix = `⚡ Latest on This Day (${currentDate.monthName} ${currentDate.dayInt}):`;
-      if (customOrder) prefix = `📅 Executive Order on This Day (${currentDate.monthName} ${currentDate.dayInt}):`;
-      else if (activeSubmode === 'oldest') prefix = `🏛️ Earliest on This Day (${currentDate.monthName} ${currentDate.dayInt}):`;
-      else if (activeSubmode === 'random') prefix = `🎲 On This Day in Presidential History (${currentDate.monthName} ${currentDate.dayInt}):`;
+      let prefixLine = '';
+      if (!customOrder) {
+        if (activeSubmode === 'latest') {
+          prefixLine = `Latest U.S. Executive Order (${year || 'Recent'})`;
+        } else if (activeSubmode === 'oldest') {
+          prefixLine = `Oldest U.S. Executive Order (${year || 'Earliest'})`;
+        } else if (activeSubmode === 'random') {
+          prefixLine = `Random U.S. Executive Order from this day in ${year || 'History'}`;
+        }
+      }
 
-      const bodyLines = [
-        prefix,
-        `${eoLabel}: "${order.title}"`,
-        `Signed by ${order.president_name || order.pres}${year ? ` (${year})` : ''}`,
-        '',
-        `⚖️ Constitutional Alignment: ${valence}`,
-        `🏛️ Read order & constitutional analysis:`
-      ];
+      const bodyLines = [];
+      if (prefixLine) {
+        bodyLines.push(prefixLine);
+        bodyLines.push('');
+      }
+      bodyLines.push(`${eoLabel}: "${order.title}"`);
+      if (presName) {
+        bodyLines.push(`Signed by ${presName}${formattedDate ? ` (${formattedDate})` : (year ? ` (${year})` : '')}`);
+      }
+      bodyLines.push('');
+      bodyLines.push(`⚖️ Constitutional Alignment:`);
+      if (yst.name) {
+        const tagSuffix = yst.tagline ? ` (${yst.tagline})` : '';
+        bodyLines.push(`• Separation of Powers: ${yst.name}${tagSuffix}`);
+      }
+      if (toneTag) {
+        bodyLines.push(`• Constitutional Authority: ${toneTag}`);
+      }
+      if (valence) {
+        bodyLines.push(`• Constitutional Valence: ${valence}${scoreStr}`);
+      }
+      bodyLines.push('');
+      bodyLines.push(`Explore historical context & constitutional scoring:`);
 
       const shareBody = bodyLines.join('\n');
       const text = `${shareBody}\n${orderUrl}`;
 
       const shortTitle = order.title.length > 55 ? order.title.substring(0, 52).trim() + '...' : order.title;
-      const tweetText = `${prefix}\n${order.eo_number ? `EO ${order.eo_number}` : 'Order'}: "${shortTitle}" (${order.president_name || order.pres}, ${year})\n⚖️ ${valence}`;
+      const zoneShort = yst.zone ? `Zone ${yst.zone}` : '';
+      const valenceShort = valence ? `${valence}${scoreStr}` : '';
+      const alignShort = [zoneShort, valenceShort].filter(Boolean).join(' • ');
+
+      const tweetPrefix = prefixLine ? `${prefixLine}\n` : '';
+      const tweetText = `${tweetPrefix}${order.eo_number || order.num ? `U.S. EO ${order.eo_number || order.num}` : 'U.S. Order'}${presName ? ` (${presName})` : ''}: "${shortTitle}"\n⚖️ Alignment: ${alignShort}${toneTag ? `\n📜 Authority: ${toneTag}` : ''}`;
 
       return {
         title: `${eoLabel}: ${order.title}`,
@@ -646,19 +801,39 @@ const initialDataJson = JSON.stringify({
 
       const orderUrl = `${siteUrl}/orders/${order.id}`;
       const year = order.signing_date ? order.signing_date.slice(0, 4) : '';
+      const formattedDate = formatSigningDateClean(order.signing_date);
+      const eoLabel = (order.eo_number !== undefined && order.eo_number !== null) ? `U.S. Executive Order ${order.eo_number}` : (order.num ? `U.S. Executive Order ${order.num}` : 'U.S. Executive Order');
+      const presName = order.president_name || order.pres || '';
+      const valence = order.sentiment_valence || order.val || '';
+      const yst = classifyYoungstown(order);
+      const scoreStr = formatScore(order);
+      const toneTag = order.tone_tag || order.tag || '';
+
+      const prefixLine = `${milestone.badge}: ${milestone.shortLabel}`;
       const bodyLines = [
-        `${milestone.badge}: ${milestone.shortLabel}`,
-        `"${order.title}"`,
-        `Signed by ${order.president_name}${year ? ` (${year})` : ''}`,
-        `• ${milestone.description}`,
+        prefixLine,
         '',
-        `Explore the full text & constitutional scoring on Executive Orders Archive:`
-      ];
+        `${eoLabel}: "${order.title}"`,
+        presName ? `Signed by ${presName}${formattedDate ? ` (${formattedDate})` : (year ? ` (${year})` : '')}` : '',
+        '',
+        `⚖️ Constitutional Alignment:`,
+        `• Separation of Powers: ${yst.name} (${yst.tagline})`,
+        toneTag ? `• Constitutional Authority: ${toneTag}` : null,
+        `• Constitutional Valence: ${valence}${scoreStr}`,
+        `• Landmark Note: ${milestone.description}`,
+        '',
+        `Explore historical context & constitutional scoring:`
+      ].filter(line => line !== null && line !== undefined);
 
       const shareBody = bodyLines.join('\n');
       const text = `${shareBody}\n${orderUrl}`;
 
-      const tweetText = `${milestone.badge}: "${order.title.slice(0, 60)}" (${order.president_name}, ${year})\n${milestone.description}`;
+      const shortTitle = order.title.length > 55 ? order.title.substring(0, 52).trim() + '...' : order.title;
+      const zoneShort = yst.zone ? `Zone ${yst.zone}` : '';
+      const valenceShort = valence ? `${valence}${scoreStr}` : '';
+      const alignShort = [zoneShort, valenceShort].filter(Boolean).join(' • ');
+
+      const tweetText = `${milestone.badge}: ${eoLabel} "${shortTitle}" (${order.president_name}, ${year})\n⚖️ Alignment: ${alignShort}`;
 
       return {
         title: `${milestone.shortLabel} — Executive Orders Archive`,
@@ -669,28 +844,44 @@ const initialDataJson = JSON.stringify({
       };
     }
 
-    // Archive Roulette
+    // Archive Roulette Pick
     const order = customOrder || seedData.rouletteSeed?.[0];
     if (!order) return { title: 'Executive Order', text: '', shareBody: '', tweetText: '', url: siteUrl };
 
     const orderUrl = `${siteUrl}/orders/${order.id}`;
-    const year = order.signing_date ? order.signing_date.slice(0, 4) : '';
-    const eoLabel = order.eo_number ? `EO ${order.eo_number}` : 'Order';
-    const valence = order.sentiment_valence || order.val || 'Order';
+    const year = order.signing_date ? order.signing_date.slice(0, 4) : (order.date ? order.date.slice(0, 4) : '');
+    const formattedDate = formatSigningDateClean(order.signing_date || order.date);
+    const eoLabel = (order.eo_number !== undefined && order.eo_number !== null) ? `U.S. Executive Order ${order.eo_number}` : (order.num ? `U.S. Executive Order ${order.num}` : 'U.S. Executive Order');
+    const presName = order.president_name || order.pres || '';
+    const valence = order.sentiment_valence || order.val || '';
+    const yst = classifyYoungstown(order);
+    const scoreStr = formatScore(order);
+    const toneTag = order.tone_tag || order.tag || '';
 
+    const prefixLine = `Random U.S. Executive Order (${year || 'Archive Discovery'})`;
     const bodyLines = [
-      `🎲 Executive Orders Roulette (Archive Curiosity):`,
-      `${eoLabel}: "${order.title}"`,
-      `Signed by ${order.president_name || order.pres}${year ? ` (${year})` : ''}`,
+      prefixLine,
       '',
-      `⚖️ Constitutional Alignment: ${valence}`,
-      `Explore this executive action:`
-    ];
+      `${eoLabel}: "${order.title}"`,
+      presName ? `Signed by ${presName}${formattedDate ? ` (${formattedDate})` : (year ? ` (${year})` : '')}` : '',
+      '',
+      `⚖️ Constitutional Alignment:`,
+      `• Separation of Powers: ${yst.name} (${yst.tagline})`,
+      toneTag ? `• Constitutional Authority: ${toneTag}` : null,
+      `• Constitutional Valence: ${valence}${scoreStr}`,
+      '',
+      `Explore historical context & constitutional scoring:`
+    ].filter(line => line !== null && line !== undefined);
 
     const shareBody = bodyLines.join('\n');
     const text = `${shareBody}\n${orderUrl}`;
 
-    const tweetText = `🎲 Archive Curiosity: ${eoLabel} "${order.title.slice(0, 55)}" (${order.president_name || order.pres}, ${year})\n⚖️ ${valence}`;
+    const shortTitle = order.title.length > 55 ? order.title.substring(0, 52).trim() + '...' : order.title;
+    const zoneShort = yst.zone ? `Zone ${yst.zone}` : '';
+    const valenceShort = valence ? `${valence}${scoreStr}` : '';
+    const alignShort = [zoneShort, valenceShort].filter(Boolean).join(' • ');
+
+    const tweetText = `${prefixLine}\n${eoLabel} (${presName}): "${shortTitle}"\n⚖️ Alignment: ${alignShort}`;
 
     return {
       title: `${eoLabel}: ${order.title}`,
@@ -737,13 +928,18 @@ const initialDataJson = JSON.stringify({
         const count = activeDateOrders.length;
         const oldest = activeDateOrders.length > 0 ? activeDateOrders[activeDateOrders.length - 1] : null;
         const latest = activeDateOrders.length > 0 ? activeDateOrders[0] : null;
+        const oldestYear = oldest?.signing_date ? oldest.signing_date.slice(0, 4) : (oldest?.date ? oldest.date.slice(0, 4) : '');
+        const latestYear = latest?.signing_date ? latest.signing_date.slice(0, 4) : (latest?.date ? latest.date.slice(0, 4) : '');
 
         if (categoryBadge) categoryBadge.textContent = `📜 Historic Day Digest`;
-        if (scoreBadge) scoreBadge.textContent = `${count} Orders Found`;
+        if (scoreBadge) {
+          scoreBadge.textContent = `${count} Orders Found`;
+          scoreBadge.className = `text-[10px] font-medium px-2 py-0.5 rounded-full border text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900`;
+        }
         if (previewTitle) previewTitle.textContent = `Presidential Executive Actions on ${currentDate.monthName} ${currentDate.dayInt}`;
         if (previewSnippet) {
           previewSnippet.textContent = count > 0 ? 
-            `From ${oldest?.president_name || 'Early Presidents'} in ${oldest?.signing_date?.slice(0, 4) || 'early history'} to ${latest?.president_name || 'Modern Presidents'} in ${latest?.signing_date?.slice(0, 4) || 'recent times'}, discover every decree signed on this day.` :
+            `From ${oldest?.president_name || 'Early Presidents'} in ${oldestYear || 'early history'} to ${latest?.president_name || 'Modern Presidents'} in ${latestYear || 'recent times'}, discover all ${count} decrees signed on this day.` :
             `No executive orders recorded on this calendar date. Try another date in the date picker!`;
         }
         if (previewPortrait) previewPortrait.src = `/portraits/george-washington.jpg`;
@@ -757,9 +953,10 @@ const initialDataJson = JSON.stringify({
       }
 
       const order = getActiveTodayOrder();
+      const year = order?.signing_date ? order.signing_date.slice(0, 4) : (order?.date ? order.date.slice(0, 4) : '');
       const badgeText = customOrder ?
-        `📅 ${order?.signing_date ? order.signing_date.slice(0, 4) : 'Selected'} Order` :
-        (activeSubmode === 'latest' ? `⚡ Latest on ${currentDate.monthName} ${currentDate.dayInt}` : activeSubmode === 'oldest' ? `🏛️ Earliest on ${currentDate.monthName} ${currentDate.dayInt}` : `🎲 Surprise Pick on ${currentDate.monthName} ${currentDate.dayInt}`);
+        `📅 U.S. Executive Order (${year || 'Historic'})` :
+        (activeSubmode === 'latest' ? `⚡ Latest U.S. Executive Order (${year || 'Recent'})` : activeSubmode === 'oldest' ? `🏛️ Oldest U.S. Executive Order (${year || 'Earliest'})` : `🎲 Random U.S. Executive Order (${year || 'History'})`);
       renderOrderInPreview(order, badgeText);
       return;
     }
@@ -774,7 +971,8 @@ const initialDataJson = JSON.stringify({
 
     if (activeTab === 'roulette') {
       const order = customOrder || seedData.rouletteSeed?.[0];
-      renderOrderInPreview(order, '🎲 Archive Roulette Pick');
+      const year = order?.signing_date ? order.signing_date.slice(0, 4) : (order?.date ? order.date.slice(0, 4) : '');
+      renderOrderInPreview(order, `🎲 Random U.S. Executive Order (${year || 'Discovery'})`);
       return;
     }
   }
@@ -788,20 +986,24 @@ const initialDataJson = JSON.stringify({
       return;
     }
 
-    const year = order.signing_date ? order.signing_date.slice(0, 4) : '';
-    const num = order.eo_number !== undefined ? order.eo_number : (order.num !== undefined ? order.num : null);
+    const year = order.signing_date ? order.signing_date.slice(0, 4) : (order.date ? order.date.slice(0, 4) : '');
+    const num = (order.eo_number !== undefined && order.eo_number !== null) ? order.eo_number : (order.num !== undefined ? order.num : null);
     const presName = order.president_name || order.pres || 'President';
     const presSlug = order.president_slug || order.slug || '';
     const valence = order.sentiment_valence || order.val || 'Executive Order';
+    const yst = classifyYoungstown(order);
+    const scoreStr = formatScore(order);
 
     if (categoryBadge) categoryBadge.textContent = badgeText || 'Executive Order';
     if (scoreBadge) {
-      scoreBadge.textContent = `${num ? `EO ${num} • ` : ''}${valence}`;
+      scoreBadge.textContent = `${yst.shortName} • ${valence}${scoreStr}`;
       let colorClass = "text-slate-700 dark:text-slate-300 border-slate-300 dark:border-slate-700";
-      if (valence.includes('Fidelity') || valence.includes('Positive')) {
+      if (yst.zone === 1) {
         colorClass = "text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-950/40";
-      } else if (valence.includes('Friction') || valence.includes('Urgent') || valence.includes('Negative')) {
+      } else if (yst.zone === 3) {
         colorClass = "text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-800 bg-rose-50 dark:bg-rose-950/40";
+      } else {
+        colorClass = "text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40";
       }
       scoreBadge.className = `text-[10px] font-medium px-2 py-0.5 rounded-full border ${colorClass}`;
     }
@@ -813,7 +1015,7 @@ const initialDataJson = JSON.stringify({
       previewPortrait.src = `/portraits/${resolvePortrait(presSlug)}.jpg`;
     }
     if (previewPresident) previewPresident.textContent = presName;
-    if (previewDate) previewDate.textContent = `(${formatDate(order.signing_date || order.date)})`;
+    if (previewDate) previewDate.textContent = `(${formatSigningDateClean(order.signing_date || order.date)})`;
     if (previewViewLink) {
       previewViewLink.href = `/orders/${order.id}`;
       previewViewLink.innerHTML = `<span>View Full Order</span> <span>&rarr;</span>`;
@@ -889,6 +1091,7 @@ const initialDataJson = JSON.stringify({
         signing_date: pick.date,
         sentiment_valence: pick.val,
         sentiment_compound: pick.comp,
+        tone_tag: pick.tag || '',
         snippet: pick.snip || ''
       };
     } else if (seedData.rouletteSeed && seedData.rouletteSeed.length > 0) {

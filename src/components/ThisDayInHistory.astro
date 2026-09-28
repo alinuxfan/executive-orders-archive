@@ -168,6 +168,7 @@ const oldestYear = oldestOrder?.signing_date ? oldestOrder.signing_date.slice(0,
             signing_date: order.signing_date,
             sentiment_valence: order.sentiment_valence,
             sentiment_compound: order.sentiment_compound,
+            tone_tag: order.tone_tag,
             snippet: order.snippet
           });
 
@@ -334,6 +335,7 @@ const oldestYear = oldestOrder?.signing_date ? oldestOrder.signing_date.slice(0,
       signing_date: rawDate,
       sentiment_valence: val,
       sentiment_compound: order.comp !== undefined ? order.comp : order.sentiment_compound,
+      tone_tag: order.tag || order.tone_tag || '',
       snippet: snippet
     }).replace(/"/g, '&quot;');
 
@@ -459,6 +461,7 @@ const oldestYear = oldestOrder?.signing_date ? oldestOrder.signing_date.slice(0,
         signing_date: m.date,
         sentiment_valence: m.val,
         sentiment_compound: m.comp,
+        tone_tag: m.tag || m.tone_tag || '',
         snippet: m.snip || ''
       }))
     };

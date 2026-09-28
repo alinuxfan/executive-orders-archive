@@ -5,6 +5,7 @@ import OrderCard from '../components/OrderCard.astro';
 import ToneChart from '../components/ToneChart.astro';
 import LengthChart from '../components/LengthChart.astro';
 import ThisDayInHistory from '../components/ThisDayInHistory.astro';
+import RecentlyViewedStrip from '../components/RecentlyViewedStrip.astro';
 import { resolvePortraitSlug } from '../lib/portraits';
 import { primaryNumber } from '../lib/presidentNumbers';
 
@@ -264,6 +265,34 @@ const organizationJsonLd = {
         </form>
       </div>
 
+      <!-- Hero Action Hub: Surprise Me & Fast Browse -->
+      <div class="mt-6 flex flex-wrap items-center justify-center gap-2.5">
+        <a
+          href="/random"
+          id="hero-surprise-me-btn"
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs transition-all shadow-md hover:shadow-purple-500/25 hover:scale-105 border border-purple-400/40 group font-sans"
+          title="Jump directly to a surprise random executive order"
+        >
+          <span class="text-base group-hover:rotate-45 transition-transform inline-block">🎲</span>
+          <span>Surprise Me / Random Decree</span>
+        </a>
+        <button
+          type="button"
+          data-open-quick-share
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 text-amber-300 font-semibold text-xs transition-all shadow-md border border-slate-700/80 hover:border-amber-400/50 font-sans"
+        >
+          <span>⚡</span>
+          <span>Today in History & Milestones</span>
+        </button>
+        <a
+          href="/orders"
+          class="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700/90 text-slate-200 font-medium text-xs transition-all shadow-md border border-slate-700/80 hover:border-slate-500 font-sans"
+        >
+          <span>📜</span>
+          <span>Browse All 10,900+ Orders &rarr;</span>
+        </a>
+      </div>
+
     </div>
   </section>
 
@@ -313,6 +342,9 @@ const organizationJsonLd = {
 
     </div>
   </section>
+
+  <!-- Continue Reading Strip (Populated from localStorage for Return Visits) -->
+  <RecentlyViewedStrip />
 
   <!-- This Day in History Dynamic Feature -->
   <ThisDayInHistory />

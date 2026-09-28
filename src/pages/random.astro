@@ -1,0 +1,48 @@
+---
+import Layout from '../layouts/Layout.astro';
+import summaryOrders from '../../data/site_orders_summary.json';
+
+// Collect all order IDs for client-side random redirect
+const orderIds = summaryOrders.map(o => o.id);
+const firstOrder = orderIds[0] || 'app-executive-order-1';
+---
+
+<Layout
+  title="Random Executive Order | Executive Orders Archive"
+  description="Discover a random decree from United States presidential history spanning 1789 to present."
+>
+  <div class="min-h-[60vh] flex flex-col items-center justify-center px-4 py-16 text-center">
+    <div class="max-w-md w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-8 shadow-xl">
+      <div class="text-6xl mb-4 animate-bounce select-none">
+        🎲
+      </div>
+      <h1 class="font-serif font-extrabold text-2xl text-slate-900 dark:text-white mb-2">
+        Rolling the Presidential Archives...
+      </h1>
+      <p class="text-sm text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
+        Selecting a decree at random from over 10,900 executive actions spanning 1789 to today.
+      </p>
+      <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden mb-6">
+        <div class="bg-purple-600 h-1.5 rounded-full animate-pulse w-3/4 mx-auto"></div>
+      </div>
+      <a
+        id="fallback-link"
+        href={`/orders/${firstOrder}`}
+        class="text-xs text-blue-600 dark:text-blue-400 hover:underline"
+      >
+        Click here if you are not redirected automatically &rarr;
+      </a>
+    </div>
+  </div>
+
+  <script is:inline define:vars={{ orderIds }}>
+    (function pickAndRedirect() {
+      if (Array.isArray(orderIds) && orderIds.length > 0) {
+        const randomId = orderIds[Math.floor(Math.random() * orderIds.length)];
+        const fallback = document.getElementById('fallback-link');
+        if (fallback) fallback.href = '/orders/' + randomId;
+        window.location.replace('/orders/' + randomId);
+      }
+    })();
+  </script>
+</Layout>

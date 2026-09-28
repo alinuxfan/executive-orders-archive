@@ -872,4 +872,31 @@ const breadcrumbJsonLd = {
       window.print();
     });
   </script>
+
+  <script is:inline define:vars={{ compactMeta }}>
+    // Record recently viewed order for return visits
+    try {
+      if (compactMeta) {
+        const meta = typeof compactMeta === "string" ? JSON.parse(compactMeta) : compactMeta;
+        const recentKey = "eoa_recent_orders";
+        const rawHistory = localStorage.getItem(recentKey);
+        const history = rawHistory ? JSON.parse(rawHistory) : [];
+        const currentItem = {
+          id: meta.id,
+          num: meta.num,
+          title: meta.title,
+          pres: meta.pres,
+          slug: meta.slug,
+          date: meta.date,
+          words: meta.words,
+          time: meta.time,
+          val: meta.val,
+          zone: meta.zone,
+          viewedAt: Date.now()
+        };
+        const updated = [currentItem, ...history.filter(h => h.id !== currentItem.id)].slice(0, 10);
+        localStorage.setItem(recentKey, JSON.stringify(updated));
+      }
+    } catch (e) {}
+  </script>
 </Layout>

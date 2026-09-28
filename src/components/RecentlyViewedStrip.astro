@@ -1,0 +1,118 @@
+---
+// RecentlyViewedStrip.astro
+// Renders recently viewed executive orders from localStorage on the client side
+---
+
+<section
+  id="recently-viewed-strip"
+  class="hidden max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8"
+  aria-label="Recently viewed orders"
+>
+  <div class="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 dark:from-slate-900 dark:via-slate-850 dark:to-slate-900 text-white rounded-3xl p-6 border border-slate-800 shadow-md">
+    <div class="flex items-center justify-between gap-4 mb-4 pb-3 border-b border-slate-800 flex-wrap">
+      <div class="flex items-center gap-2.5">
+        <span class="flex h-2.5 w-2.5 rounded-full bg-amber-400 animate-pulse"></span>
+        <h2 class="text-xs font-bold uppercase tracking-wider text-amber-400 font-sans flex items-center gap-1.5">
+          <span>📖 Continue Reading</span>
+          <span class="text-slate-500">•</span>
+          <span class="text-slate-300 font-normal">Recently Viewed by You</span>
+        </h2>
+      </div>
+      <button
+        type="button"
+        id="clear-recent-orders-btn"
+        class="text-[11px] text-slate-400 hover:text-rose-400 transition-colors font-medium hover:underline flex items-center gap-1"
+        title="Clear viewing history"
+      >
+        <span>✕</span>
+        <span>Clear History</span>
+      </button>
+    </div>
+
+    <!-- Cards Grid -->
+    <div id="recent-orders-track" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+      <!-- Populated via client-side JavaScript from localStorage -->
+    </div>
+  </div>
+</section>
+
+<script is:inline>
+  (function initRecentlyViewed() {
+    const strip = document.getElementById('recently-viewed-strip');
+    const track = document.getElementById('recent-orders-track');
+    const clearBtn = document.getElementById('clear-recent-orders-btn');
+    if (!strip || !track) return;
+
+    function renderRecent() {
+      try {
+        const raw = localStorage.getItem('eoa_recent_orders');
+        if (!raw) {
+          strip.classList.add('hidden');
+          return;
+        }
+        const recent = JSON.parse(raw);
+        if (!Array.isArray(recent) || recent.length === 0) {
+          strip.classList.add('hidden');
+          return;
+        }
+
+        // Render up to 4 recent orders
+        const displayOrders = recent.slice(0, 4);
+
+        track.innerHTML = displayOrders.map(o => {
+          const eoLabel = o.num ? `EO ${o.num}` : 'Presidential Order';
+          const portraitSlug = o.slug || 'default';
+          const zoneBadge = o.zone === 1
+            ? '<span class="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800/80">Zone 1</span>'
+            : o.zone === 3
+            ? '<span class="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-rose-950/80 text-rose-300 border border-rose-800/80">Zone 3</span>'
+            : '<span class="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-amber-950/80 text-amber-300 border border-amber-800/80">Zone 2</span>';
+
+          return `
+            <a
+              href="/orders/${o.id}"
+              class="group bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 hover:border-amber-400/60 rounded-2xl p-4 transition-all flex flex-col justify-between shadow-xs hover:shadow-md"
+            >
+              <div>
+                <div class="flex items-center justify-between gap-1 mb-2">
+                  <span class="font-mono text-[11px] font-bold px-2 py-0.5 rounded bg-blue-950 text-blue-200 border border-blue-800/80">
+                    ${eoLabel}
+                  </span>
+                  ${zoneBadge}
+                </div>
+                <h3 class="font-serif font-bold text-sm text-slate-100 group-hover:text-amber-300 line-clamp-2 leading-snug transition-colors mb-2">
+                  ${o.title}
+                </h3>
+              </div>
+              <div class="pt-2 border-t border-slate-700/50 flex items-center justify-between text-[11px] text-slate-400">
+                <div class="flex items-center gap-1.5 truncate max-w-[130px]">
+                  <img
+                    src="/portraits/${portraitSlug}.jpg"
+                    alt="${o.pres || ''}"
+                    class="w-4 h-4 rounded-full object-cover border border-slate-600"
+                    onerror="this.style.display='none'"
+                  />
+                  <span class="truncate">${o.pres || 'President'}</span>
+                </div>
+                <span class="font-mono text-amber-400/90">${o.time || 2}m read &rarr;</span>
+              </div>
+            </a>
+          `;
+        }).join('');
+
+        strip.classList.remove('hidden');
+      } catch (e) {
+        strip.classList.add('hidden');
+      }
+    }
+
+    renderRecent();
+
+    clearBtn?.addEventListener('click', () => {
+      try {
+        localStorage.removeItem('eoa_recent_orders');
+      } catch (e) {}
+      strip.classList.add('hidden');
+    });
+  })();
+</script>

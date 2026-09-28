@@ -69,6 +69,123 @@ const lengthChartPresidents = sortedPresidents
 // Most recent orders for the homepage feed
 const recentOrders = rawOrders.slice(0, 6);
 
+// Curated landmark historical decrees for instant digestible exploration
+const landmarkDecrees = [
+  {
+    category: "Civil Rights & Equality",
+    icon: "⚖️",
+    id: "app-executive-order-9981-establishing-the-presidents-committee-equality-treatment-and",
+    eoNumber: 9981,
+    title: "Desegregation of the Armed Forces",
+    president: "Harry S. Truman",
+    year: "1948",
+    portraitSlug: "harry-s-truman",
+    zone: 1,
+    zoneName: "Zone 1 (Statutory / Commander-in-Chief)",
+    impact: "Abolished racial discrimination in the United States Armed Forces, establishing equality of treatment and opportunity regardless of race or color.",
+    citation: "13 Fed. Reg. 4313"
+  },
+  {
+    category: "Civil Rights & Equality",
+    icon: "⚖️",
+    id: "app-executive-order-11246-equal-employment-opportunity",
+    eoNumber: 11246,
+    title: "Equal Employment Opportunity & Affirmative Action",
+    president: "Lyndon B. Johnson",
+    year: "1965",
+    portraitSlug: "lyndon-b-johnson",
+    zone: 1,
+    zoneName: "Zone 1 (Statutory Procurement Power)",
+    impact: "Required federal contractors not to discriminate and to take affirmative action to ensure equal opportunity in employment.",
+    citation: "30 Fed. Reg. 12319"
+  },
+  {
+    category: "Wartime Powers & Friction",
+    icon: "🛡️",
+    id: "app-executive-order-9066-authorizing-the-secretary-war-prescribe-military-areas",
+    eoNumber: 9066,
+    title: "Authorizing Military Areas (Japanese Internment)",
+    president: "Franklin D. Roosevelt",
+    year: "1942",
+    portraitSlug: "franklin-d-roosevelt",
+    zone: 3,
+    zoneName: "Zone 3 (Severe Friction / Unilateral Deprivation)",
+    impact: "Authorized the forced exclusion and internment of 120,000+ Japanese Americans; one of the most scrutinized executive actions in U.S. constitutional history.",
+    citation: "7 Fed. Reg. 1407"
+  },
+  {
+    category: "Wartime Powers & Friction",
+    icon: "🛡️",
+    id: "app-executive-order-10340-directing-the-secretary-commerce-take-possession-and-operate-the",
+    eoNumber: 10340,
+    title: "Steel Mill Seizure (The Youngstown Precedent)",
+    president: "Harry S. Truman",
+    year: "1952",
+    portraitSlug: "harry-s-truman",
+    zone: 3,
+    zoneName: "Zone 3 (Invalidated: Youngstown v. Sawyer)",
+    impact: "Attempted seizure of private steel mills during the Korean War; struck down by the Supreme Court, establishing Justice Jackson's three-zone framework.",
+    citation: "17 Fed. Reg. 3139"
+  },
+  {
+    category: "Economic Emergencies",
+    icon: "💰",
+    id: "app-executive-order-6102-forbidding-the-hoarding-gold-coin-gold-bullion-and-gold-certificates",
+    eoNumber: 6102,
+    title: "Prohibition on Hoarding Gold Coin & Bullion",
+    president: "Franklin D. Roosevelt",
+    year: "1933",
+    portraitSlug: "franklin-d-roosevelt",
+    zone: 2,
+    zoneName: "Zone 2 (Trading with the Enemy Act / Twilight)",
+    impact: "Compelled all U.S. citizens to deliver private gold coins and bullion to the Federal Reserve in exchange for $20.67 per ounce, altering the monetary system.",
+    citation: "Pres. Proc. 2039"
+  },
+  {
+    category: "Economic Emergencies",
+    icon: "💰",
+    id: "app-executive-order-11615-providing-for-stabilization-prices-rents-wages-and-salaries",
+    eoNumber: 11615,
+    title: "90-Day Freeze on Wages, Prices, and Rents",
+    president: "Richard Nixon",
+    year: "1971",
+    portraitSlug: "richard-nixon",
+    zone: 1,
+    zoneName: "Zone 1 (Economic Stabilization Act Authorization)",
+    impact: "Unprecedented peacetime federal control over domestic prices and wages to combat stagflation, part of the Nixon Shock severing dollar gold convertibility.",
+    citation: "36 Fed. Reg. 15727"
+  },
+  {
+    category: "The Emerging Frontier",
+    icon: "🤖",
+    id: "app-executive-order-14110-safe-secure-and-trustworthy-development-and-use-artificial",
+    eoNumber: 14110,
+    title: "Safe, Secure & Trustworthy Artificial Intelligence",
+    president: "Joe Biden",
+    year: "2023",
+    portraitSlug: "joe-biden",
+    zone: 1,
+    zoneName: "Zone 1 (Defense Production Act & Procurement)",
+    impact: "Comprehensive federal governance establishing AI safety evaluations, red-teaming mandates, consumer protections, and standards for frontier models.",
+    citation: "88 Fed. Reg. 75191"
+  },
+  {
+    category: "The Emerging Frontier",
+    icon: "🤖",
+    id: "app-executive-order-14067-ensuring-responsible-development-digital-assets",
+    eoNumber: 14067,
+    title: "Ensuring Responsible Development of Digital Assets",
+    president: "Joe Biden",
+    year: "2022",
+    portraitSlug: "joe-biden",
+    zone: 2,
+    zoneName: "Zone 2 (Executive Agency Coordination)",
+    impact: "First whole-of-government strategy addressing cryptocurrencies, central bank digital currencies (CBDCs), financial stability, and consumer protection.",
+    citation: "87 Fed. Reg. 14143"
+  }
+];
+
+
 const websiteJsonLd = {
   "@context": "https://schema.org",
   "@type": "WebSite",
@@ -241,6 +358,67 @@ const organizationJsonLd = {
       </div>
     </div>
   </section>
+
+  <!-- Curated Landmark Decrees: High-Impact Digestible Entry Points -->
+  <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-10">
+    <div class="mb-6 flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+      <div>
+        <div class="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-400 font-sans">
+          <span>🏛️ Landmark Decrees</span>
+          <span>•</span>
+          <span>Essential Turning Points</span>
+        </div>
+        <h2 class="font-serif font-extrabold text-2xl sm:text-3xl text-slate-900 dark:text-white mt-1">
+          Landmark Executive Orders That Shaped America
+        </h2>
+      </div>
+      <p class="text-xs sm:text-sm text-slate-500 dark:text-slate-400 max-w-md">
+        From wartime civil liberties tests to civil rights breakthroughs and modern frontier policies—curated for rapid constitutional insight.
+      </p>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      {landmarkDecrees.map(item => (
+        <a
+          href={`/orders/${item.id}`}
+          class="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-400 dark:hover:border-amber-600 rounded-2xl p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+        >
+          <div>
+            <div class="flex items-center justify-between gap-2 mb-3">
+              <span class="font-mono text-xs font-bold px-2 py-0.5 rounded bg-blue-50 text-blue-900 dark:bg-blue-950 dark:text-blue-200 border border-blue-200 dark:border-blue-900">
+                EO {item.eoNumber}
+              </span>
+              <span class={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${item.zone === 1 ? "bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800" : item.zone === 3 ? "bg-rose-50 text-rose-800 border-rose-300 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800" : "bg-amber-50 text-amber-800 border-amber-300 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800"}`}>
+                {item.zone === 1 ? "Zone 1: Express" : item.zone === 3 ? "Zone 3: Friction" : "Zone 2: Twilight"}
+              </span>
+            </div>
+
+            <h3 class="font-serif font-bold text-base text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors leading-snug mb-2">
+              {item.title}
+            </h3>
+
+            <p class="text-xs text-slate-600 dark:text-slate-300 line-clamp-3 leading-relaxed mb-4">
+              {item.impact}
+            </p>
+          </div>
+
+          <div class="pt-3 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
+            <div class="flex items-center gap-1.5 font-medium text-slate-700 dark:text-slate-300">
+              <img
+                src={`/portraits/${item.portraitSlug}.jpg`}
+                alt={item.president}
+                class="w-5 h-5 rounded-full object-cover border border-slate-300 dark:border-slate-600"
+                onerror="this.style.display='none'"
+              />
+              <span class="truncate max-w-[120px]">{item.president}</span>
+            </div>
+            <span class="font-mono text-[11px]">{item.year}</span>
+          </div>
+        </a>
+      ))}
+    </div>
+  </section>
+
 
   <!-- Interactive Charts & Trends Grid -->
   <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">

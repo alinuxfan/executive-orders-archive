@@ -179,6 +179,15 @@ const legislationJsonLd = {
 const { related: relatedOrders, referencedCount } = getRelatedOrders(order);
 const referencedByLater = getReferencedByLater(order);
 
+// At-a-glance executive brief takeaways
+const briefMandate = directives.length > 0
+  ? directives[0].description
+  : (operativeText || summaryParagraphs[0] || "Executes presidential policy mandate under executive branch authority.");
+
+const briefEntities = affectedEntities.length > 0
+  ? affectedEntities.slice(0, 4)
+  : (topicTags.length > 0 ? topicTags.slice(0, 4) : ["Executive Branch Agencies", "Federal Administration"]);
+
 function relationBadgeClasses(relation: string): string {
   if (relation === 'Revokes' || relation === 'Rescinds' || relation === 'Supersedes') {
     return 'bg-rose-600 text-white border-rose-700';
@@ -282,10 +291,18 @@ const breadcrumbJsonLd = {
         </span>
         <span
           class={`text-xs font-semibold px-2.5 py-1 rounded-full border ${sentimentColor.bg} ${sentimentColor.text} ${sentimentColor.border}`}
-          title="Automated keyword-pattern score from -1 to +1 (see About → methodology). It measures the wording of the text, not a legal judgment."
+          title="Automated keyword-pattern score from -1 to +1 (see About → methodology). Measures linguistic adherence to constitutional powers."
         >
           {order.sentiment_valence} ({order.sentiment_compound >= 0 ? '+' : ''}{order.sentiment_compound.toFixed(2)})
         </span>
+        {order.tone_tag && (
+          <span
+            class="text-xs font-semibold px-2.5 py-1 rounded-full border bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-300/80 dark:border-amber-800/80"
+            title="Primary constitutional clause or statutory authority invoked"
+          >
+            📜 {order.tone_tag}
+          </span>
+        )}
       </div>
 
       <h1 class="font-serif font-extrabold text-2xl sm:text-3xl lg:text-4xl text-slate-900 dark:text-white leading-tight mb-4">
@@ -320,6 +337,126 @@ const breadcrumbJsonLd = {
         )}
       </div>
     </header>
+
+    <!-- Sticky In-Page Navigation Jump Bar -->
+    <nav
+      id="order-nav-bar"
+      aria-label="Order sections"
+      class="sticky top-16 z-30 mb-8 py-2 px-3 rounded-2xl bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border border-slate-200 dark:border-slate-800 shadow-xs flex items-center gap-1 sm:gap-2 overflow-x-auto text-xs font-medium no-scrollbar print:hidden"
+    >
+      <span class="text-[10px] uppercase font-bold text-slate-400 dark:text-slate-500 px-1 hidden lg:inline whitespace-nowrap">Jump to:</span>
+      <a href="#executive-brief" class="px-2.5 py-1 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-amber-100/70 dark:hover:bg-amber-950/60 hover:text-amber-900 dark:hover:text-amber-300 transition-colors whitespace-nowrap flex items-center gap-1">
+        <span>⚡</span><span>Executive Brief</span>
+      </a>
+      {disposition && (statusRelations.length > 0 || outboundRelations.length > 0) && (
+        <a href="#legal-status" class="px-2.5 py-1 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-amber-100/70 dark:hover:bg-amber-950/60 hover:text-amber-900 dark:hover:text-amber-300 transition-colors whitespace-nowrap flex items-center gap-1">
+          <span>⚖️</span><span>Status</span>
+        </a>
+      )}
+      <a href="#plain-english-translation" class="px-2.5 py-1 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-amber-100/70 dark:hover:bg-amber-950/60 hover:text-amber-900 dark:hover:text-amber-300 transition-colors whitespace-nowrap flex items-center gap-1">
+        <span>📜</span><span>Translation</span>
+      </a>
+      <a href="#key-directives" class="px-2.5 py-1 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-amber-100/70 dark:hover:bg-amber-950/60 hover:text-amber-900 dark:hover:text-amber-300 transition-colors whitespace-nowrap flex items-center gap-1">
+        <span>🎯</span><span>Directives</span>
+      </a>
+      <a href="#framers-council" class="px-2.5 py-1 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-amber-100/70 dark:hover:bg-amber-950/60 hover:text-amber-900 dark:hover:text-amber-300 transition-colors whitespace-nowrap flex items-center gap-1">
+        <span>🏛️</span><span>Framers' Council</span>
+      </a>
+      <a href="#constitutional-scorecard" class="px-2.5 py-1 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-amber-100/70 dark:hover:bg-amber-950/60 hover:text-amber-900 dark:hover:text-amber-300 transition-colors whitespace-nowrap flex items-center gap-1">
+        <span>📊</span><span>Scorecard</span>
+      </a>
+      <a href="#unabridged-text" class="px-2.5 py-1 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-amber-100/70 dark:hover:bg-amber-950/60 hover:text-amber-900 dark:hover:text-amber-300 transition-colors whitespace-nowrap flex items-center gap-1">
+        <span>📑</span><span>Full Text</span>
+      </a>
+      {relatedOrders.length > 0 && (
+        <a href="#related-orders" class="px-2.5 py-1 rounded-lg text-slate-700 dark:text-slate-200 hover:bg-amber-100/70 dark:hover:bg-amber-950/60 hover:text-amber-900 dark:hover:text-amber-300 transition-colors whitespace-nowrap flex items-center gap-1">
+          <span>🔗</span><span>Related</span>
+        </a>
+      )}
+    </nav>
+
+    <!-- At-a-Glance Executive Brief (3-Pillar Rapid Takeaway) -->
+    <section id="executive-brief" class="scroll-mt-28 bg-gradient-to-br from-amber-500/10 via-slate-50 to-amber-500/5 dark:from-slate-900 dark:via-slate-900/90 dark:to-amber-950/20 border-2 border-amber-300/80 dark:border-amber-700/60 rounded-2xl p-5 sm:p-6 mb-8 shadow-xs">
+      <div class="flex items-center justify-between gap-4 mb-4 pb-3 border-b border-amber-200/60 dark:border-amber-900/40 flex-wrap">
+        <div class="flex items-center gap-2">
+          <span class="flex h-2.5 w-2.5 rounded-full bg-amber-500 animate-pulse"></span>
+          <h2 class="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-300 font-sans">
+            Executive Brief &bull; At a Glance
+          </h2>
+        </div>
+        <div class="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-300 font-mono">
+          <span>⏱️ {order.reading_time_minutes} min read ({order.word_count.toLocaleString()} words)</span>
+          <span>•</span>
+          <span class={orderStatus === "Revoked" || orderStatus === "Superseded" ? "text-rose-600 dark:text-rose-400 font-bold" : "text-emerald-600 dark:text-emerald-400 font-bold"}>
+            ● {orderStatus || "In Effect"}
+          </span>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-xs sm:text-sm">
+        <!-- 1. Primary Action -->
+        <div class="bg-white/90 dark:bg-slate-800/80 p-4 rounded-xl border border-amber-200/60 dark:border-slate-700/70 flex flex-col justify-between shadow-2xs">
+          <div>
+            <div class="text-[11px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-400 mb-2 flex items-center gap-1.5 font-sans">
+              <span>🎯</span>
+              <span>Primary Mandate</span>
+            </div>
+            <p class="text-slate-800 dark:text-slate-200 font-medium leading-relaxed">
+              {briefMandate}
+            </p>
+          </div>
+          <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700/50 text-[11px] text-slate-500">
+            <a href="#key-directives" class="hover:underline text-amber-700 dark:text-amber-400 font-medium">View all {directives.length} directives &darr;</a>
+          </div>
+        </div>
+
+        <!-- 2. Constitutional Footing -->
+        <div class="bg-white/90 dark:bg-slate-800/80 p-4 rounded-xl border border-amber-200/60 dark:border-slate-700/70 flex flex-col justify-between shadow-2xs">
+          <div>
+            <div class="text-[11px] font-bold uppercase tracking-wider text-blue-800 dark:text-blue-400 mb-2 flex items-center gap-1.5 font-sans">
+              <span>⚖️</span>
+              <span>Constitutional Footing</span>
+            </div>
+            <div class="text-slate-800 dark:text-slate-200 font-medium leading-relaxed">
+              <div class="font-semibold text-xs mb-1 text-slate-900 dark:text-white">
+                {youngstown.icon} {youngstown.name}
+              </div>
+              <div class="text-xs text-slate-600 dark:text-slate-300">
+                {youngstown.tagline}
+              </div>
+              {order.tone_tag && (
+                <div class="mt-2 text-[11px] font-mono bg-slate-100 dark:bg-slate-900/80 px-2 py-1 rounded text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-800">
+                  📜 {order.tone_tag}
+                </div>
+              )}
+            </div>
+          </div>
+          <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700/50 text-[11px] text-slate-500">
+            <a href="#framers-council" class="hover:underline text-blue-600 dark:text-blue-400 font-medium">Framers' constitutional debate &darr;</a>
+          </div>
+        </div>
+
+        <!-- 3. Key Scope & Entities -->
+        <div class="bg-white/90 dark:bg-slate-800/80 p-4 rounded-xl border border-amber-200/60 dark:border-slate-700/70 flex flex-col justify-between shadow-2xs">
+          <div>
+            <div class="text-[11px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-400 mb-2 flex items-center gap-1.5 font-sans">
+              <span>🏛️</span>
+              <span>Scope & Affected Sectors</span>
+            </div>
+            <div class="flex flex-wrap gap-1.5">
+              {briefEntities.map(entity => (
+                <span class="px-2 py-1 rounded-md bg-slate-100 dark:bg-slate-700/60 text-slate-700 dark:text-slate-200 text-xs font-medium">
+                  {entity}
+                </span>
+              ))}
+            </div>
+          </div>
+          <div class="mt-3 pt-2 border-t border-slate-100 dark:border-slate-700/50 text-[11px] text-slate-500">
+            <a href="#unabridged-text" class="hover:underline text-emerald-700 dark:text-emerald-400 font-medium">Inspect unabridged text &darr;</a>
+          </div>
+        </div>
+      </div>
+    </section>
 
     <!-- Legal status from Federal Register disposition tables -->
     {disposition && (statusRelations.length > 0 || outboundRelations.length > 0) && (
@@ -382,7 +519,7 @@ const breadcrumbJsonLd = {
     )}
 
     <!-- Plain-English Translation & Constitutional Analysis Callout -->
-    <section class="bg-amber-50/50 dark:bg-amber-950/20 border-2 border-amber-200/80 dark:border-amber-900/40 rounded-2xl p-6 sm:p-8 mb-8 shadow-sm">
+    <section id="plain-english-translation" class="scroll-mt-28 bg-amber-50/50 dark:bg-amber-950/20 border-2 border-amber-200/80 dark:border-amber-900/40 rounded-2xl p-6 sm:p-8 mb-8 shadow-sm">
       <div class="flex items-center gap-3 mb-4">
         <div class="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/50 text-amber-900 dark:text-amber-200">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
@@ -413,7 +550,7 @@ const breadcrumbJsonLd = {
       </div>
 
       <!-- Key Directives -->
-      <div class="space-y-3 mb-6">
+      <div id="key-directives" class="scroll-mt-28 space-y-3 mb-6">
         <h3 class="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
           Key Directives & Operative Actions
         </h3>
@@ -482,10 +619,14 @@ const breadcrumbJsonLd = {
     </section>
 
     <!-- The Framers' Constitutional Council (Madison, Hamilton, Mason & Youngstown Framework) -->
-    <FramersPerspective order={order} youngstown={youngstown} />
+    <div id="framers-council" class="scroll-mt-28">
+      <FramersPerspective order={order} youngstown={youngstown} />
+    </div>
 
     <!-- Five Measurable Constitutional Friction Dimensions Audit -->
-    <ConstitutionalFrictionScorecard order={order} />
+    <div id="constitutional-scorecard" class="scroll-mt-28">
+      <ConstitutionalFrictionScorecard order={order} />
+    </div>
 
     <!-- Quantitative Metrics Panel -->
     <section class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
@@ -551,7 +692,7 @@ const breadcrumbJsonLd = {
     </div>
 
     <!-- Official Full Document Body -->
-    <article class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-10 mb-10 shadow-sm">
+    <article id="unabridged-text" class="scroll-mt-28 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 sm:p-10 mb-10 shadow-sm">
       <div class="border-b border-slate-100 dark:border-slate-800 pb-4 mb-6 flex items-center justify-between">
         <h2 class="text-xs font-bold uppercase tracking-wider text-slate-400">Official Archival Text</h2>
         {order.source_url && (
@@ -604,7 +745,7 @@ const breadcrumbJsonLd = {
 
     <!-- Related Orders (Cross-referenced in text, or same president) -->
     {relatedOrders.length > 0 && (
-      <section class="mb-10">
+      <section id="related-orders" class="scroll-mt-28 mb-10">
         <div class="flex items-center justify-between mb-4">
           <div>
             <h2 class="font-serif font-bold text-lg text-slate-900 dark:text-white">

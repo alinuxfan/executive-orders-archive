@@ -1,7 +1,7 @@
 {
-  "last_sync_timestamp": "2026-10-02T12:21:05.760883+00:00",
+  "last_sync_timestamp": "2026-10-02T22:05:04.400191+00:00",
   "status": "success",
-  "orders_checked": 14,
-  "orders_synced": 14,
-  "since_date": "2026-08-24"
+  "orders_checked": 13,
+  "orders_synced": 13,
+  "since_date": "2026-09-02"
 }

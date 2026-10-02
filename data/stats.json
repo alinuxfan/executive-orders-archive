@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-10-01T22:35:32.444259+00:00",
-  "last_sync_timestamp": "2026-10-01T22:35:32.444259+00:00",
-  "total_orders": 10845,
+  "generated_at": "2026-10-02T12:21:15.930116+00:00",
+  "last_sync_timestamp": "2026-10-02T12:21:15.930116+00:00",
+  "total_orders": 10848,
   "sentiment_breakdown": {
-    "Constitutional Fidelity": 2162,
+    "Constitutional Fidelity": 2165,
     "Constitutional Friction / Overreach": 232,
     "Constitutional Neutral": 8451
   },
@@ -88,8 +88,8 @@
     },
     {
       "president": "Donald Trump",
-      "total_orders": 202,
-      "avg_word_count": 1272.0,
+      "total_orders": 205,
+      "avg_word_count": 1267.0,
       "avg_sentiment": 0.596
     },
     {
@@ -263,6 +263,39 @@
   ],
   "recent_orders": [
     {
+      "id": "fr-2026-20321",
+      "eo_number": 14434,
+      "title": "Inaugurating the Era of Super Intelligence",
+      "president_name": "Donald Trump",
+      "signing_date": "2026-09-29",
+      "word_count": 723,
+      "reading_time_minutes": 4,
+      "sentiment_valence": "Constitutional Fidelity",
+      "sentiment_compound": 0.6
+    },
+    {
+      "id": "fr-2026-20320",
+      "eo_number": 14433,
+      "title": "Eliminating Disease-Carrying Pests and Restoring Enjoyment of the Great Outdoors",
+      "president_name": "Donald Trump",
+      "signing_date": "2026-09-29",
+      "word_count": 1201,
+      "reading_time_minutes": 6,
+      "sentiment_valence": "Constitutional Fidelity",
+      "sentiment_compound": 0.52
+    },
+    {
+      "id": "fr-2026-20319",
+      "eo_number": 14432,
+      "title": "Streamlining Access to Government Services Through America.gov",
+      "president_name": "Donald Trump",
+      "signing_date": "2026-09-29",
+      "word_count": 940,
+      "reading_time_minutes": 5,
+      "sentiment_valence": "Constitutional Fidelity",
+      "sentiment_compound": 0.6
+    },
+    {
       "id": "fr-2026-19555",
       "eo_number": 14431,
       "title": "Enhancing Program Integrity and Interagency Coordination in the Administration of the H-1B Nonimmigrant Visa Program",
@@ -338,39 +371,6 @@
       "reading_time_minutes": 5,
       "sentiment_valence": "Constitutional Fidelity",
       "sentiment_compound": 0.7
-    },
-    {
-      "id": "fr-2026-18567",
-      "eo_number": 14424,
-      "title": "Promoting Fair Competition in Livestock Markets and Expanding Market Access for American Meat Producers",
-      "president_name": "Donald Trump",
-      "signing_date": "2026-09-04",
-      "word_count": 910,
-      "reading_time_minutes": 5,
-      "sentiment_valence": "Constitutional Fidelity",
-      "sentiment_compound": 0.76
-    },
-    {
-      "id": "fr-2026-18141",
-      "eo_number": 14423,
-      "title": "Establishing the United States Space Academy",
-      "president_name": "Donald Trump",
-      "signing_date": "2026-08-28",
-      "word_count": 931,
-      "reading_time_minutes": 5,
-      "sentiment_valence": "Constitutional Fidelity",
-      "sentiment_compound": 0.6
-    },
-    {
-      "id": "fr-2026-18020",
-      "eo_number": 14422,
-      "title": "Honoring the American History of the Great Lakes and Renaming Lake Ontario as Lake America",
-      "president_name": "Donald Trump",
-      "signing_date": "2026-08-27",
-      "word_count": 856,
-      "reading_time_minutes": 4,
-      "sentiment_valence": "Constitutional Fidelity",
-      "sentiment_compound": 0.6
     }
   ]
 }

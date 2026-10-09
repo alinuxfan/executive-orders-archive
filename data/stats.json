@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-10-08T23:13:52.718814+00:00",
-  "last_sync_timestamp": "2026-10-08T23:13:52.718814+00:00",
-  "total_orders": 10848,
+  "generated_at": "2026-10-09T13:03:09.286215+00:00",
+  "last_sync_timestamp": "2026-10-09T13:03:09.286215+00:00",
+  "total_orders": 10849,
   "sentiment_breakdown": {
-    "Constitutional Fidelity": 2165,
+    "Constitutional Fidelity": 2166,
     "Constitutional Friction / Overreach": 232,
     "Constitutional Neutral": 8451
   },
@@ -88,8 +88,8 @@
     },
     {
       "president": "Donald Trump",
-      "total_orders": 205,
-      "avg_word_count": 1267.0,
+      "total_orders": 206,
+      "avg_word_count": 1266.0,
       "avg_sentiment": 0.596
     },
     {
@@ -263,6 +263,17 @@
   ],
   "recent_orders": [
     {
+      "id": "fr-2026-20855",
+      "eo_number": 14435,
+      "title": "Emergency Tax Relief on Diesel Fuel",
+      "president_name": "Donald Trump",
+      "signing_date": "2026-10-05",
+      "word_count": 913,
+      "reading_time_minutes": 5,
+      "sentiment_valence": "Constitutional Fidelity",
+      "sentiment_compound": 0.6
+    },
+    {
       "id": "fr-2026-20321",
       "eo_number": 14434,
       "title": "Inaugurating the Era of Super Intelligence",
@@ -360,17 +371,6 @@
       "reading_time_minutes": 5,
       "sentiment_valence": "Constitutional Fidelity",
       "sentiment_compound": 0.6
-    },
-    {
-      "id": "fr-2026-18571",
-      "eo_number": 14425,
-      "title": "Supporting America's Ranchers",
-      "president_name": "Donald Trump",
-      "signing_date": "2026-09-04",
-      "word_count": 1032,
-      "reading_time_minutes": 5,
-      "sentiment_valence": "Constitutional Fidelity",
-      "sentiment_compound": 0.7
     }
   ]
 }

@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-10-21T21:31:40.788833+00:00",
-  "last_sync_timestamp": "2026-10-21T21:31:40.788833+00:00",
-  "total_orders": 10850,
+  "generated_at": "2026-10-22T11:36:39.964868+00:00",
+  "last_sync_timestamp": "2026-10-22T11:36:39.964868+00:00",
+  "total_orders": 10851,
   "sentiment_breakdown": {
-    "Constitutional Fidelity": 2167,
+    "Constitutional Fidelity": 2168,
     "Constitutional Friction / Overreach": 232,
     "Constitutional Neutral": 8451
   },
@@ -88,8 +88,8 @@
     },
     {
       "president": "Donald Trump",
-      "total_orders": 207,
-      "avg_word_count": 1268.0,
+      "total_orders": 208,
+      "avg_word_count": 1269.0,
       "avg_sentiment": 0.596
     },
     {
@@ -263,6 +263,17 @@
   ],
   "recent_orders": [
     {
+      "id": "fr-2026-21666",
+      "eo_number": 14437,
+      "title": "Advancing Women's Health To Improve Outcomes in All Phases of Life",
+      "president_name": "Donald Trump",
+      "signing_date": "2026-10-19",
+      "word_count": 1345,
+      "reading_time_minutes": 7,
+      "sentiment_valence": "Constitutional Fidelity",
+      "sentiment_compound": 0.6
+    },
+    {
       "id": "fr-2026-21599",
       "eo_number": 14436,
       "title": "Implementing the Lindsey O. Graham Sanctioning Russia and Iran Act of 2026",
@@ -358,17 +369,6 @@
       "signing_date": "2026-09-16",
       "word_count": 984,
       "reading_time_minutes": 5,
-      "sentiment_valence": "Constitutional Fidelity",
-      "sentiment_compound": 0.52
-    },
-    {
-      "id": "fr-2026-18739",
-      "eo_number": 14427,
-      "title": "Adjusting Certain Delegations Under the Defense Production Act",
-      "president_name": "Donald Trump",
-      "signing_date": "2026-09-08",
-      "word_count": 583,
-      "reading_time_minutes": 3,
       "sentiment_valence": "Constitutional Fidelity",
       "sentiment_compound": 0.52
     }

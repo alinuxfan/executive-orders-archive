@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-10-27T22:04:52.011915+00:00",
-  "last_sync_timestamp": "2026-10-27T22:04:52.011915+00:00",
-  "total_orders": 10851,
+  "generated_at": "2026-10-28T12:37:32.528981+00:00",
+  "last_sync_timestamp": "2026-10-28T12:37:32.528981+00:00",
+  "total_orders": 10852,
   "sentiment_breakdown": {
-    "Constitutional Fidelity": 2168,
+    "Constitutional Fidelity": 2169,
     "Constitutional Friction / Overreach": 232,
     "Constitutional Neutral": 8451
   },
@@ -88,8 +88,8 @@
     },
     {
       "president": "Donald Trump",
-      "total_orders": 208,
-      "avg_word_count": 1269.0,
+      "total_orders": 209,
+      "avg_word_count": 1268.0,
       "avg_sentiment": 0.596
     },
     {
@@ -263,6 +263,17 @@
   ],
   "recent_orders": [
     {
+      "id": "fr-2026-22051",
+      "eo_number": 14438,
+      "title": "Decreasing Housing Costs for the American People",
+      "president_name": "Donald Trump",
+      "signing_date": "2026-10-22",
+      "word_count": 1150,
+      "reading_time_minutes": 6,
+      "sentiment_valence": "Constitutional Fidelity",
+      "sentiment_compound": 0.66
+    },
+    {
       "id": "fr-2026-21666",
       "eo_number": 14437,
       "title": "Advancing Women's Health To Improve Outcomes in All Phases of Life",
@@ -360,17 +371,6 @@
       "reading_time_minutes": 6,
       "sentiment_valence": "Constitutional Fidelity",
       "sentiment_compound": 0.66
-    },
-    {
-      "id": "fr-2026-19335",
-      "eo_number": 14428,
-      "title": "Providing Meaningful Water Quality Improvements Through Collaboration and Oversight of Federal Support",
-      "president_name": "Donald Trump",
-      "signing_date": "2026-09-16",
-      "word_count": 984,
-      "reading_time_minutes": 5,
-      "sentiment_valence": "Constitutional Fidelity",
-      "sentiment_compound": 0.52
     }
   ]
 }

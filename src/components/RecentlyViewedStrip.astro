@@ -43,6 +43,16 @@
     const clearBtn = document.getElementById('clear-recent-orders-btn');
     if (!strip || !track) return;
 
+    function escapeHtml(s) {
+      if (window.EOSearch?.escapeHtml) return window.EOSearch.escapeHtml(s);
+      return String(s ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
     function renderRecent() {
       try {
         const raw = localStorage.getItem('eoa_recent_orders');
@@ -60,8 +70,12 @@
         const displayOrders = recent.slice(0, 4);
 
         track.innerHTML = displayOrders.map(o => {
-          const eoLabel = o.num ? `EO ${o.num}` : 'Presidential Order';
-          const portraitSlug = o.slug || 'default';
+          const eoLabel = o.num ? `EO ${escapeHtml(o.num)}` : 'Presidential Order';
+          const portraitSlug = escapeHtml(o.slug || 'default');
+          const safeIdUrl = encodeURIComponent(o.id || '');
+          const safeTitle = escapeHtml(o.title || 'Untitled Executive Order');
+          const safePres = escapeHtml(o.pres || 'President');
+          const safeTime = Number(o.time) > 0 ? Number(o.time) : 2;
           const zoneBadge = o.zone === 1
             ? '<span class="text-[9px] font-semibold px-1.5 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800/80">Zone 1</span>'
             : o.zone === 3
@@ -70,7 +84,7 @@
 
           return `
             <a
-              href="/orders/${o.id}"
+              href="/orders/${safeIdUrl}"
               class="group bg-slate-800/80 hover:bg-slate-800 border border-slate-700/80 hover:border-amber-400/60 rounded-2xl p-4 transition-all flex flex-col justify-between shadow-xs hover:shadow-md"
             >
               <div>
@@ -81,20 +95,20 @@
                   ${zoneBadge}
                 </div>
                 <h3 class="font-serif font-bold text-sm text-slate-100 group-hover:text-amber-300 line-clamp-2 leading-snug transition-colors mb-2">
-                  ${o.title}
+                  ${safeTitle}
                 </h3>
               </div>
               <div class="pt-2 border-t border-slate-700/50 flex items-center justify-between text-[11px] text-slate-400">
                 <div class="flex items-center gap-1.5 truncate max-w-[130px]">
                   <img
                     src="/portraits/${portraitSlug}.jpg"
-                    alt="${o.pres || ''}"
+                    alt="${safePres}"
                     class="w-4 h-4 rounded-full object-cover border border-slate-600"
                     onerror="this.style.display='none'"
                   />
-                  <span class="truncate">${o.pres || 'President'}</span>
+                  <span class="truncate">${safePres}</span>
                 </div>
-                <span class="font-mono text-amber-400/90">${o.time || 2}m read &rarr;</span>
+                <span class="font-mono text-amber-400/90">${safeTime}m read &rarr;</span>
               </div>
             </a>
           `;

@@ -18,7 +18,7 @@ DATA_DIR = ROOT_DIR / "data"
 SYNC_STATUS_FILE = DATA_DIR / "sync_status.json"
 
 HEADERS = {
-    "User-Agent": "ExecutiveOrdersSyncBot/1.0 (Public Open Data Tracker; mailto:info@executiveorders.io)"
+    "User-Agent": "ExecutiveOrdersSyncBot/1.0 (+https://executiveordersarchive.org)"
 }
 
 def get_latest_order_info():

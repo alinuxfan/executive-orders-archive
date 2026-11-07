@@ -406,3 +406,51 @@ def generate_statesman_summary(
         "who_it_affects": affected,
         "tone_tag": tone_tag
     }
+
+
+def classify_youngstown_zone(
+    valence: str = "",
+    compound: float = 0.0,
+    tone_tag: str = "",
+    title: str = ""
+) -> int:
+    """
+    Youngstown Three-Tier Framework Engine
+    Based on Justice Robert H. Jackson's landmark concurring opinion in
+    Youngstown Sheet & Tube Co. v. Sawyer, 343 U.S. 579 (1952).
+    Returns 1, 2, or 3.
+    """
+    valence_str = valence or ""
+    comp = compound if compound is not None else 0.0
+    tag_str = tone_tag or ""
+    t_lower = (title or "").lower()
+
+    # Zone 3: Lowest Ebb / Severe Constitutional Friction / Incompatible with Congressional Will
+    is_zone_3 = (
+        valence_str in ("Constitutional Friction / Overreach", "Urgent/Negative") or
+        comp <= -0.08 or
+        "Tension" in tag_str or
+        "Scrutiny" in tag_str or
+        "habeas corpus" in t_lower or
+        "martial law" in t_lower or
+        "taking into military possession" in t_lower or
+        "confiscating and vesting" in t_lower
+    )
+    if is_zone_3:
+        return 3
+
+    # Zone 1: Maximum Authority / Statutory Execution
+    is_zone_1 = (
+        valence_str in ("Constitutional Fidelity", "Positive") or
+        comp >= 0.08 or
+        "Faithful Execution" in tag_str or
+        "Delegated" in tag_str or
+        "Intergovernmental Federalism" in tag_str or
+        "pursuant to" in t_lower or
+        "authorized by" in t_lower
+    )
+    if is_zone_1:
+        return 1
+
+    # Zone 2: Zone of Twilight / Concurrent Authority / Congressional Silence
+    return 2

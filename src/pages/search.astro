@@ -40,7 +40,7 @@ const TOPIC_OPTIONS = [
         Search Executive Orders
       </h1>
       <p class="text-sm text-slate-500 dark:text-slate-400 mt-2">
-        Instant search across titles, presidential administrations, topics, and constitutional postures.
+        Instant search across titles, presidential administrations, topics, Youngstown separation of powers tiers, and full-text keywords.
       </p>
 
       <!-- Search Input Box -->
@@ -71,10 +71,12 @@ const TOPIC_OPTIONS = [
       </div>
     </div>
 
-    <!-- Match Status -->
+    <!-- Match Status & Controls -->
     <div class="flex flex-wrap items-center justify-between gap-3 text-xs text-slate-500 mb-6 pb-2 border-b border-slate-200 dark:border-slate-800">
       <span id="search-status">Showing recent executive orders</span>
-      <div class="flex items-center gap-3">
+      <div class="flex flex-wrap items-center gap-2.5">
+        
+        <!-- Topic Select -->
         <label for="topic-select" class="sr-only">Topic</label>
         <select
           id="topic-select"
@@ -85,6 +87,20 @@ const TOPIC_OPTIONS = [
             <option value={topic}>{topic}</option>
           ))}
         </select>
+
+        <!-- Youngstown Zone Select -->
+        <label for="zone-select" class="sr-only">Youngstown Zone</label>
+        <select
+          id="zone-select"
+          class="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-700 dark:text-slate-300"
+        >
+          <option value="">All Youngstown Zones</option>
+          <option value="1">Zone 1: Maximum Authority</option>
+          <option value="2">Zone 2: Zone of Twilight</option>
+          <option value="3">Zone 3: Lowest Ebb</option>
+        </select>
+
+        <!-- Sort Select -->
         <label for="sort-select" class="sr-only">Sort By</label>
         <select
           id="sort-select"
@@ -98,7 +114,8 @@ const TOPIC_OPTIONS = [
           <option value="friction">Most Constitutional Friction</option>
           <option value="fidelity">Most Constitutional Fidelity</option>
         </select>
-        <span class="font-mono" id="total-count">{totalIndexed.toLocaleString()} total orders indexed</span>
+
+        <span class="font-mono text-slate-400 dark:text-slate-500" id="total-count">{totalIndexed.toLocaleString()} total orders</span>
       </div>
     </div>
 
@@ -119,7 +136,7 @@ const TOPIC_OPTIONS = [
 
     <div id="empty-state" class="hidden text-center py-20 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 mt-4">
       <p class="text-slate-600 dark:text-slate-400 text-base font-serif">No executive orders found matching your search.</p>
-      <p class="text-slate-400 text-xs mt-1">Try another keyword or search by president's name.</p>
+      <p class="text-slate-400 text-xs mt-1">Try another keyword, adjust filters, or search by president's name or EO number.</p>
     </div>
 
   </div>
@@ -134,11 +151,13 @@ const TOPIC_OPTIONS = [
     const suggestBtns = document.querySelectorAll('.suggest-btn');
     const sortSelect = document.getElementById('sort-select');
     const topicSelect = document.getElementById('topic-select');
+    const zoneSelect = document.getElementById('zone-select');
     const EOSearch = window.EOSearch;
 
     let currentMatches = [];
     let displayedCount = 0;
     let searchRun = 0;
+    let activeQuery = '';
     const PAGE_SIZE = 40;
 
     function sortItems(list, sortMode) {
@@ -174,6 +193,7 @@ const TOPIC_OPTIONS = [
       const params = new URLSearchParams();
       if (query) params.set('q', query);
       if (topicSelect?.value) params.set('topic', topicSelect.value);
+      if (zoneSelect?.value) params.set('zone', zoneSelect.value);
       if (sortSelect?.value && sortSelect.value !== 'relevance') params.set('sort', sortSelect.value);
       const qs = params.toString();
       const newUrl = qs ? `${window.location.pathname}?${qs}` : window.location.pathname;
@@ -188,7 +208,7 @@ const TOPIC_OPTIONS = [
 
       const nextBatch = currentMatches.slice(displayedCount, displayedCount + PAGE_SIZE);
       if (nextBatch.length > 0) {
-        EOSearch.appendHtml(resultsGrid, nextBatch.map(o => EOSearch.renderOrderCard(o, { showTag: true })).join(''));
+        EOSearch.appendHtml(resultsGrid, nextBatch.map(o => EOSearch.renderOrderCard(o, { showTag: true, query: activeQuery })).join(''));
         displayedCount += nextBatch.length;
         window.EOBookmarks?.refreshAllButtons();
       }
@@ -200,8 +220,10 @@ const TOPIC_OPTIONS = [
     async function performSearch(query, opts = {}) {
       const runId = ++searchRun;
       const q = (query || '').trim();
+      activeQuery = q;
       const sortMode = sortSelect?.value || 'relevance';
       const topic = topicSelect?.value || '';
+      const zoneFilter = zoneSelect?.value ? parseInt(zoneSelect.value, 10) : null;
 
       let dataset;
       try {
@@ -212,19 +234,35 @@ const TOPIC_OPTIONS = [
       }
       if (runId !== searchRun) return; // a newer keystroke superseded this search
 
-      const inTopic = topic ? dataset.filter(order => (order.topics || []).includes(topic)) : dataset;
+      let candidates = dataset;
+      if (topic) {
+        candidates = candidates.filter(order => (order.topics || []).includes(topic));
+      }
+      if (zoneFilter !== null) {
+        candidates = candidates.filter(order => (order._zone !== undefined ? order._zone : EOSearch.getYoungstownZone(order)) === zoneFilter);
+      }
 
       if (!q) {
         const browseSort = sortMode === 'relevance' ? 'newest' : sortMode;
-        currentMatches = sortItems(inTopic, browseSort);
-        if (!topic && browseSort === 'newest') currentMatches = currentMatches.slice(0, 40);
+        currentMatches = sortItems(candidates, browseSort);
+        if (!topic && zoneFilter === null && browseSort === 'newest') currentMatches = currentMatches.slice(0, 40);
         const sortLabel = sortSelect?.selectedOptions[0]?.textContent || '';
-        status.textContent = topic
-          ? `Showing ${currentMatches.length.toLocaleString()} orders tagged "${topic}"`
-          : browseSort === 'newest' ? 'Showing recent executive orders' : `Showing all orders: ${sortLabel}`;
+        let label = 'Showing recent executive orders';
+        if (topic && zoneFilter) {
+          label = `Showing ${currentMatches.length.toLocaleString()} orders tagged "${topic}" in Zone ${zoneFilter}`;
+        } else if (topic) {
+          label = `Showing ${currentMatches.length.toLocaleString()} orders tagged "${topic}"`;
+        } else if (zoneFilter) {
+          label = `Showing ${currentMatches.length.toLocaleString()} orders classified in Youngstown Zone ${zoneFilter}`;
+        } else if (browseSort !== 'newest') {
+          label = `Showing all orders: ${sortLabel}`;
+        }
+        status.textContent = label;
       } else {
-        currentMatches = sortItems(EOSearch.rankOrders(inTopic, q), sortMode);
-        status.textContent = `Found ${currentMatches.length.toLocaleString()} match${currentMatches.length === 1 ? '' : 'es'} for "${q}"`;
+        currentMatches = sortItems(EOSearch.rankOrders(candidates, q), sortMode);
+        const zoneDesc = zoneFilter ? ` in Zone ${zoneFilter}` : '';
+        const topicDesc = topic ? ` under "${topic}"` : '';
+        status.textContent = `Found ${currentMatches.length.toLocaleString()} match${currentMatches.length === 1 ? '' : 'es'} for "${q}"${topicDesc}${zoneDesc}`;
       }
       displayMatches(true);
       if (!opts.skipUrlSync) syncUrl(q);
@@ -242,10 +280,12 @@ const TOPIC_OPTIONS = [
     const initialQuery = urlParams.get('q');
     const initialSort = urlParams.get('sort');
     const initialTopic = urlParams.get('topic');
+    const initialZone = urlParams.get('zone');
     if (initialSort && sortSelect) sortSelect.value = initialSort;
     if (initialTopic && topicSelect) topicSelect.value = initialTopic;
+    if (initialZone && zoneSelect) zoneSelect.value = initialZone;
     if (input && initialQuery) input.value = initialQuery;
-    if (initialQuery || initialTopic || initialSort) {
+    if (initialQuery || initialTopic || initialSort || initialZone) {
       performSearch(initialQuery || '', { skipUrlSync: true });
     }
 
@@ -257,11 +297,28 @@ const TOPIC_OPTIONS = [
       }, 150);
     });
 
+    // Enter key quick-jump when exact EO number or direct match is typed
+    input?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const parsed = EOSearch.parseQuery(input.value);
+        if (parsed.eoNumber !== null && currentMatches.length > 0) {
+          const exact = currentMatches.find(o => (o.num || o.eo_number) === parsed.eoNumber);
+          if (exact) {
+            window.location.href = `/orders/${encodeURIComponent(exact.id)}`;
+          }
+        }
+      }
+    });
+
     sortSelect?.addEventListener('change', () => {
       performSearch(input?.value || '');
     });
 
     topicSelect?.addEventListener('change', () => {
+      performSearch(input?.value || '');
+    });
+
+    zoneSelect?.addEventListener('change', () => {
       performSearch(input?.value || '');
     });
 

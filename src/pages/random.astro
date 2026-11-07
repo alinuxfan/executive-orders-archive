@@ -2,9 +2,16 @@
 import Layout from '../layouts/Layout.astro';
 import summaryOrders from '../../data/site_orders_summary.json';
 
-// Collect all order IDs for client-side random redirect
-const orderIds = summaryOrders.map(o => o.id);
-const firstOrder = orderIds[0] || 'app-executive-order-1';
+// Select a stratified sample of 300 order IDs across the full 1789-present archive
+// so /random/index.html stays lightweight (~6 KB instead of 550+ KB) while still
+// providing instant zero-latency fallback if search_index.json isn't cached yet.
+const SAMPLE_SIZE = 300;
+const step = Math.max(1, Math.floor(summaryOrders.length / SAMPLE_SIZE));
+const sampleIds: string[] = [];
+for (let i = 0; i < summaryOrders.length && sampleIds.length < SAMPLE_SIZE; i += step) {
+  sampleIds.push(summaryOrders[i].id);
+}
+const firstOrder = sampleIds[0] || 'app-executive-order-1';
 ---
 
 <Layout
@@ -20,7 +27,7 @@ const firstOrder = orderIds[0] || 'app-executive-order-1';
         Rolling the Presidential Archives...
       </h1>
       <p class="text-sm text-slate-600 dark:text-slate-400 mb-6 leading-relaxed">
-        Selecting a decree at random from over 10,900 executive actions spanning 1789 to today.
+        Selecting a decree at random from over {summaryOrders.length.toLocaleString()} executive actions spanning 1789 to today.
       </p>
       <div class="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5 overflow-hidden mb-6">
         <div class="bg-purple-600 h-1.5 rounded-full animate-pulse w-3/4 mx-auto"></div>
@@ -35,13 +42,26 @@ const firstOrder = orderIds[0] || 'app-executive-order-1';
     </div>
   </div>
 
-  <script is:inline define:vars={{ orderIds }}>
-    (function pickAndRedirect() {
-      if (Array.isArray(orderIds) && orderIds.length > 0) {
-        const randomId = orderIds[Math.floor(Math.random() * orderIds.length)];
+  <script is:inline define:vars={{ sampleIds }}>
+    (async function pickAndRedirect() {
+      let pool = Array.isArray(sampleIds) ? sampleIds : [];
+      if (window.EOSearch?.loadIndex) {
+        try {
+          const fullIndex = await Promise.race([
+            window.EOSearch.loadIndex(),
+            new Promise((resolve) => setTimeout(() => resolve(null), 250))
+          ]);
+          if (Array.isArray(fullIndex) && fullIndex.length > 0) {
+            pool = fullIndex.map((o) => o.id);
+          }
+        } catch (e) {}
+      }
+      if (pool.length > 0) {
+        const randomId = pool[Math.floor(Math.random() * pool.length)];
+        const targetUrl = '/orders/' + encodeURIComponent(randomId);
         const fallback = document.getElementById('fallback-link');
-        if (fallback) fallback.href = '/orders/' + randomId;
-        window.location.replace('/orders/' + randomId);
+        if (fallback) fallback.href = targetUrl;
+        window.location.replace(targetUrl);
       }
     })();
   </script>

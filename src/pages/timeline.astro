@@ -92,21 +92,16 @@ const breadcrumbJsonLd = {
     const moreNotice = document.getElementById('timeline-more-notice');
     const grid = document.getElementById('timeline-grid');
     const emptyState = document.getElementById('timeline-empty');
-    const resultsSection = document.getElementById('timeline-results');
 
     const RENDER_CAP = 60;
-    let dataset = null;
 
     async function loadData() {
-      if (dataset) return dataset;
       try {
-        const res = await fetch('/search_index.json');
-        dataset = await res.json();
+        return await window.EOSearch.loadIndex();
       } catch (e) {
         console.error('Failed to load timeline dataset:', e);
-        dataset = [];
+        return [];
       }
-      return dataset;
     }
 
     function renderCard(order) {
@@ -154,7 +149,7 @@ const breadcrumbJsonLd = {
 
     async function showYear(year, updateHistory = true) {
       const data = await loadData();
-      const matches = data.filter((o) => (o.date || '').slice(0, 4) === String(year));
+      const matches = data.filter((o) => o._year === year);
       renderResults(matches, `Orders Signed in ${year}`);
       paintBarHighlight((y) => y === year);
       if (updateHistory) {
@@ -167,10 +162,7 @@ const breadcrumbJsonLd = {
 
     async function showDecade(decadeStart, updateHistory = true) {
       const data = await loadData();
-      const matches = data.filter((o) => {
-        const y = parseInt((o.date || '0').slice(0, 4), 10);
-        return y >= decadeStart && y < decadeStart + 10;
-      });
+      const matches = data.filter((o) => o._year >= decadeStart && o._year < decadeStart + 10);
       renderResults(matches, `Orders Signed in the ${decadeStart}s`);
       paintBarHighlight((y) => y >= decadeStart && y < decadeStart + 10);
       if (updateHistory) {

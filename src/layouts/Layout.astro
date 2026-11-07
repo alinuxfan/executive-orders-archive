@@ -27,10 +27,18 @@ const lastSyncTimestamp = syncStatus?.last_sync_timestamp || "";
 
 const organizationJsonLd = {
   "@context": "https://schema.org",
-  "@type": "GovernmentPermit",
+  "@type": "WebSite",
   "name": "Executive Orders Archive",
-  "url": Astro.site?.toString() || "https://executive-orders-archive.org",
-  "description": "Comprehensive, non-partisan computational linguistics and constitutional analysis archive of US Presidential Executive Orders."
+  "url": Astro.site?.toString() || "https://executiveordersarchive.org",
+  "description": "Comprehensive, non-partisan computational linguistics and constitutional analysis archive of US Presidential Executive Orders.",
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": {
+      "@type": "EntryPoint",
+      "urlTemplate": `${Astro.site?.toString() || "https://executiveordersarchive.org"}/search?q={search_term_string}`
+    },
+    "query-input": "required name=search_term_string"
+  }
 };
 
 const structuredDataArray = [
@@ -148,13 +156,16 @@ const structuredDataArray = [
           <!-- Search Button Trigger -->
           <a 
             href="/search" 
-            aria-label="Search all orders" 
-            title="Search archive (Cmd+K)" 
+            aria-label="Search all orders (press / or Cmd+K)" 
+            title="Search archive (/ or ⌘K)" 
             class="flex items-center gap-2 px-3 py-1.5 text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-lg transition-colors border border-slate-200 dark:border-slate-700/60"
           >
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
             <span class="hidden lg:inline whitespace-nowrap">Search orders...</span>
-            <kbd class="hidden sm:inline-block px-1.5 py-0.5 text-[10px] font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded text-slate-600 dark:text-slate-300">⌘K</kbd>
+            <div class="hidden sm:flex items-center gap-1">
+              <kbd class="px-1.5 py-0.5 text-[10px] font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded text-slate-600 dark:text-slate-300">⌘K</kbd>
+              <kbd class="px-1.5 py-0.5 text-[10px] font-mono bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-600 rounded text-slate-600 dark:text-slate-300" title="Press / to search">/</kbd>
+            </div>
           </a>
 
           <!-- Dedicated Surprise Me / Random Decree button -->
@@ -361,11 +372,23 @@ const structuredDataArray = [
         } catch (e) {}
       }
 
-      // Global ⌘K / Ctrl+K search shortcut
+      // Global ⌘K / Ctrl+K and / search shortcuts
       document.addEventListener('keydown', function(e) {
-        if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        const isCmdK = (e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k';
+        const isSlash = e.key === '/' && !e.metaKey && !e.ctrlKey && !e.altKey;
+
+        if (isCmdK || isSlash) {
+          const target = e.target;
+          const isEditable = target && (
+            target.tagName === 'INPUT' ||
+            target.tagName === 'TEXTAREA' ||
+            target.isContentEditable ||
+            target.tagName === 'SELECT'
+          );
+          if (isSlash && isEditable) return;
+
           e.preventDefault();
-          const searchInput = document.getElementById('search-input');
+          const searchInput = document.getElementById('search-input') || document.getElementById('order-search');
           if (searchInput) {
             searchInput.focus();
             searchInput.select?.();

@@ -4,13 +4,21 @@ interface Props {
   neutralCount: number;
   urgentCount: number;
   totalOrders: number;
+  presidentSlug?: string;
 }
 
-const { positiveCount, neutralCount, urgentCount, totalOrders } = Astro.props;
+const { positiveCount, neutralCount, urgentCount, totalOrders, presidentSlug } = Astro.props;
 
 const posPct = totalOrders > 0 ? Math.round((positiveCount / totalOrders) * 100) : 0;
 const neuPct = totalOrders > 0 ? Math.round((neutralCount / totalOrders) * 100) : 0;
 const urgPct = totalOrders > 0 ? Math.round((urgentCount / totalOrders) * 100) : 0;
+
+function filterHref(sentiment: string): string {
+  const params = new URLSearchParams();
+  if (presidentSlug) params.set('president', presidentSlug);
+  params.set('sentiment', sentiment);
+  return `/orders?${params.toString()}`;
+}
 ---
 
 <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-6 shadow-sm">
@@ -31,27 +39,33 @@ const urgPct = totalOrders > 0 ? Math.round((urgentCount / totalOrders) * 100) :
 
   <!-- Segmented Progress Bar -->
   <div class="w-full h-5 rounded-full overflow-hidden flex shadow-inner bg-slate-100 dark:bg-slate-800 mb-6">
-    <div 
+    <a 
+      href={filterHref('Constitutional Fidelity')}
       style={`width: ${posPct}%`} 
-      class="bg-emerald-500 hover:bg-emerald-600 transition-all cursor-pointer relative group" 
-      title={`Constitutional Fidelity: ${positiveCount} (${posPct}%)`}
-    ></div>
-    <div 
+      aria-label={`Filter by Constitutional Fidelity: ${positiveCount} orders (${posPct}%)`}
+      class="bg-emerald-500 hover:bg-emerald-600 transition-all cursor-pointer relative group block" 
+      title={`Constitutional Fidelity: ${positiveCount} (${posPct}%) — Click to filter`}
+    ></a>
+    <a 
+      href={filterHref('Constitutional Neutral')}
       style={`width: ${neuPct}%`} 
-      class="bg-amber-400 hover:bg-amber-500 transition-all cursor-pointer relative group" 
-      title={`Constitutional Neutral: ${neutralCount} (${neuPct}%)`}
-    ></div>
-    <div 
+      aria-label={`Filter by Constitutional Neutral: ${neutralCount} orders (${neuPct}%)`}
+      class="bg-amber-400 hover:bg-amber-500 transition-all cursor-pointer relative group block" 
+      title={`Constitutional Neutral: ${neutralCount} (${neuPct}%) — Click to filter`}
+    ></a>
+    <a 
+      href={filterHref('Constitutional Friction / Overreach')}
       style={`width: ${urgPct}%`} 
-      class="bg-rose-500 hover:bg-rose-600 transition-all cursor-pointer relative group" 
-      title={`Constitutional Friction / Overreach: ${urgentCount} (${urgPct}%)`}
-    ></div>
+      aria-label={`Filter by Constitutional Friction / Overreach: ${urgentCount} orders (${urgPct}%)`}
+      class="bg-rose-500 hover:bg-rose-600 transition-all cursor-pointer relative group block" 
+      title={`Constitutional Friction / Overreach: ${urgentCount} (${urgPct}%) — Click to filter`}
+    ></a>
   </div>
 
   <!-- Legend & Metrics Grid -->
   <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 text-xs">
     
-    <div class="flex items-start gap-3 p-3 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40">
+    <a href={filterHref('Constitutional Fidelity')} class="flex items-start gap-3 p-3 rounded-lg bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40 hover:border-emerald-400 transition-colors">
       <div class="w-3.5 h-3.5 rounded bg-emerald-500 mt-0.5 flex-shrink-0"></div>
       <div>
         <div class="font-bold text-slate-900 dark:text-slate-100 text-sm">
@@ -60,9 +74,9 @@ const urgPct = totalOrders > 0 ? Math.round((urgentCount / totalOrders) * 100) :
         <div class="font-semibold text-emerald-700 dark:text-emerald-400">Constitutional Fidelity</div>
         <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Art. II §3 faithful statutory execution & civil liberty protection</div>
       </div>
-    </div>
+    </a>
 
-    <div class="flex items-start gap-3 p-3 rounded-lg bg-amber-50/60 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/40">
+    <a href={filterHref('Constitutional Neutral')} class="flex items-start gap-3 p-3 rounded-lg bg-amber-50/60 dark:bg-amber-950/20 border border-amber-100 dark:border-amber-900/40 hover:border-amber-400 transition-colors">
       <div class="w-3.5 h-3.5 rounded bg-amber-400 mt-0.5 flex-shrink-0"></div>
       <div>
         <div class="font-bold text-slate-900 dark:text-slate-100 text-sm">
@@ -71,9 +85,9 @@ const urgPct = totalOrders > 0 ? Math.round((urgentCount / totalOrders) * 100) :
         <div class="font-semibold text-amber-700 dark:text-amber-400">Constitutional Neutral</div>
         <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Routine departmental administration, civil service, executive seals</div>
       </div>
-    </div>
+    </a>
 
-    <div class="flex items-start gap-3 p-3 rounded-lg bg-rose-50/60 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/40">
+    <a href={filterHref('Constitutional Friction / Overreach')} class="flex items-start gap-3 p-3 rounded-lg bg-rose-50/60 dark:bg-rose-950/20 border border-rose-100 dark:border-rose-900/40 hover:border-rose-400 transition-colors">
       <div class="w-3.5 h-3.5 rounded bg-rose-500 mt-0.5 flex-shrink-0"></div>
       <div>
         <div class="font-bold text-slate-900 dark:text-slate-100 text-sm">
@@ -82,7 +96,7 @@ const urgPct = totalOrders > 0 ? Math.round((urgentCount / totalOrders) * 100) :
         <div class="font-semibold text-rose-700 dark:text-rose-400">Friction & Overreach</div>
         <div class="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5">Art. I purse/commerce tension, 10th Amend federalism, property takings</div>
       </div>
-    </div>
+    </a>
 
   </div>
 </div>

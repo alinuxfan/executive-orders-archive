@@ -81,6 +81,7 @@ def main():
             'time': o.get('reading_time_minutes', 1),
             'words': o.get('word_count', 0),
             'tag': o.get('tone_tag', ''),
+            'zone': o.get('youngstown_zone') or o.get('zone', 2),
             'topics': json.loads(o['topic_tags_json']) if o.get('topic_tags_json') else [],
             'snip': snippet,
         }

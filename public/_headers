@@ -1,0 +1,20 @@
+/*
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(), microphone=(), geolocation=(), payment=()
+
+/portraits/*
+  Cache-Control: public, max-age=604800, stale-while-revalidate=86400
+
+/search_index.json
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+
+/search_keywords.json
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+
+/quick-share-data.json
+  Cache-Control: public, max-age=3600, stale-while-revalidate=86400
+
+/quick-share.js
+  Cache-Control: public, max-age=86400, stale-while-revalidate=604800

@@ -1,6 +1,8 @@
 export interface DocumentBlock {
   type: 'paragraph' | 'heading' | 'page_break' | 'page_cluster' | 'filing_stamp';
   text?: string;
+  id?: string;
+  shortLabel?: string;
   page?: string;
   startPage?: string;
   endPage?: string;
@@ -45,6 +47,17 @@ export function parseDocumentBlocks(rawText: string): DocumentBlock[] {
 
   const rawBlocks = text.split(/\n\s*\n/).map(s => s.trim()).filter(Boolean);
   const blocks: DocumentBlock[] = [];
+  const usedIds = new Set<string>();
+
+  function uniqueHeadingId(base: string): string {
+    let candidate = base;
+    let counter = 2;
+    while (usedIds.has(candidate)) {
+      candidate = `${base}-${counter++}`;
+    }
+    usedIds.add(candidate);
+    return candidate;
+  }
 
   for (const b of rawBlocks) {
     if (b.startsWith('__BLOCK_CLUSTER_') && b.endsWith('__')) {
@@ -64,26 +77,62 @@ export function parseDocumentBlocks(rawText: string): DocumentBlock[] {
           page: pageMatch[1],
         });
       }
+    } else if (b.startsWith('__BLOCK_FILING__')) {
+      const lines = b.split('\n').map(l => l.trim()).filter(Boolean);
+      const docLine = lines.find(l => l.startsWith('Doc:'));
+      const billLine = lines.find(l => l.startsWith('Billing:'));
+      const doc = docLine ? docLine.replace(/^Doc:\s*/, '').trim() : '';
+      const billing = billLine ? billLine.replace(/^Billing:\s*/, '').trim() : '';
+      if (doc || billing) {
+        blocks.push({
+          type: 'filing_stamp',
+          doc: doc || 'Filed with the Office of the Federal Register',
+          billing: billing || undefined,
+        });
+      }
     } else if (b.startsWith('Doc: ') && b.includes('Billing: ')) {
       const [docLine, billLine] = b.split('\n', 2);
+      const doc = docLine.replace('Doc: ', '').trim();
+      const billing = billLine ? billLine.replace('Billing: ', '').trim() : '';
       blocks.push({
         type: 'filing_stamp',
-        doc: docLine.replace('Doc: ', '').trim(),
-        billing: billLine ? billLine.replace('Billing: ', '').trim() : undefined,
+        doc,
+        billing: billing || undefined,
       });
-    } else if (b === '__BLOCK_FILING__') {
-      // noop
     } else {
       const headingMatch = b.match(/^(Section\s+\d+\s*\.|\bSec\.\s+\d+\s*\.|\bNOW,\s*THEREFORE,|\bTHE WHITE HOUSE,)\s*(.*)/s);
       if (headingMatch) {
+        const rawHeading = headingMatch[1].trim();
+        const restText = headingMatch[2].trim();
+        const secNumMatch = rawHeading.match(/\d+/);
+        let baseId = 'section';
+        let shortLabel = rawHeading;
+
+        if (secNumMatch) {
+          baseId = `sec-${secNumMatch[0]}`;
+          // Extract brief section topic if the following prose begins with a short title like "Purpose." or "Policy."
+          const subTitleMatch = restText.match(/^([A-Z][A-Za-z0-9\s,&'-]{2,40})\.(?=\s+[A-Z(])/);
+          shortLabel = subTitleMatch
+            ? `Sec. ${secNumMatch[0]}: ${subTitleMatch[1].trim()}`
+            : `Sec. ${secNumMatch[0]}`;
+        } else if (/^NOW,\s*THEREFORE/i.test(rawHeading)) {
+          baseId = 'now-therefore';
+          shortLabel = 'Operative Clause';
+        } else if (/^THE WHITE HOUSE/i.test(rawHeading)) {
+          baseId = 'signature';
+          shortLabel = 'Signature';
+        }
+
         blocks.push({
           type: 'heading',
-          text: headingMatch[1].trim(),
+          text: rawHeading,
+          id: uniqueHeadingId(baseId),
+          shortLabel,
         });
-        if (headingMatch[2].trim()) {
+        if (restText) {
           blocks.push({
             type: 'paragraph',
-            text: headingMatch[2].trim(),
+            text: restText,
           });
         }
       } else {

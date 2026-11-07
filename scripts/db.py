@@ -51,6 +51,7 @@ def init_db():
         key_directives_json TEXT,         -- JSON array of strings
         who_it_affects_json TEXT,         -- JSON array of strings
         tone_tag TEXT,                    -- e.g. 'Regulatory', 'Emergency', 'Directive'
+        youngstown_zone INTEGER,          -- 1 (Max Authority), 2 (Twilight), 3 (Lowest Ebb)
         topic_tags_json TEXT,              -- JSON array of controlled taxonomy topics (scripts/topics.py)
         fr_citation TEXT,                 -- Federal Register citation, e.g. "91 FR 60501"
         eo_notes TEXT,                    -- Federal Register disposition notes ("Revoked by: EO 14148, ...")
@@ -92,6 +93,8 @@ def init_db():
     for column in ("topic_tags_json", "fr_citation", "eo_notes", "summary_model"):
         if column not in existing_columns:
             cursor.execute(f"ALTER TABLE orders ADD COLUMN {column} TEXT")
+    if "youngstown_zone" not in existing_columns:
+        cursor.execute("ALTER TABLE orders ADD COLUMN youngstown_zone INTEGER")
     if "manually_curated" not in existing_columns:
         cursor.execute("ALTER TABLE orders ADD COLUMN manually_curated INTEGER DEFAULT 0")
 
@@ -109,7 +112,7 @@ def upsert_order(order_dict):
         "flesch_kincaid_grade", "sentiment_compound", "sentiment_pos",
         "sentiment_neg", "sentiment_neu", "sentiment_valence",
         "summary_plain_english", "key_directives_json", "who_it_affects_json",
-        "tone_tag", "topic_tags_json", "fr_citation", "eo_notes", "raw_metadata_json"
+        "tone_tag", "youngstown_zone", "topic_tags_json", "fr_citation", "eo_notes", "raw_metadata_json"
     ]
 
     # These fields are populated by the constitutional batch worker, not by the
@@ -123,7 +126,7 @@ def upsert_order(order_dict):
     # body fetch or a sparse API response must not erase previously stored values
     # either (sync_orders.py sends NULL rather than "" when the fetch fails).
     protected_null_coalesce_fields = [
-        "summary_plain_english", "key_directives_json", "who_it_affects_json", "tone_tag",
+        "summary_plain_english", "key_directives_json", "who_it_affects_json", "tone_tag", "youngstown_zone",
         "topic_tags_json", "full_text", "fr_citation", "eo_notes"
     ]
     protected_if_evaluated_fields = [

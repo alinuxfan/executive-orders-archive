@@ -24,7 +24,7 @@ const midYear = Math.round((firstYear + lastYear) / 2);
       </p>
     </div>
     <span class="text-xs text-slate-400 font-mono hidden sm:inline">
-      {interactive ? 'Click a bar to explore that year' : `Peak: ${maxCount} in one year`}
+      {interactive ? 'Click a bar to explore that year' : `Peak: ${maxCount} in one year • Click a bar to inspect`}
     </span>
   </div>
 
@@ -34,18 +34,28 @@ const midYear = Math.round((firstYear + lastYear) / 2);
         const heightPct = Math.max(3, Math.round((d.count / maxCount) * 100));
         const isDecade = d.year % 10 === 0;
         const isActive = activeYear === d.year;
-        return (
+        const label = `${d.year}: ${d.count} order${d.count === 1 ? '' : 's'}`;
+        const barClasses = `group relative flex-1 min-w-[3px] rounded-t-sm transition-colors cursor-pointer hover:bg-amber-400 ${
+          isActive ? 'bg-amber-500' : isDecade ? 'bg-blue-400 dark:bg-blue-600' : 'bg-blue-200 dark:bg-blue-900/60'
+        }`;
+        return interactive ? (
           <button
             type="button"
             data-timeline-year={d.year}
             data-timeline-count={d.count}
-            tabindex={interactive ? 0 : -1}
-            title={`${d.year}: ${d.count} order${d.count === 1 ? '' : 's'}`}
-            class={`group relative flex-1 min-w-[3px] rounded-t-sm transition-colors ${
-              isActive ? 'bg-amber-500' : isDecade ? 'bg-blue-400 dark:bg-blue-600' : 'bg-blue-200 dark:bg-blue-900/60'
-            } ${interactive ? 'cursor-pointer hover:bg-amber-400' : 'cursor-default'}`}
+            aria-label={label}
+            title={label}
+            class={barClasses}
             style={`height: ${heightPct}%`}
           ></button>
+        ) : (
+          <a
+            href={`/timeline?year=${d.year}`}
+            aria-label={label}
+            title={label}
+            class={barClasses}
+            style={`height: ${heightPct}%`}
+          ></a>
         );
       })}
     </div>

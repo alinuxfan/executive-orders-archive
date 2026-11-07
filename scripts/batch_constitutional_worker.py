@@ -14,7 +14,7 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 from db import init_db, get_connection, vacuum_db
-from constitutional_engine import analyze_constitutional_sentiment, generate_statesman_summary
+from constitutional_engine import analyze_constitutional_sentiment, generate_statesman_summary, classify_youngstown_zone
 from topics import classify_topics
 from export_site_data import export_all
 from sync_orders import export_stats_json
@@ -50,6 +50,14 @@ def process_single_order(row):
 
     # 3. Controlled Topic Classification
     topic_tags = classify_topics(f"{title or ''} {full_text or ''}")
+
+    # 4. Youngstown Three-Tier Framework Classification
+    youngstown_zone = classify_youngstown_zone(
+        valence=metrics["sentiment_valence"],
+        compound=metrics["sentiment_compound"],
+        tone_tag=metrics["tone_tag"],
+        title=title or ""
+    )
     
     return (
         metrics["sentiment_compound"],
@@ -58,6 +66,7 @@ def process_single_order(row):
         metrics["sentiment_neg"],
         metrics["sentiment_neu"],
         metrics["tone_tag"],
+        youngstown_zone,
         summary_data["summary_plain_english"],
         json.dumps(summary_data["key_directives"]),
         json.dumps(summary_data["who_it_affects"]),
@@ -86,7 +95,7 @@ def run_batch_worker(batch_size=200, workers=4, limit=None, force=False):
         # Process any order that lacks tone_tag OR summary_plain_english OR topic_tags_json
         where_clause = "WHERE word_count > 0 AND COALESCE(manually_curated, 0) = 0 AND (tone_tag IS NULL OR summary_plain_english IS NULL OR topic_tags_json IS NULL)"
 
-    limit_clause = f"LIMIT {limit}" if limit else ""
+    limit_clause = f"LIMIT {int(limit)}" if limit is not None else ""
 
     query = f"""
         SELECT id, title, full_text, president_name, signing_date, word_count 
@@ -116,6 +125,7 @@ def run_batch_worker(batch_size=200, workers=4, limit=None, force=False):
             sentiment_neg = ?,
             sentiment_neu = ?,
             tone_tag = ?,
+            youngstown_zone = ?,
             summary_plain_english = ?,
             key_directives_json = ?,
             who_it_affects_json = ?,

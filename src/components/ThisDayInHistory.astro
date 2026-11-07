@@ -172,6 +172,23 @@ const oldestYear = oldestOrder?.signing_date ? oldestOrder.signing_date.slice(0,
             snippet: order.snippet
           });
 
+          const bookmarkMeta = JSON.stringify({
+            id: order.id,
+            num: order.eo_number,
+            sfx: order.eo_suffix || undefined,
+            st: order.eo_status || undefined,
+            title: order.title,
+            pres: order.president_name,
+            slug: order.president_slug,
+            date: order.signing_date,
+            words: order.word_count,
+            time: order.reading_time_minutes,
+            val: order.sentiment_valence,
+            comp: order.sentiment_compound,
+            tag: order.tone_tag,
+            snip: order.snippet
+          });
+
           return (
             <div class="history-item bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-blue-700/60 rounded-2xl p-4 transition-all duration-200 flex flex-col justify-between group shadow-md">
               <div>
@@ -206,6 +223,7 @@ const oldestYear = oldestOrder?.signing_date ? oldestOrder.signing_date.slice(0,
                     <button
                       type="button"
                       data-bookmark-btn={order.id}
+                      data-order-meta={bookmarkMeta}
                       aria-label="Save this order"
                       aria-pressed="false"
                       class="p-1 rounded-md text-slate-500 hover:text-amber-400 hover:bg-slate-800 transition-colors"
@@ -268,12 +286,21 @@ const oldestYear = oldestOrder?.signing_date ? oldestOrder.signing_date.slice(0,
   const tzBadge = document.getElementById('history-tz-badge');
   const shareLatestBtn = document.getElementById('btn-share-latest-day');
   const shareOldestBtn = document.getElementById('btn-share-oldest-day');
-  const quickShareBar = document.getElementById('this-day-quick-share-bar');
 
   const monthNames = [
     "January", "February", "March", "April", "May", "June",
     "July", "August", "September", "October", "November", "December"
   ];
+
+  function escapeHtml(s) {
+    if (window.EOSearch?.escapeHtml) return window.EOSearch.escapeHtml(s);
+    return String(s ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
 
   function getUserLocalDate() {
     const d = new Date();
@@ -298,8 +325,12 @@ const oldestYear = oldestOrder?.signing_date ? oldestOrder.signing_date.slice(0,
   async function loadData() {
     if (dataset) return dataset;
     try {
-      const res = await fetch('/search_index.json');
-      dataset = await res.json();
+      if (window.EOSearch?.loadIndex) {
+        dataset = await window.EOSearch.loadIndex();
+      } else {
+        const res = await fetch('/search_index.json');
+        dataset = await res.json();
+      }
     } catch (e) {
       console.error('Failed to load search index:', e);
       dataset = [];
@@ -309,7 +340,7 @@ const oldestYear = oldestOrder?.signing_date ? oldestOrder.signing_date.slice(0,
 
   function renderHistoryCard(order) {
     const rawDate = order.date || order.signing_date || '';
-    const year = rawDate.slice(0, 4) || 'Undated';
+    const year = escapeHtml(rawDate.slice(0, 4) || 'Undated');
     const val = order.val || order.sentiment_valence;
     let sentimentColor = "bg-slate-800 text-slate-300 border-slate-700";
     if (val === "Constitutional Fidelity" || val === "Positive") {
@@ -320,13 +351,16 @@ const oldestYear = oldestOrder?.signing_date ? oldestOrder.signing_date.slice(0,
 
     const num = order.num !== undefined ? order.num : order.eo_number;
     const eoBadge = num ? 
-      `<span class="px-1.5 py-0.5 rounded font-mono text-[11px] bg-blue-900/40 text-blue-200 border border-blue-800/40">EO ${num}</span>` : '';
+      `<span class="px-1.5 py-0.5 rounded font-mono text-[11px] bg-blue-900/40 text-blue-200 border border-blue-800/40">EO ${escapeHtml(num)}</span>` : '';
 
-    const slug = window.resolvePortraitSlug ? window.resolvePortraitSlug(order.slug || order.president_slug) : (order.slug || order.president_slug || 'default');
-    const presName = order.pres || order.president_name;
+    const rawSlug = window.resolvePortraitSlug ? window.resolvePortraitSlug(order.slug || order.president_slug) : (order.slug || order.president_slug || 'default');
+    const slug = escapeHtml(rawSlug);
+    const presName = order.pres || order.president_name || '';
     const snippet = order.snip || order.snippet || '';
+    const safeIdUrl = encodeURIComponent(order.id || '');
+    const safeIdAttr = escapeHtml(order.id || '');
 
-    const cardMeta = JSON.stringify({
+    const cardMeta = escapeHtml(JSON.stringify({
       id: order.id,
       eo_number: num,
       title: order.title,
@@ -337,7 +371,24 @@ const oldestYear = oldestOrder?.signing_date ? oldestOrder.signing_date.slice(0,
       sentiment_compound: order.comp !== undefined ? order.comp : order.sentiment_compound,
       tone_tag: order.tag || order.tone_tag || '',
       snippet: snippet
-    }).replace(/"/g, '&quot;');
+    }));
+
+    const bookmarkMeta = escapeHtml(JSON.stringify(
+      window.EOSearch?.bookmarkMeta
+        ? window.EOSearch.bookmarkMeta(order)
+        : {
+            id: order.id,
+            num: num,
+            title: order.title,
+            pres: presName,
+            slug: order.slug || order.president_slug,
+            date: rawDate,
+            val: val,
+            comp: order.comp !== undefined ? order.comp : order.sentiment_compound,
+            tag: order.tag || order.tone_tag || '',
+            snip: snippet
+          }
+    ));
 
     return `
       <div class="history-item bg-slate-900/90 hover:bg-slate-850 border border-slate-800 hover:border-blue-700/60 rounded-2xl p-4 transition-all duration-200 flex flex-col justify-between group shadow-md">
@@ -349,30 +400,30 @@ const oldestYear = oldestOrder?.signing_date ? oldestOrder.signing_date.slice(0,
             </div>
             <div class="flex items-center gap-1.5">
               <span class="text-[10px] font-medium px-2 py-0.5 rounded-full border ${sentimentColor}">
-                ${val || 'Order'}
+                ${escapeHtml(val || 'Order')}
               </span>
-              <button type="button" data-card-share-btn data-order-id="${order.id}" data-order-meta="${cardMeta}" aria-label="Share this order" title="Quick share this order" class="p-1 rounded-md text-slate-500 hover:text-amber-400 hover:bg-slate-800 transition-colors">
+              <button type="button" data-card-share-btn data-order-id="${safeIdAttr}" data-order-meta="${cardMeta}" aria-label="Share this order" title="Quick share this order" class="p-1 rounded-md text-slate-500 hover:text-amber-400 hover:bg-slate-800 transition-colors">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
               </button>
-              <button type="button" data-bookmark-btn="${order.id}" aria-label="Save this order" aria-pressed="false" class="p-1 rounded-md text-slate-500 hover:text-amber-400 hover:bg-slate-800 transition-colors">
+              <button type="button" data-bookmark-btn="${safeIdAttr}" data-order-meta="${bookmarkMeta}" aria-label="Save this order" aria-pressed="false" class="p-1 rounded-md text-slate-500 hover:text-amber-400 hover:bg-slate-800 transition-colors">
                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path></svg>
               </button>
             </div>
           </div>
 
           <h3 class="font-serif font-bold text-sm sm:text-base text-slate-100 group-hover:text-amber-300 line-clamp-2 transition-colors mb-2">
-            <a href="/orders/${order.id}">${order.title}</a>
+            <a href="/orders/${safeIdUrl}">${escapeHtml(order.title)}</a>
           </h3>
 
-          ${snippet ? `<p class="text-xs text-slate-400 line-clamp-2 leading-relaxed mb-3">${snippet}</p>` : ''}
+          ${snippet ? `<p class="text-xs text-slate-400 line-clamp-2 leading-relaxed mb-3">${escapeHtml(snippet)}</p>` : ''}
         </div>
 
         <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
           <div class="flex items-center gap-2">
             <img src="/portraits/${slug}.jpg" alt="" class="w-5 h-5 rounded-full object-cover border border-slate-700" onerror="this.style.display='none'" />
-            <span class="truncate max-w-[130px] font-medium text-slate-300">${presName}</span>
+            <span class="truncate max-w-[130px] font-medium text-slate-300">${escapeHtml(presName)}</span>
           </div>
-          <a href="/orders/${order.id}" class="text-amber-400 hover:text-amber-300 font-semibold text-[11px]">Read &rarr;</a>
+          <a href="/orders/${safeIdUrl}" class="text-amber-400 hover:text-amber-300 font-semibold text-[11px]">Read &rarr;</a>
         </div>
       </div>
     `;
@@ -415,11 +466,11 @@ const oldestYear = oldestOrder?.signing_date ? oldestOrder.signing_date.slice(0,
         const newest = (matches[0].date || matches[0].signing_date || '').slice(0, 4);
         spanBadge.textContent = oldest && newest ? `Spanning ${oldest} – ${newest}` : 'Various Eras';
         if (shareLatestBtn) {
-          shareLatestBtn.innerHTML = `<span>⚡ Latest (${newest || 'Recent'})</span>`;
+          shareLatestBtn.innerHTML = `<span>⚡ Latest (${escapeHtml(newest || 'Recent')})</span>`;
           shareLatestBtn.classList.remove('opacity-50', 'pointer-events-none');
         }
         if (shareOldestBtn) {
-          shareOldestBtn.innerHTML = `<span>🏛️ Oldest (${oldest || 'Earliest'})</span>`;
+          shareOldestBtn.innerHTML = `<span>🏛️ Oldest (${escapeHtml(oldest || 'Earliest')})</span>`;
           shareOldestBtn.classList.remove('opacity-50', 'pointer-events-none');
         }
       } else {

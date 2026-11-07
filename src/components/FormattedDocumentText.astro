@@ -7,70 +7,298 @@ interface Props {
 
 const { text } = Astro.props;
 const blocks = parseDocumentBlocks(text || '');
+const sectionHeadings = blocks.filter(b => b.type === 'heading' && b.id && b.id.startsWith('sec-'));
 ---
 
 {blocks.length === 0 ? (
   <p class="italic text-slate-400">The archival text for this order is not yet digitized.</p>
 ) : (
-  <div class="space-y-4">
-    {blocks.map((block) => {
-      if (block.type === 'page_break') {
-        return (
-          <div class="my-6 flex items-center justify-center gap-3 select-none not-prose" aria-label={`Federal Register Page ${block.page}`}>
-            <span class="h-px bg-slate-200 dark:bg-slate-800 flex-1"></span>
-            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/90 text-slate-500 dark:text-slate-400 font-mono text-[11px] shadow-2xs">
-              <span class="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-slate-600"></span>
-              FR Page {block.page}
-            </span>
-            <span class="h-px bg-slate-200 dark:bg-slate-800 flex-1"></span>
-          </div>
-        );
-      }
-      
-      if (block.type === 'page_cluster') {
-        return (
-          <div class="my-6 p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 text-center select-none not-prose">
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono font-medium text-slate-700 dark:text-slate-300 shadow-2xs">
-              <span>📑</span>
-              <span>Federal Register Pages {block.startPage}–{block.endPage} (Annex / Tabular Schedules)</span>
-            </div>
-            <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 max-w-md mx-auto font-sans">
-              These pages comprise tabular annexes, tariff rate modifications, or graphic schedules in the printed Federal Register.
-            </p>
-          </div>
-        );
-      }
+  <div>
+    <!-- In-Document Search & Section Jump Toolbar -->
+    <div class="mb-6 not-prose space-y-3 print:hidden">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-800">
+        <div class="relative flex-1">
+          <svg class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+          </svg>
+          <input
+            type="search"
+            id="doc-find-input"
+            placeholder="Find words or phrases inside this order..."
+            aria-label="Find text within this executive order"
+            class="w-full pl-9 pr-20 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-xs sm:text-sm text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <span
+            id="doc-find-count"
+            class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] font-mono text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded"
+          ></span>
+        </div>
 
-      if (block.type === 'heading') {
-        return (
-          <h3 class="font-sans font-bold text-sm sm:text-base tracking-wide uppercase text-slate-900 dark:text-slate-100 pt-3 border-b border-slate-100 dark:border-slate-800/60 pb-1">
-            {block.text}
-          </h3>
-        );
-      }
+        <div id="doc-find-controls" class="hidden items-center gap-1.5 self-end sm:self-auto">
+          <button
+            type="button"
+            id="doc-find-prev"
+            title="Previous match (Shift+Enter)"
+            aria-label="Previous match"
+            class="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-mono text-slate-700 dark:text-slate-300 transition-colors"
+          >
+            &uarr; Prev
+          </button>
+          <button
+            type="button"
+            id="doc-find-next"
+            title="Next match (Enter)"
+            aria-label="Next match"
+            class="px-2.5 py-1.5 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-mono text-slate-700 dark:text-slate-300 transition-colors"
+          >
+            Next &darr;
+          </button>
+          <button
+            type="button"
+            id="doc-find-clear"
+            title="Clear search"
+            aria-label="Clear in-document search"
+            class="px-2 py-1.5 rounded-lg text-xs text-slate-500 hover:text-rose-600 dark:hover:text-rose-400 transition-colors"
+          >
+            Clear
+          </button>
+        </div>
+      </div>
 
-      if (block.type === 'filing_stamp') {
-        return (
-          <div class="mt-8 pt-4 border-t border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-500 dark:text-slate-400 not-prose bg-slate-50/60 dark:bg-slate-800/30 p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-            <div class="flex items-center gap-2">
-              <span class="text-sm">🏛️</span>
-              <span class="font-bold text-slate-700 dark:text-slate-300">Official NARA Filing:</span>
-              <span>FR Doc. {block.doc}</span>
+      {sectionHeadings.length >= 2 && (
+        <div class="p-3 rounded-xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800">
+          <div class="text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-2 flex items-center gap-1.5">
+            <span>📑</span>
+            <span>Sections Outline ({sectionHeadings.length} sections)</span>
+          </div>
+          <div class="flex flex-wrap gap-1.5 max-h-28 overflow-y-auto pr-1">
+            {sectionHeadings.map((sec) => (
+              <a
+                href={`#${sec.id}`}
+                class="text-xs font-mono px-2.5 py-1 rounded-lg bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-blue-400 dark:hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors truncate max-w-[220px]"
+                title={sec.shortLabel}
+              >
+                {sec.shortLabel}
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+
+    <div class="space-y-4" id="doc-blocks-container">
+      {blocks.map((block) => {
+        if (block.type === 'page_break') {
+          return (
+            <div class="my-6 flex items-center justify-center gap-3 select-none not-prose" aria-label={`Federal Register Page ${block.page}`}>
+              <span class="h-px bg-slate-200 dark:bg-slate-800 flex-1"></span>
+              <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/90 text-slate-500 dark:text-slate-400 font-mono text-[11px] shadow-2xs">
+                <span class="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-slate-600"></span>
+                FR Page {block.page}
+              </span>
+              <span class="h-px bg-slate-200 dark:bg-slate-800 flex-1"></span>
             </div>
-            {block.billing && (
-              <div class="text-[11px] text-slate-400 dark:text-slate-500">
-                Billing Codes: {block.billing}
+          );
+        }
+        
+        if (block.type === 'page_cluster') {
+          return (
+            <div class="my-6 p-4 rounded-xl border border-dashed border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/40 text-center select-none not-prose">
+              <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs font-mono font-medium text-slate-700 dark:text-slate-300 shadow-2xs">
+                <span>📑</span>
+                <span>Federal Register Pages {block.startPage}–{block.endPage} (Annex / Tabular Schedules)</span>
               </div>
-            )}
-          </div>
-        );
-      }
+              <p class="text-xs text-slate-500 dark:text-slate-400 mt-1.5 max-w-md mx-auto font-sans">
+                These pages comprise tabular annexes, tariff rate modifications, or graphic schedules in the printed Federal Register.
+              </p>
+            </div>
+          );
+        }
 
-      return (
-        <p class="leading-relaxed text-slate-800 dark:text-slate-200">
-          {block.text}
-        </p>
-      );
-    })}
+        if (block.type === 'heading') {
+          return (
+            <h3
+              id={block.id}
+              data-searchable-block
+              class="group scroll-mt-28 font-sans font-bold text-sm sm:text-base tracking-wide uppercase text-slate-900 dark:text-slate-100 pt-3 border-b border-slate-100 dark:border-slate-800/60 pb-1 flex items-center justify-between gap-2"
+            >
+              <span>{block.text}</span>
+              {block.id && (
+                <a
+                  href={`#${block.id}`}
+                  data-heading-permalink={block.id}
+                  aria-label={`Copy link to ${block.shortLabel || block.text}`}
+                  title="Copy link to this section"
+                  class="opacity-0 group-hover:opacity-100 focus:opacity-100 text-xs font-mono font-normal lowercase text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-opacity px-1.5 py-0.5 rounded not-prose print:hidden"
+                >
+                  #{block.id}
+                </a>
+              )}
+            </h3>
+          );
+        }
+
+        if (block.type === 'filing_stamp') {
+          return (
+            <div class="mt-8 pt-4 border-t border-slate-200 dark:border-slate-800 text-xs font-mono text-slate-500 dark:text-slate-400 not-prose bg-slate-50/60 dark:bg-slate-800/30 p-3.5 rounded-xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div class="flex items-center gap-2">
+                <span class="text-sm">🏛️</span>
+                <span class="font-bold text-slate-700 dark:text-slate-300">Official NARA Filing:</span>
+                <span>FR Doc. {block.doc}</span>
+              </div>
+              {block.billing && (
+                <div class="text-[11px] text-slate-400 dark:text-slate-500">
+                  Billing Codes: {block.billing}
+                </div>
+              )}
+            </div>
+          );
+        }
+
+        return (
+          <p data-searchable-block class="leading-relaxed text-slate-800 dark:text-slate-200">
+            {block.text}
+          </p>
+        );
+      })}
+    </div>
   </div>
 )}
+
+<script is:inline>
+  (function initInDocumentFind() {
+    const findInput = document.getElementById('doc-find-input');
+    const countBadge = document.getElementById('doc-find-count');
+    const controls = document.getElementById('doc-find-controls');
+    const prevBtn = document.getElementById('doc-find-prev');
+    const nextBtn = document.getElementById('doc-find-next');
+    const clearBtn = document.getElementById('doc-find-clear');
+    const container = document.getElementById('doc-blocks-container');
+
+    if (!findInput || !container) return;
+
+    const searchableEls = Array.from(container.querySelectorAll('p[data-searchable-block], h3[data-searchable-block] > span:first-child'));
+    const originalTexts = searchableEls.map(el => el.textContent || '');
+    let marks = [];
+    let activeIdx = -1;
+
+    function escapeHtml(s) {
+      return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function escapeRegex(s) {
+      return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function highlightMatches(query) {
+      marks = [];
+      activeIdx = -1;
+      const q = (query || '').trim();
+
+      if (!q || q.length < 2) {
+        searchableEls.forEach((el, idx) => {
+          el.textContent = originalTexts[idx];
+        });
+        countBadge?.classList.add('hidden');
+        controls?.classList.add('hidden');
+        controls?.classList.remove('flex');
+        return;
+      }
+
+      const re = new RegExp(`(${escapeRegex(q)})`, 'gi');
+      searchableEls.forEach((el, idx) => {
+        const raw = originalTexts[idx];
+        if (!re.test(raw)) {
+          el.textContent = raw;
+          return;
+        }
+        re.lastIndex = 0;
+        const parts = raw.split(re);
+        el.innerHTML = parts
+          .map((part, i) =>
+            i % 2 === 1
+              ? `<mark data-doc-mark class="bg-amber-200 dark:bg-amber-500/40 text-slate-900 dark:text-amber-100 rounded px-0.5">${escapeHtml(part)}</mark>`
+              : escapeHtml(part)
+          )
+          .join('');
+      });
+
+      marks = Array.from(container.querySelectorAll('mark[data-doc-mark]'));
+      if (countBadge) {
+        countBadge.classList.remove('hidden');
+        countBadge.textContent = marks.length > 0 ? `1 / ${marks.length}` : '0 matches';
+      }
+      if (marks.length > 0) {
+        controls?.classList.remove('hidden');
+        controls?.classList.add('flex');
+        focusMark(0, false);
+      } else {
+        controls?.classList.add('hidden');
+        controls?.classList.remove('flex');
+      }
+    }
+
+    function focusMark(index, scroll = true) {
+      if (marks.length === 0) return;
+      if (activeIdx >= 0 && marks[activeIdx]) {
+        marks[activeIdx].classList.remove('ring-2', 'ring-blue-600', 'dark:ring-amber-300', 'bg-amber-300');
+      }
+      activeIdx = ((index % marks.length) + marks.length) % marks.length;
+      const target = marks[activeIdx];
+      target.classList.add('ring-2', 'ring-blue-600', 'dark:ring-amber-300', 'bg-amber-300');
+      if (countBadge) {
+        countBadge.textContent = `${activeIdx + 1} / ${marks.length}`;
+      }
+      if (scroll) {
+        target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+
+    let timer;
+    findInput.addEventListener('input', () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => highlightMatches(findInput.value), 120);
+    });
+
+    findInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && marks.length > 0) {
+        e.preventDefault();
+        focusMark(e.shiftKey ? activeIdx - 1 : activeIdx + 1, true);
+      } else if (e.key === 'Escape') {
+        findInput.value = '';
+        highlightMatches('');
+      }
+    });
+
+    nextBtn?.addEventListener('click', () => focusMark(activeIdx + 1, true));
+    prevBtn?.addEventListener('click', () => focusMark(activeIdx - 1, true));
+    clearBtn?.addEventListener('click', () => {
+      findInput.value = '';
+      highlightMatches('');
+      findInput.focus();
+    });
+
+    // Copy permalink on section heading click
+    container.querySelectorAll('[data-heading-permalink]').forEach((link) => {
+      link.addEventListener('click', (e) => {
+        const id = link.getAttribute('data-heading-permalink');
+        if (!id) return;
+        const url = `${window.location.origin}${window.location.pathname}#${id}`;
+        if (navigator.clipboard?.writeText) {
+          e.preventDefault();
+          history.replaceState(null, '', `#${id}`);
+          navigator.clipboard.writeText(url).then(() => {
+            const orig = link.textContent;
+            link.textContent = '✓ copied';
+            setTimeout(() => { link.textContent = orig; }, 1400);
+          }).catch(() => {});
+        }
+      });
+    });
+  })();
+</script>

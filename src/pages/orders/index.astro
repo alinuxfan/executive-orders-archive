@@ -51,23 +51,23 @@ const TOPIC_OPTIONS = [
         Executive Orders Archive ({totalOrders.toLocaleString()})
       </h1>
       <p class="text-sm text-slate-500 dark:text-slate-400 mt-2 max-w-2xl">
-        Filter by constitutional alignment, era, or search by keywords. Every order includes quantitative reading times and Early Statesman distillations.
+        Filter by constitutional alignment, Youngstown framework tier, era, or search by keywords. Every order includes quantitative reading times and Early Statesman distillations.
       </p>
     </div>
 
     <!-- Client-side Interactive Filter Bar -->
     <div class="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-6 border border-slate-200 dark:border-slate-800 shadow-sm mb-8 space-y-4">
-      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
 
         <!-- Keyword Search -->
-        <div>
+        <div class="sm:col-span-2 lg:col-span-1">
           <label for="order-search" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
             Search Titles & Topics
           </label>
           <input 
             type="text" 
             id="order-search"
-            placeholder="Type keywords (e.g. defense, tariff)..."
+            placeholder="Keywords (e.g. tariff, 14430)..."
             class="w-full px-3.5 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
           />
         </div>
@@ -88,6 +88,22 @@ const TOPIC_OPTIONS = [
           </select>
         </div>
 
+        <!-- Youngstown Zone Filter -->
+        <div>
+          <label for="zone-select" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+            Youngstown Zone
+          </label>
+          <select 
+            id="zone-select"
+            class="w-full px-3.5 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
+          >
+            <option value="">All Zones (1, 2, 3)</option>
+            <option value="1">Zone 1: Maximum Authority</option>
+            <option value="2">Zone 2: Zone of Twilight</option>
+            <option value="3">Zone 3: Lowest Ebb</option>
+          </select>
+        </div>
+
         <!-- Sentiment Valence Filter -->
         <div>
           <label for="sentiment-select" class="block text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
@@ -98,8 +114,8 @@ const TOPIC_OPTIONS = [
             class="w-full px-3.5 py-2 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white"
           >
             <option value="">All Constitutional Postures</option>
-            <option value="Constitutional Fidelity">Constitutional Fidelity (Approved / Lawful)</option>
-            <option value="Constitutional Neutral">Constitutional Neutral (Managerial Routine)</option>
+            <option value="Constitutional Fidelity">Constitutional Fidelity (Approved)</option>
+            <option value="Constitutional Neutral">Constitutional Neutral (Managerial)</option>
             <option value="Constitutional Friction / Overreach">Constitutional Friction / Overreach</option>
           </select>
         </div>
@@ -223,6 +239,7 @@ const TOPIC_OPTIONS = [
   <script is:inline define:vars={{ initialOrders, presidentSlugsByName }}>
     const searchInput = document.getElementById('order-search');
     const presSelect = document.getElementById('president-select');
+    const zoneSelect = document.getElementById('zone-select');
     const sentSelect = document.getElementById('sentiment-select');
     const statusSelect = document.getElementById('status-select');
     const yearFromInput = document.getElementById('year-from');
@@ -278,6 +295,7 @@ const TOPIC_OPTIONS = [
       const params = new URLSearchParams();
       if (searchInput?.value) params.set('q', searchInput.value);
       if (presSelect?.value) params.set('president', presSelect.value);
+      if (zoneSelect?.value) params.set('zone', zoneSelect.value);
       if (sentSelect?.value) params.set('sentiment', sentSelect.value);
       if (statusSelect?.value) params.set('status', statusSelect.value);
       if (topicSelect?.value) params.set('topic', topicSelect.value);
@@ -304,7 +322,8 @@ const TOPIC_OPTIONS = [
       }
       const slice = filteredOrders.slice(displayedCount, displayedCount + BATCH_SIZE);
       if (slice.length > 0) {
-        EOSearch.appendHtml(ordersContainer, slice.map(o => EOSearch.renderOrderCard(o, { showTag: true })).join(''));
+        const queryTerm = (searchInput?.value || '').trim();
+        EOSearch.appendHtml(ordersContainer, slice.map(o => EOSearch.renderOrderCard(o, { showTag: true, query: queryTerm })).join(''));
         displayedCount += slice.length;
         window.EOBookmarks?.refreshAllButtons();
       }
@@ -316,6 +335,7 @@ const TOPIC_OPTIONS = [
       const runId = ++filterRun;
       const q = (searchInput?.value || '').trim();
       const presSlug = presSelect?.value || '';
+      const zoneFilter = zoneSelect?.value ? parseInt(zoneSelect.value, 10) : null;
       const sent = sentSelect?.value || '';
       const statusGroup = statusSelect?.value || '';
       const topic = topicSelect?.value || '';
@@ -342,7 +362,9 @@ const TOPIC_OPTIONS = [
         const itemVal = item.val || item.sentiment_valence || '';
         const itemStatus = item.st || item.eo_status || '';
         const itemYear = item._year !== undefined ? item._year : parseInt(String(item.date || item.signing_date || '').slice(0, 4), 10);
+        const itemZone = item._zone !== undefined ? item._zone : EOSearch.getYoungstownZone(item);
         if (presSlug && window.resolvePortraitSlug(item.slug || item.president_slug) !== presSlug) return false;
+        if (zoneFilter !== null && itemZone !== zoneFilter) return false;
         if (sent && itemVal !== sent) return false;
         if (statusGroup === 'any' && !itemStatus) return false;
         if (allowedStatuses && !allowedStatuses.includes(itemStatus)) return false;
@@ -368,6 +390,7 @@ const TOPIC_OPTIONS = [
     const fields = [
       [searchInput, urlParams.get('q')],
       [presSelect, initialPres],
+      [zoneSelect, urlParams.get('zone')],
       [sentSelect, urlParams.get('sentiment')],
       [statusSelect, urlParams.get('status')],
       [topicSelect, urlParams.get('topic')],
@@ -393,7 +416,22 @@ const TOPIC_OPTIONS = [
       clearTimeout(searchDebounceTimer);
       searchDebounceTimer = setTimeout(applyFilters, 150);
     });
+
+    // Enter key quick-jump when exact EO number or direct match is typed
+    searchInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        const parsed = EOSearch.parseQuery(searchInput.value);
+        if (parsed.eoNumber !== null && filteredOrders.length > 0) {
+          const exact = filteredOrders.find(o => (o.num || o.eo_number) === parsed.eoNumber);
+          if (exact) {
+            window.location.href = `/orders/${encodeURIComponent(exact.id)}`;
+          }
+        }
+      }
+    });
+
     presSelect?.addEventListener('change', applyFilters);
+    zoneSelect?.addEventListener('change', applyFilters);
     sentSelect?.addEventListener('change', applyFilters);
     statusSelect?.addEventListener('change', applyFilters);
     topicSelect?.addEventListener('change', applyFilters);
@@ -409,7 +447,7 @@ const TOPIC_OPTIONS = [
     });
 
     resetBtn?.addEventListener('click', () => {
-      for (const el of [searchInput, presSelect, sentSelect, statusSelect, topicSelect, yearFromInput, yearToInput]) {
+      for (const el of [searchInput, presSelect, zoneSelect, sentSelect, statusSelect, topicSelect, yearFromInput, yearToInput]) {
         if (el) el.value = '';
       }
       if (sortSelect) sortSelect.value = 'newest';

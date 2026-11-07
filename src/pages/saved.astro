@@ -151,6 +151,20 @@ import Layout from '../layouts/Layout.astro';
       }, 100);
     }
 
+    // Sanitize CSV cells against spreadsheet formula injection (=, +, -, @, tab, CR)
+    function csvCell(value) {
+      if (value === null || value === undefined) return '';
+      if (typeof value === 'number') return String(value);
+      let s = String(value);
+      if (/^[=+\-@\t\r]/.test(s)) {
+        s = "'" + s;
+      }
+      if (/[",\r\n]/.test(s)) {
+        return `"${s.replace(/"/g, '""')}"`;
+      }
+      return `"${s}"`;
+    }
+
     exportJsonBtn?.addEventListener('click', () => {
       if (!currentSavedOrders.length) return;
       const dataStr = JSON.stringify(currentSavedOrders, null, 2);
@@ -161,17 +175,17 @@ import Layout from '../layouts/Layout.astro';
       if (!currentSavedOrders.length) return;
       const headers = ['id', 'eo_number', 'title', 'president', 'signing_date', 'word_count', 'reading_time_minutes', 'constitutional_alignment', 'url'];
       const rows = currentSavedOrders.map(o => {
-        const url = `${window.location.origin}/orders/${o.id}`;
+        const url = `${window.location.origin}/orders/${encodeURIComponent(o.id || '')}`;
         const fields = [
-          o.id,
-          o.num || '',
-          `"${(o.title || '').replace(/"/g, '""')}"`,
-          `"${(o.pres || '').replace(/"/g, '""')}"`,
-          o.date || '',
-          o.words || 0,
-          o.time || 1,
-          `"${(o.val || '').replace(/"/g, '""')}"`,
-          url
+          csvCell(o.id || ''),
+          csvCell(o.num || ''),
+          csvCell(o.title || ''),
+          csvCell(o.pres || ''),
+          csvCell(o.date || ''),
+          Number(o.words || 0),
+          Number(o.time || 1),
+          csvCell(o.val || ''),
+          csvCell(url)
         ];
         return fields.join(',');
       });
@@ -181,7 +195,8 @@ import Layout from '../layouts/Layout.astro';
 
     // Re-render live when an order is unsaved from this page (or saved elsewhere in another tab)
     document.addEventListener('eo-bookmarks-changed', (e) => {
-      const card = grid.querySelector(`[data-saved-card="${e.detail.id}"]`);
+      const safeSelectorId = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(String(e.detail.id)) : String(e.detail.id).replace(/"/g, '\\"');
+      const card = grid.querySelector(`[data-saved-card="${safeSelectorId}"]`);
       if (card && !e.detail.saved) {
         card.remove();
         currentSavedOrders = currentSavedOrders.filter(o => o.id !== e.detail.id);

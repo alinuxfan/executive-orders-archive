@@ -5,12 +5,79 @@
     return String(value ?? '').replace(/[&<>"']/g, (c) => ESCAPES[c]);
   }
 
+  function escapeRegex(value) {
+    return String(value ?? '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
   // "EO 11359-A" for suffixed orders that share a number with another order.
   function eoLabel(order) {
     const num = order.num !== undefined ? order.num : order.eo_number;
     if (!num) return '';
     const suffix = order.sfx || order.eo_suffix;
     return suffix ? `${num}-${suffix}` : String(num);
+  }
+
+  // Mirrors src/lib/youngstown.ts so client-rendered cards & filters classify
+  // orders into Justice Jackson's three Youngstown zones identically to SSR.
+  function getYoungstownZone(order) {
+    if (!order) return 2;
+    if (order._zone) return order._zone;
+    const valence = order.val || order.sentiment_valence || '';
+    const comp = order.comp !== undefined ? order.comp : (order.sentiment_compound || 0);
+    const toneTag = order.tag || order.tone_tag || '';
+    const title = (order._title || (order.title || '').toLowerCase());
+
+    const isZone3 =
+      valence === 'Constitutional Friction / Overreach' ||
+      valence === 'Urgent/Negative' ||
+      comp <= -0.08 ||
+      toneTag.includes('Tension') ||
+      toneTag.includes('Scrutiny') ||
+      title.includes('habeas corpus') ||
+      title.includes('martial law') ||
+      title.includes('taking into military possession') ||
+      title.includes('confiscating and vesting');
+
+    if (isZone3) return 3;
+
+    const isZone1 =
+      valence === 'Constitutional Fidelity' ||
+      valence === 'Positive' ||
+      comp >= 0.08 ||
+      toneTag.includes('Faithful Execution') ||
+      toneTag.includes('Delegated') ||
+      toneTag.includes('Intergovernmental Federalism') ||
+      title.includes('pursuant to') ||
+      title.includes('authorized by');
+
+    if (isZone1) return 1;
+    return 2;
+  }
+
+  function youngstownBadge(order) {
+    const z = getYoungstownZone(order);
+    if (z === 1) {
+      return {
+        zone: 1,
+        label: 'Zone 1',
+        title: 'Youngstown Zone 1: Maximum Authority (Express or Implied Congressional Authorization)',
+        cls: 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800/80'
+      };
+    }
+    if (z === 3) {
+      return {
+        zone: 3,
+        label: 'Zone 3',
+        title: 'Youngstown Zone 3: Lowest Ebb (Constitutional Friction / Separation of Powers Scrutiny)',
+        cls: 'bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-200 dark:border-rose-800/80'
+      };
+    }
+    return {
+      zone: 2,
+      label: 'Zone 2',
+      title: 'Youngstown Zone 2: Zone of Twilight (Concurrent Authority / Congressional Silence)',
+      cls: 'bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border-amber-200 dark:border-amber-800/80'
+    };
   }
 
   let indexPromise = null;
@@ -33,6 +100,7 @@
             o._kw = '';
             const rawDate = o.date || '';
             o._year = rawDate.length >= 4 ? parseInt(rawDate.slice(0, 4), 10) : null;
+            o._zone = getYoungstownZone(o);
           }
           return orders;
         })
@@ -73,6 +141,29 @@
       eoNumber: eo ? parseInt(eo[1], 10) : null,
       eoSuffix: eo && eo[2] ? eo[2].toUpperCase() : null,
     };
+  }
+
+  // Safely highlights query tokens inside plain text by splitting before HTML-escaping.
+  function highlightText(text, query) {
+    const raw = String(text ?? '');
+    if (!query || !raw) return escapeHtml(raw);
+    const parsed = typeof query === 'string' ? parseQuery(query) : query;
+    const validTerms = (parsed.terms || [])
+      .filter((t) => t.length >= 2)
+      .sort((a, b) => b.length - a.length);
+    if (validTerms.length === 0) return escapeHtml(raw);
+
+    const pattern = new RegExp(`(${validTerms.map(escapeRegex).join('|')})`, 'gi');
+    const parts = raw.split(pattern);
+    if (parts.length === 1) return escapeHtml(raw);
+
+    return parts
+      .map((part, idx) =>
+        idx % 2 === 1
+          ? `<mark class="bg-amber-200/80 dark:bg-amber-500/30 text-slate-900 dark:text-amber-100 rounded px-0.5 font-medium">${escapeHtml(part)}</mark>`
+          : escapeHtml(part)
+      )
+      .join('');
   }
 
   // Relevance score, or -1 when the order doesn't match every term. Exact EO
@@ -165,6 +256,7 @@
   function renderOrderCard(order, opts = {}) {
     const meta = bookmarkMeta(order);
     const badge = sentimentBadge(order);
+    const yBadge = youngstownBadge(order);
     const formattedDate = window.formatSigningDate ? window.formatSigningDate(meta.date) : (meta.date || 'Undated');
     const label = eoLabel(order);
     const eoBadge = label
@@ -180,13 +272,35 @@
           <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 5a2 2 0 012-2h10a2 2 0 012 2v16l-7-3.5L5 21V5z"></path></svg>
         </button>`;
 
+    const queryStr = opts.query || '';
+    const renderedTitle = queryStr ? highlightText(meta.title, queryStr) : escapeHtml(meta.title);
+    const renderedSnip = meta.snip ? (queryStr ? highlightText(meta.snip, queryStr) : escapeHtml(meta.snip)) : '';
+
+    // Identify terms that matched strictly via full-text body keywords (not visible in title or snippet)
+    let bodyMatchedBadge = '';
+    if (queryStr && order._kw) {
+      const parsed = parseQuery(queryStr);
+      const visibleHaystack = `${order._title || ''} ${(meta.snip || '').toLowerCase()} ${order._pres || ''}`;
+      const kwOnlyTerms = parsed.terms.filter((t) => t.length >= 2 && !visibleHaystack.includes(t) && order._kw.includes(t));
+      if (kwOnlyTerms.length > 0) {
+        bodyMatchedBadge = `
+          <div class="mb-2">
+            <span class="inline-flex items-center gap-1 text-[11px] font-mono px-2 py-0.5 rounded bg-blue-50/80 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/60">
+              <span>🔎 Matched in full text:</span>
+              <strong class="font-semibold">${escapeHtml(kwOnlyTerms.slice(0, 3).join(', '))}</strong>
+            </span>
+          </div>`;
+      }
+    }
+
     return `
       <article class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl p-5 hover:shadow-md hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-200 flex flex-col justify-between"${opts.savedView ? ` data-saved-card="${id}"` : ''}>
         <div>
           <div class="flex flex-wrap items-center justify-between gap-2 mb-2.5">
-            <div class="flex flex-wrap items-center gap-2">
+            <div class="flex flex-wrap items-center gap-1.5">
               ${eoBadge}
               ${statusBadge(order)}
+              <span class="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded border ${yBadge.cls}" title="${escapeHtml(yBadge.title)}">⚖️ ${yBadge.label}</span>
               <span class="text-xs font-mono text-slate-500 dark:text-slate-400">${escapeHtml(formattedDate)}</span>
             </div>
             <div class="flex items-center gap-1.5">
@@ -195,13 +309,14 @@
             </div>
           </div>
           <h3 class="font-serif font-bold text-slate-900 dark:text-white text-base sm:text-lg mb-2 line-clamp-2 hover:text-blue-600 dark:hover:text-blue-400">
-            <a href="/orders/${encodeURIComponent(meta.id)}">${escapeHtml(meta.title)}</a>
+            <a href="/orders/${encodeURIComponent(meta.id)}">${renderedTitle}</a>
           </h3>
           ${opts.showTag && meta.tag ? `
-            <div class="mb-3">
+            <div class="mb-2.5">
               <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-amber-50 dark:bg-amber-950/40 text-amber-900 dark:text-amber-200 border border-amber-200 dark:border-amber-900/60 font-medium">🏛️ ${escapeHtml(meta.tag)}</span>
             </div>` : ''}
-          ${meta.snip ? `<p class="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed mb-4">${escapeHtml(meta.snip)}</p>` : ''}
+          ${renderedSnip ? `<p class="text-xs text-slate-600 dark:text-slate-400 line-clamp-2 leading-relaxed mb-3">${renderedSnip}</p>` : ''}
+          ${bodyMatchedBadge}
         </div>
         <div class="pt-3 mt-2 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
           <div class="flex items-center gap-1.5 font-medium min-w-0">
@@ -224,7 +339,8 @@
   }
 
   window.EOSearch = {
-    escapeHtml, eoLabel, loadIndex, loadKeywords, parseQuery, scoreOrder, rankOrders,
+    escapeHtml, eoLabel, getYoungstownZone, youngstownBadge, highlightText,
+    loadIndex, loadKeywords, parseQuery, scoreOrder, rankOrders,
     statusBadge, renderOrderCard, bookmarkMeta, appendHtml,
   };
 })();

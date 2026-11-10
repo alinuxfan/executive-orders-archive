@@ -89,10 +89,18 @@ const modal = document.getElementById('quick-share-modal');
     }, { passive: true });
   }
 
+  // Modal state. The modal is closed/open via the `hidden` class on #quick-share-modal;
+  // while open, what it previews is (activeTab, activeSubmode, customOrder):
+  //   tab 'today'      -> submode 'latest' | 'oldest' | 'random' | 'summary' over activeDateOrders,
+  //                       unless customOrder (an order picked from a card) overrides it
+  //   tab 'milestones' -> seedData.milestones[activeMilestoneIndex]
+  //   tab 'roulette'   -> customOrder (set by rollRoulette)
+  // openModal() is the single transition entry point; it repaints tab/submode buttons.
   let activeTab = 'today'; // 'today' | 'milestones' | 'roulette'
   let activeSubmode = 'latest'; // 'latest' | 'oldest' | 'random' | 'summary'
   let activeMilestoneIndex = 0;
   let customOrder = null; // Specific order picked from page
+  let randomTodayOrder = null; // Sticky pick for submode 'random'; cleared when the date changes
   let activeDateOrders = seedData.todayOrders || [];
   let currentDate = seedData.dateInfo || {};
   let fullSearchData = null;
@@ -456,10 +464,10 @@ const modal = document.getElementById('quick-share-modal');
     if (activeSubmode === 'latest') return activeDateOrders[0];
     if (activeSubmode === 'oldest') return activeDateOrders[activeDateOrders.length - 1];
     if (activeSubmode === 'random') {
-      if (!window._randomTodayOrder || !activeDateOrders.includes(window._randomTodayOrder)) {
-        window._randomTodayOrder = activeDateOrders[Math.floor(Math.random() * activeDateOrders.length)];
+      if (!randomTodayOrder || !activeDateOrders.includes(randomTodayOrder)) {
+        randomTodayOrder = activeDateOrders[Math.floor(Math.random() * activeDateOrders.length)];
       }
-      return window._randomTodayOrder;
+      return randomTodayOrder;
     }
     return activeDateOrders[0];
   }
@@ -698,7 +706,7 @@ const modal = document.getElementById('quick-share-modal');
       submodeOldestYear.textContent = oldest?.signing_date ? oldest.signing_date.slice(0, 4) : 'Earliest';
     }
 
-    window._randomTodayOrder = null;
+    randomTodayOrder = null;
     if (activeTab === 'today') {
       updateModalUI();
     }
@@ -749,7 +757,7 @@ const modal = document.getElementById('quick-share-modal');
       if (sub === 'random') {
         // Pick new random on date
         if (activeDateOrders && activeDateOrders.length > 0) {
-          window._randomTodayOrder = activeDateOrders[Math.floor(Math.random() * activeDateOrders.length)];
+          randomTodayOrder = activeDateOrders[Math.floor(Math.random() * activeDateOrders.length)];
         }
       }
       openModal('today', sub);
@@ -839,7 +847,7 @@ const modal = document.getElementById('quick-share-modal');
       else if (type === 'oldest') openModal('today', 'oldest');
       else if (type === 'random-date') {
         if (activeDateOrders && activeDateOrders.length > 0) {
-          window._randomTodayOrder = activeDateOrders[Math.floor(Math.random() * activeDateOrders.length)];
+          randomTodayOrder = activeDateOrders[Math.floor(Math.random() * activeDateOrders.length)];
         }
         openModal('today', 'random');
       }

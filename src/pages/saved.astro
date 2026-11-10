@@ -74,65 +74,55 @@ import Layout from '../layouts/Layout.astro';
 
     let currentSavedOrders = [];
 
+    // The page is always in exactly one view. setView() is the only place that
+    // shows/hides the loading, empty, grid and export elements.
+    //   loading -> list | empty | error
+    //   list -> empty (last card unsaved); any -> render() again (changed in another tab)
+    type View = 'loading' | 'empty' | 'list' | 'error';
+    function setView(view: View, orders: any[] = []) {
+      currentSavedOrders = view === 'list' ? orders : [];
+      loading?.classList.toggle('hidden', view !== 'loading' && view !== 'error');
+      if (loading) {
+        loading.textContent = view === 'error' ? 'Failed to load saved orders.' : 'Loading your saved orders\u2026';
+      }
+      empty?.classList.toggle('hidden', view !== 'empty');
+      exportControls?.classList.toggle('hidden', view !== 'list');
+      if (grid) grid.innerHTML = view === 'list' ? orders.map(renderCard).join('') : '';
+      if (view === 'list') window.EOBookmarks?.refreshAllButtons();
+    }
+
     function renderCard(order) {
       return window.EOSearch.renderOrderCard(order, { savedView: true });
     }
 
     async function render() {
       const savedIds = window.EOBookmarks ? window.EOBookmarks.getAll() : [];
+      if (savedIds.length === 0) return setView('empty');
 
-      if (savedIds.length === 0) {
-        currentSavedOrders = [];
-        loading.classList.add('hidden');
-        grid.innerHTML = '';
-        empty.classList.remove('hidden');
-        if (exportControls) exportControls.classList.add('hidden');
-        return;
-      }
-
-      if (exportControls) exportControls.classList.remove('hidden');
-
-      // Check if we have compact metadata cached in localStorage for immediate 0ms rendering
+      // Compact metadata cached in localStorage allows an instant render.
       const metaMap = window.EOBookmarks?.getMetadataMap ? window.EOBookmarks.getMetadataMap() : {};
-      const missingIds = savedIds.filter(id => !metaMap[id]);
-
-      if (missingIds.length === 0) {
-        // Instant local render!
-        currentSavedOrders = savedIds.map(id => metaMap[id]);
-        loading.classList.add('hidden');
-        empty.classList.add('hidden');
-        grid.innerHTML = currentSavedOrders.map(renderCard).join('');
-        window.EOBookmarks?.refreshAllButtons();
-        return;
+      if (savedIds.every(id => metaMap[id])) {
+        return setView('list', savedIds.map(id => metaMap[id]));
       }
 
-      // If any metadata is missing, backfill from search_index.json
+      // Some metadata is missing: backfill from search_index.json.
+      setView('loading');
       try {
         const allOrders = await window.EOSearch.loadIndex();
         const byId = new Map(allOrders.map(o => [o.id, o]));
-
-        currentSavedOrders = [];
+        const orders = [];
         for (const id of savedIds) {
           let item = metaMap[id];
           if (!item && byId.has(id)) {
             item = window.EOSearch.bookmarkMeta(byId.get(id));
             window.EOBookmarks?.saveMetadata?.(id, item);
           }
-          if (item) currentSavedOrders.push(item);
+          if (item) orders.push(item);
         }
-
-        loading.classList.add('hidden');
-        if (currentSavedOrders.length === 0) {
-          grid.innerHTML = '';
-          empty.classList.remove('hidden');
-        } else {
-          empty.classList.add('hidden');
-          grid.innerHTML = currentSavedOrders.map(renderCard).join('');
-          window.EOBookmarks?.refreshAllButtons();
-        }
+        setView(orders.length ? 'list' : 'empty', orders);
       } catch (e) {
         console.error('Failed to load saved orders:', e);
-        loading.textContent = 'Failed to load saved orders.';
+        setView('error');
       }
     }
 
@@ -193,18 +183,16 @@ import Layout from '../layouts/Layout.astro';
       downloadFile(csvContent, 'saved-executive-orders.csv', 'text/csv');
     });
 
-    // Re-render live when an order is unsaved from this page (or saved elsewhere in another tab)
+    // Unsaving a card on this page removes it in place; a change made in another
+    // tab (detail.external) re-renders the whole list.
     document.addEventListener('eo-bookmarks-changed', (e) => {
-      const safeSelectorId = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(String(e.detail.id)) : String(e.detail.id).replace(/"/g, '\\"');
-      const card = grid.querySelector(`[data-saved-card="${safeSelectorId}"]`);
-      if (card && !e.detail.saved) {
-        card.remove();
-        currentSavedOrders = currentSavedOrders.filter(o => o.id !== e.detail.id);
-        if (grid.children.length === 0) {
-          empty.classList.remove('hidden');
-          if (exportControls) exportControls.classList.add('hidden');
-        }
-      }
+      const detail = (e as CustomEvent).detail || {};
+      if (detail.external) return void render();
+      if (detail.saved) return;
+      const safeSelectorId = typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(String(detail.id)) : String(detail.id).replace(/"/g, '\\"');
+      grid?.querySelector(`[data-saved-card="${safeSelectorId}"]`)?.remove();
+      currentSavedOrders = currentSavedOrders.filter(o => o.id !== detail.id);
+      if (currentSavedOrders.length === 0) setView('empty');
     });
 
     render();

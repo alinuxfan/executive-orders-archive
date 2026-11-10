@@ -14,6 +14,7 @@ if str(SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPTS_DIR))
 
 from db import init_db, get_connection, vacuum_db
+from enrichment import HEURISTIC_UPDATE_SQL, heuristic_worker_where
 from constitutional_engine import analyze_constitutional_sentiment, generate_statesman_summary, classify_youngstown_zone
 from topics import classify_topics
 from export_site_data import export_all
@@ -84,16 +85,11 @@ def run_batch_worker(batch_size=200, workers=4, limit=None, force=False):
     conn = get_connection()
     cursor = conn.cursor()
 
-    # Hand-curated orders (manually_curated = 1) are never regenerated, even with
-    # --force: their summary/directives were written by a person, and site JSON
-    # is re-exported from SQLite, so an overwrite here would be permanent.
-    if force:
-        # LLM-written summaries (summary_model set) are likewise kept; re-run
-        # scripts/llm_summarize.py --redo to regenerate those.
-        where_clause = "WHERE word_count > 0 AND COALESCE(manually_curated, 0) = 0 AND summary_model IS NULL"
-    else:
-        # Process any order that lacks tone_tag OR summary_plain_english OR topic_tags_json
-        where_clause = "WHERE word_count > 0 AND COALESCE(manually_curated, 0) = 0 AND (tone_tag IS NULL OR summary_plain_english IS NULL OR topic_tags_json IS NULL)"
+    # Which rows to pick and which fields we may write are defined by the
+    # enrichment lifecycle in scripts/enrichment.py: curated orders are never
+    # selected, and HEURISTIC_UPDATE_SQL keeps LLM-written summaries even when the
+    # metrics are (re)computed.
+    where_clause = f"WHERE {heuristic_worker_where(force)}"
 
     limit_clause = f"LIMIT {int(limit)}" if limit is not None else ""
 
@@ -116,24 +112,6 @@ def run_batch_worker(batch_size=200, workers=4, limit=None, force=False):
         conn.close()
         return
 
-    update_sql = """
-        UPDATE orders 
-        SET 
-            sentiment_compound = ?,
-            sentiment_valence = ?,
-            sentiment_pos = ?,
-            sentiment_neg = ?,
-            sentiment_neu = ?,
-            tone_tag = ?,
-            youngstown_zone = ?,
-            summary_plain_english = ?,
-            key_directives_json = ?,
-            who_it_affects_json = ?,
-            topic_tags_json = ?,
-            updated_at = CURRENT_TIMESTAMP
-        WHERE id = ?
-    """
-
     processed_count = 0
     start_time = time.time()
 
@@ -149,7 +127,7 @@ def run_batch_worker(batch_size=200, workers=4, limit=None, force=False):
         # Atomic commit to SQLite
         update_conn = get_connection()
         update_cur = update_conn.cursor()
-        update_cur.executemany(update_sql, results)
+        update_cur.executemany(HEURISTIC_UPDATE_SQL, results)
         update_conn.commit()
         update_conn.close()
 

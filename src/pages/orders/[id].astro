@@ -839,18 +839,27 @@ const breadcrumbJsonLd = {
     const ttsLabel = document.getElementById('tts-label');
 
     if ('speechSynthesis' in window && ttsBtn) {
-      let isSpeaking = false;
+      // idle <-> speaking. `current` is the utterance that owns the speaking state;
+      // late onend/onerror events from a cancelled utterance are ignored, so a quick
+      // Stop -> Read Aloud can't be cut off by the previous utterance's callback.
+      let current = null;
+
+      function render() {
+        const speaking = current !== null;
+        playIcon?.classList.toggle('hidden', speaking);
+        stopIcon?.classList.toggle('hidden', !speaking);
+        if (ttsLabel) ttsLabel.textContent = speaking ? 'Stop' : 'Read Aloud';
+        ttsBtn.setAttribute('aria-pressed', String(speaking));
+      }
 
       function stopSpeech() {
+        current = null;
         window.speechSynthesis.cancel();
-        isSpeaking = false;
-        playIcon?.classList.remove('hidden');
-        stopIcon?.classList.add('hidden');
-        if (ttsLabel) ttsLabel.textContent = 'Read Aloud';
+        render();
       }
 
       ttsBtn.addEventListener('click', () => {
-        if (isSpeaking) {
+        if (current) {
           stopSpeech();
           return;
         }
@@ -863,19 +872,21 @@ const breadcrumbJsonLd = {
         utterance.rate = 1.0;
         utterance.pitch = 1.0;
 
-        utterance.onend = () => { stopSpeech(); };
-        utterance.onerror = () => { stopSpeech(); };
+        const finish = () => {
+          if (current !== utterance) return;
+          current = null;
+          render();
+        };
+        utterance.onend = finish;
+        utterance.onerror = finish;
 
+        current = utterance;
         window.speechSynthesis.speak(utterance);
-        isSpeaking = true;
-        playIcon?.classList.add('hidden');
-        stopIcon?.classList.remove('hidden');
-        if (ttsLabel) ttsLabel.textContent = 'Stop';
+        render();
       });
 
-      window.addEventListener('beforeunload', () => {
-        window.speechSynthesis.cancel();
-      });
+      // pagehide also covers bfcache navigations, where beforeunload doesn't fire.
+      window.addEventListener('pagehide', stopSpeech);
     } else if (ttsBtn) {
       ttsBtn.style.display = 'none';
     }

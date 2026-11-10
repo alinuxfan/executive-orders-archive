@@ -60,9 +60,12 @@ orders*.json    references.json          data.json        public/search_keywords
 4. **Decoupled Reverse Citations (`data/reverse_references.json`)**:
    - Reverse legal citations ("Orders Citing This Order") are precomputed by [`scripts/export_site_data.py`](file:///home/adam/git/executive_orders/scripts/export_site_data.py) into `data/reverse_references.json`.
    - **CRITICAL**: Never import `data/site_orders.json` (65+ MB) into [`src/lib/relatedOrders.ts`](file:///home/adam/git/executive_orders/src/lib/relatedOrders.ts) or any individual page component. Doing so causes V8 heap memory exhaustion during Astro's multi-thousand-page static build.
-5. **Hand-curated and LLM summaries**:
-   - Orders with `manually_curated = 1` or a non-null `summary_model` are skipped by `batch_constitutional_worker.py`, even with `--force`.
-   - To hand-edit an order's summary, update SQLite and set `manually_curated = 1` — edits made directly to `site_orders.json` will be wiped by the next export.
+5. **Enrichment lifecycle, hand-curated and LLM summaries ([`scripts/enrichment.py`](file:///home/adam/git/executive_orders/scripts/enrichment.py))**:
+   - Every order is in exactly one state: `curated` → `no_text` → `needs_analysis` → `llm_summary` / `analyzed` (first match wins). `STATE_SQL` derives it; `heuristic_worker_where()` and `llm_summarize_where()` are the only row selectors. Don't write new ad-hoc `WHERE manually_curated ...` predicates; extend this module.
+   - Orders with `manually_curated = 1` are never touched by any script, even with `--force`.
+   - Orders with a non-null `summary_model` keep their summary, directives and who-it-affects. `batch_constitutional_worker.py` may still fill in or refresh their metrics (`HEURISTIC_UPDATE_SQL` enforces this).
+   - See the counts: `PYTHONPATH=scripts python scripts/enrichment.py`.
+   - To hand-edit an order's summary, update SQLite and set `manually_curated = 1`. Edits made directly to `site_orders.json` will be wiped by the next export.
 6. **Execution Environment for Python**:
    - When running scripts, ensure `PYTHONPATH=scripts` is set so internal module imports (`from db import ...`, `from metrics import ...`) resolve properly:
      ```bash
@@ -86,6 +89,19 @@ orders*.json    references.json          data.json        public/search_keywords
 5. **Bookmarks & Client State**:
    - Bookmarks are managed client-side via `localStorage` in [`public/bookmarks.js`](file:///home/adam/git/executive_orders/dist/bookmarks.js) and displayed in [`src/pages/saved.astro`](file:///home/adam/git/executive_orders/src/pages/saved.astro). Avoid introducing server-side session dependencies.
 
+### Client State Machines
+Client components keep their state in closures and the DOM, so each machine has a single transition point. Change state through it rather than toggling classes directly:
+
+| Machine | Where | States / transition point |
+|---|---|---|
+| Quick Share modal | `public/quick-share.js` | closed/open × `(activeTab, activeSubmode, customOrder)`; `openModal()` is the only entry point. Random pick is closure state `randomTodayOrder`, not a global. |
+| Saved orders view | `src/pages/saved.astro` | `loading` / `empty` / `list` / `error` via `setView()`. |
+| Bookmarks | `public/bookmarks.js` | saved/unsaved per id in `localStorage`; every change (including other tabs, via `storage`) broadcasts `eo-bookmarks-changed` (`detail.external` for cross-tab). |
+| Search index load | `public/search-lib.js` | idle → loading → ready; failures reset to idle so callers can retry. Never cache a failure as an empty dataset. |
+| This Day in History | `src/components/ThisDayInHistory.astro` | per-date request token (`latestRequest`) drops stale renders; load errors show an error, not "no orders". |
+| Read Aloud (TTS) | `src/pages/orders/[id].astro` | idle ↔ speaking, owned by `current` utterance; late callbacks from cancelled utterances are ignored. |
+| Search page | `src/pages/search.astro` | `searchRun` counter drops superseded searches. |
+
 ---
 
 ## 3. Key Directory & File Guide
@@ -107,6 +123,7 @@ orders*.json    references.json          data.json        public/search_keywords
 | [`scripts/batch_constitutional_worker.py`](file:///home/adam/git/executive_orders/scripts/batch_constitutional_worker.py) | Batch runner processing NLP enrichment and Youngstown classification in SQLite. |
 | [`scripts/build_search_index.py`](file:///home/adam/git/executive_orders/scripts/build_search_index.py) | Generates `public/search_index.json` and `public/search_keywords.json`. |
 | [`scripts/constitutional_engine.py`](file:///home/adam/git/executive_orders/scripts/constitutional_engine.py) | Core NLP analyzer: readability, sentiment, and Youngstown Jackson classification. |
+| [`scripts/enrichment.py`](file:///home/adam/git/executive_orders/scripts/enrichment.py) | Enrichment lifecycle states, row selectors, and the summary-protecting worker UPDATE; run it for per-state counts. |
 | [`scripts/db.py`](file:///home/adam/git/executive_orders/scripts/db.py) | SQLite schema, connection management, migrations, and protected upserts. |
 | [`scripts/export_site_data.py`](file:///home/adam/git/executive_orders/scripts/export_site_data.py) | Exports SQLite records to `site_orders*.json`, `reverse_references.json`, and `quick-share-data.json`. |
 | [`scripts/r2_sync.py`](file:///home/adam/git/executive_orders/scripts/r2_sync.py) | Cloudflare R2 backup, restore, and status utility with boto3. |
@@ -159,7 +176,7 @@ orders*.json    references.json          data.json        public/search_keywords
 ## 5. Verification Checklist for Agents
 
 Before completing any task or opening a pull request:
-- [ ] **Modernization Tests**: `python scripts/test_modernization.py` passes all checks.
+- [ ] **Modernization Tests**: `python scripts/test_modernization.py` passes all checks (includes the enrichment lifecycle).
 - [ ] **Static Build**: `npm run build` completes with exit code 0.
 - [ ] **No Memory Regressions**: `src/lib/relatedOrders.ts` uses `data/reverse_references.json` (do not import `site_orders.json`).
 - [ ] **No Inlined HTML Bloat**: Layout components do not inline multi-kilobyte JSON objects; externalized to `public/`.

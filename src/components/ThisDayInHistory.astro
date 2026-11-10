@@ -320,23 +320,24 @@ const oldestYear = oldestOrder?.signing_date ? oldestOrder.signing_date.slice(0,
     };
   }
 
+  // Index load: idle -> loading -> ready. A failure returns to idle (not cached),
+  // so the next date pick retries instead of showing "no orders" forever.
   let dataset = null;
 
   async function loadData() {
     if (dataset) return dataset;
-    try {
-      if (window.EOSearch?.loadIndex) {
-        dataset = await window.EOSearch.loadIndex();
-      } else {
-        const res = await fetch('/search_index.json');
-        dataset = await res.json();
-      }
-    } catch (e) {
-      console.error('Failed to load search index:', e);
-      dataset = [];
-    }
+    const data = window.EOSearch?.loadIndex
+      ? await window.EOSearch.loadIndex()
+      : await fetch('/search_index.json').then((r) => {
+          if (!r.ok) throw new Error(`HTTP ${r.status}`);
+          return r.json();
+        });
+    dataset = data;
     return dataset;
   }
+
+  // Each date pick gets a token; only the latest pick may render.
+  let latestRequest = 0;
 
   function renderHistoryCard(order) {
     const rawDate = order.date || order.signing_date || '';
@@ -444,7 +445,23 @@ const oldestYear = oldestOrder?.signing_date ? oldestOrder.signing_date.slice(0,
     if (headingDate) headingDate.textContent = `${monthName} ${dayInt}`;
     if (activeDateLabel) activeDateLabel.textContent = `${monthName} ${dayInt}`;
 
-    const data = await loadData();
+    const requestId = ++latestRequest;
+    let data;
+    try {
+      data = await loadData();
+    } catch (e) {
+      if (requestId !== latestRequest) return;
+      console.error('Failed to load search index:', e);
+      if (countBadge) countBadge.textContent = 'Could not load orders';
+      container.innerHTML = '';
+      emptyView.classList.remove('hidden');
+      const msg = emptyView.querySelector('p');
+      if (msg) msg.textContent = 'Could not load orders for this date. Check your connection and pick the date again.';
+      return;
+    }
+    if (requestId !== latestRequest) return;
+    const msg = emptyView.querySelector('p');
+    if (msg) msg.textContent = 'No executive orders found for this calendar date.';
     const matches = data
       .filter(o => {
         const d = o.date || o.signing_date;

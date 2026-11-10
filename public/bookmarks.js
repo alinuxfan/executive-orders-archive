@@ -101,6 +101,12 @@
   });
 
   document.addEventListener('eo-bookmarks-changed', refreshAllButtons);
+  // Keep every open tab in sync: localStorage writes in another tab fire 'storage'
+  // here. Re-broadcast them as eo-bookmarks-changed with external: true.
+  window.addEventListener('storage', (e) => {
+    if (e.key !== STORAGE_KEY && e.key !== null) return;
+    document.dispatchEvent(new CustomEvent('eo-bookmarks-changed', { detail: { external: true, all: getAll() } }));
+  });
   document.addEventListener('DOMContentLoaded', refreshAllButtons);
   refreshAllButtons();
 

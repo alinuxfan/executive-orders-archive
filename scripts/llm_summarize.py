@@ -24,6 +24,7 @@ if str(_SCRIPTS_DIR) not in sys.path:
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
 from db import init_db, get_connection
+from enrichment import llm_summarize_where
 
 DEFAULT_MODEL = "claude-opus-5"
 STATE_FILE = _SCRIPTS_DIR.parent / "data" / "llm_batch_state.json"
@@ -65,9 +66,7 @@ OUTPUT_SCHEMA = {
 
 def select_orders(limit, redo):
     conn = get_connection()
-    where = "word_count > 0 AND COALESCE(manually_curated, 0) = 0"
-    if not redo:
-        where += " AND summary_model IS NULL"
+    where = llm_summarize_where(redo)
     sql = f"""SELECT id, title, president_name, signing_date, full_text, summary_plain_english
               FROM orders WHERE {where} ORDER BY signing_date DESC"""
     if limit:
@@ -173,7 +172,8 @@ def collect(client, batch_id, id_map, model):
             summary = f"{summary}\n\n{assessment}"
         conn.execute(
             """UPDATE orders SET summary_plain_english = ?, key_directives_json = ?, who_it_affects_json = ?,
-                   summary_model = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?""",
+                   summary_model = ?, updated_at = CURRENT_TIMESTAMP
+               WHERE id = ? AND COALESCE(manually_curated, 0) = 0""",
             (summary, json.dumps(data["key_directives"]), json.dumps(data["who_it_affects"]), model, order["id"]),
         )
         written += 1

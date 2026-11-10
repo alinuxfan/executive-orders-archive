@@ -18,6 +18,7 @@ sys.path.insert(0, str(ROOT / "scripts"))
 from constitutional_engine import classify_youngstown_zone
 from db import init_db, get_connection
 from r2_sync import get_r2_config
+import enrichment
 
 def test_all():
     print("Testing constitutional_engine Youngstown zones...")
@@ -37,6 +38,41 @@ def test_all():
     assert "manually_curated" in cols
     conn.close()
     print("✓ SQLite schema tests passed!")
+
+    print("Testing enrichment lifecycle (scripts/enrichment.py)...")
+    import sqlite3
+    mem = sqlite3.connect(":memory:")
+    mem.execute("""CREATE TABLE orders (id TEXT PRIMARY KEY, word_count INTEGER, manually_curated INTEGER,
+        summary_model TEXT, tone_tag TEXT, summary_plain_english TEXT, topic_tags_json TEXT,
+        key_directives_json TEXT, who_it_affects_json TEXT, sentiment_compound REAL, sentiment_valence TEXT,
+        sentiment_pos REAL, sentiment_neg REAL, sentiment_neu REAL, youngstown_zone INTEGER, updated_at TEXT)""")
+    fixtures = {
+        # id: (word_count, manually_curated, summary_model, tone_tag, summary, topics), expected state
+        "cur": ((100, 1, None, None, None, None), "curated"),
+        "empty": ((0, 0, None, None, None, None), "no_text"),
+        "new": ((100, 0, None, None, None, None), "needs_analysis"),
+        "llm_gap": ((100, 0, "m", None, "LLM text", "[]"), "needs_analysis"),
+        "llm": ((100, 0, "m", "t", "LLM text", "[]"), "llm_summary"),
+        "done": ((100, None, None, "t", "s", "[]"), "analyzed"),
+    }
+    for oid, (row, _) in fixtures.items():
+        mem.execute("""INSERT INTO orders (id, word_count, manually_curated, summary_model, tone_tag,
+            summary_plain_english, topic_tags_json) VALUES (?,?,?,?,?,?,?)""", (oid, *row))
+    states = dict(mem.execute(f"SELECT id, {enrichment.STATE_SQL} FROM orders"))
+    assert states == {oid: exp for oid, (_, exp) in fixtures.items()}, states
+    assert sum(enrichment.state_counts(mem).values()) == len(fixtures)
+    pick = lambda where: {r[0] for r in mem.execute(f"SELECT id FROM orders WHERE {where}")}
+    assert pick(enrichment.heuristic_worker_where()) == {"new", "llm_gap"}
+    assert pick(enrichment.heuristic_worker_where(force=True)) == {"new", "llm_gap", "llm", "done"}
+    assert pick(enrichment.llm_summarize_where()) == {"new", "done"}
+    assert pick(enrichment.llm_summarize_where(redo=True)) == {"new", "llm_gap", "llm", "done"}
+    # The heuristic worker fills metrics on an LLM-summarized order but keeps its summary.
+    for oid in ("llm_gap", "new"):
+        mem.execute(enrichment.HEURISTIC_UPDATE_SQL, (0.1, "Positive", 0.1, 0.0, 0.9, "tone", 2, "heuristic", "[]", "[]", '["x"]', oid))
+    assert mem.execute("SELECT tone_tag, summary_plain_english FROM orders WHERE id='llm_gap'").fetchone() == ("tone", "LLM text")
+    assert mem.execute("SELECT summary_plain_english FROM orders WHERE id='new'").fetchone() == ("heuristic",)
+    mem.close()
+    print("✓ Enrichment lifecycle tests passed!")
 
     print("Testing data/reverse_references.json...")
     with open(ROOT / "data" / "reverse_references.json") as f:

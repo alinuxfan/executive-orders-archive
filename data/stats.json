@@ -1,9 +1,9 @@
 {
-  "generated_at": "2026-11-25T02:12:24.064338+00:00",
-  "last_sync_timestamp": "2026-11-25T02:12:24.064338+00:00",
-  "total_orders": 10852,
+  "generated_at": "2026-11-25T17:03:44.282631+00:00",
+  "last_sync_timestamp": "2026-11-25T17:03:44.282631+00:00",
+  "total_orders": 10853,
   "sentiment_breakdown": {
-    "Constitutional Fidelity": 2169,
+    "Constitutional Fidelity": 2170,
     "Constitutional Friction / Overreach": 232,
     "Constitutional Neutral": 8451
   },
@@ -88,8 +88,8 @@
     },
     {
       "president": "Donald Trump",
-      "total_orders": 209,
-      "avg_word_count": 1268.0,
+      "total_orders": 210,
+      "avg_word_count": 1267.0,
       "avg_sentiment": 0.596
     },
     {
@@ -263,6 +263,17 @@
   ],
   "recent_orders": [
     {
+      "id": "fr-2026-24114",
+      "eo_number": 14439,
+      "title": "Protecting the Executive's Privileges and Enhancing Efficiencies in Federal Contracting",
+      "president_name": "Donald Trump",
+      "signing_date": "2026-11-20",
+      "word_count": 1080,
+      "reading_time_minutes": 5,
+      "sentiment_valence": "Constitutional Fidelity",
+      "sentiment_compound": 0.6
+    },
+    {
       "id": "fr-2026-22051",
       "eo_number": 14438,
       "title": "Decreasing Housing Costs for the American People",
@@ -360,17 +371,6 @@
       "reading_time_minutes": 11,
       "sentiment_valence": "Constitutional Fidelity",
       "sentiment_compound": 0.86
-    },
-    {
-      "id": "fr-2026-19416",
-      "eo_number": 14429,
-      "title": "Reinvigorating America's Hunting Heritage",
-      "president_name": "Donald Trump",
-      "signing_date": "2026-09-17",
-      "word_count": 1209,
-      "reading_time_minutes": 6,
-      "sentiment_valence": "Constitutional Fidelity",
-      "sentiment_compound": 0.66
     }
   ]
 }
